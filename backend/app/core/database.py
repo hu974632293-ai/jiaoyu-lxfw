@@ -21,4 +21,6 @@ def get_db():
 
 
 def init_db():
+    from app.models import user, lead, project, event, knowledge, report  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
