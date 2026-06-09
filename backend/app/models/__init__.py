@@ -13,7 +13,7 @@ from app.models.project import CourseProject
 from app.models.event import EventLecture, EventRegistration
 from app.models.knowledge import KnowledgeChatLog
 from app.models.operation import AuditLog, EventCheckIn, Notification, ReportJob
-from app.models.permission import SysPermission, SysRole, SysUserRole
+from app.models.permission import SysPermission, SysRole, SysRolePermission, SysUserRole
 from app.models.report import ReportSnapshot
 from app.models.student import (
     StudentAcademicEvent,
@@ -51,6 +51,7 @@ __all__ = [
     "ReportJob",
     "SysPermission",
     "SysRole",
+    "SysRolePermission",
     "SysUserRole",
     "ReportSnapshot",
     "StudentAcademicEvent",

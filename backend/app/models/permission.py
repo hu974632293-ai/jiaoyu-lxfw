@@ -35,3 +35,12 @@ class SysUserRole(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("sys_user.id"), nullable=False)
     role_id: Mapped[int] = mapped_column(Integer, ForeignKey("sys_role.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SysRolePermission(Base):
+    __tablename__ = "sys_role_permission"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("sys_role.id"), nullable=False)
+    permission_id: Mapped[int] = mapped_column(Integer, ForeignKey("sys_permission.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

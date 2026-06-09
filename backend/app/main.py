@@ -2,14 +2,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    routes_audit,
     routes_demo,
     routes_events,
     routes_knowledge,
     routes_leads,
+    routes_notifications,
     routes_phase2,
     routes_profile,
     routes_projects,
     routes_reports,
+    routes_roles,
+    routes_users,
 )
 from app.core.config import settings
 from app.core.database import init_db
@@ -44,3 +48,7 @@ app.include_router(routes_events.router)
 app.include_router(routes_reports.router)
 app.include_router(routes_knowledge.router)
 app.include_router(routes_phase2.router)
+app.include_router(routes_users.router)
+app.include_router(routes_roles.router)
+app.include_router(routes_audit.router)
+app.include_router(routes_notifications.router)

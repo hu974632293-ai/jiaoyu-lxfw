@@ -6,8 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.models.event import EventLecture
 from app.models.lead import CrmLead
+from app.models.operation import AuditLog, Notification
+from app.models.permission import SysPermission, SysRole
 from app.models.project import CourseProject
 from app.models.user import SysUser
+from app.services.admin_service import ensure_default_admin_data
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -45,8 +48,13 @@ def seed_demo_data(db: Session):
             db.add(CrmLead(**item, status="新增意向"))
 
     db.commit()
+    ensure_default_admin_data(db)
     return {
         "users": db.query(SysUser).count(),
+        "roles": db.query(SysRole).count(),
+        "permissions": db.query(SysPermission).count(),
+        "notifications": db.query(Notification).count(),
+        "audit_logs": db.query(AuditLog).count(),
         "projects": db.query(CourseProject).count(),
         "events": db.query(EventLecture).count(),
         "leads": db.query(CrmLead).count(),
