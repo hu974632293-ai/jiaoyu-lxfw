@@ -1,8 +1,10 @@
 from fastapi.testclient import TestClient
 
+from app.core.database import init_db
 from app.main import app
 
 
+init_db()
 client = TestClient(app)
 
 
@@ -20,3 +22,13 @@ def test_profile_assess():
     payload = response.json()
     assert payload["code"] == 0
     assert payload["data"]["matched_project"] == "新加坡国际本硕升学计划"
+
+
+def test_phase2_overview():
+    response = client.get("/api/phase2/overview")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 0
+    assert "企业助手" in [item["name"] for item in payload["data"]["modules"]]
+    assert "students" in payload["data"]["counts"]

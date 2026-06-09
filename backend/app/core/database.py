@@ -21,6 +21,19 @@ def get_db():
 
 
 def init_db():
-    from app.models import user, lead, project, event, knowledge, report  # noqa: F401
+    from app.models import (  # noqa: F401
+        assistant,
+        crm,
+        enterprise,
+        event,
+        knowledge,
+        lead,
+        operation,
+        permission,
+        project,
+        report,
+        student,
+        user,
+    )
 
     Base.metadata.create_all(bind=engine)
