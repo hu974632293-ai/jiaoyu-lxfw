@@ -6,3 +6,5 @@ backend/app.db
 node_modules/
 dist/
 .superpowers/
+.idea/
+教育服务/

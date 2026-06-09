@@ -1,8 +1,17 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="教育服务客户增长闭环 Demo")
+from app.core.config import settings
+from app.core.database import init_db
+from app.core.response import ok
+
+app = FastAPI(title=settings.app_name)
+
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 
 @app.get("/health")
 def health_check():
-    return {"code": 0, "msg": "success", "data": {"status": "ok"}}
+    return ok({"status": "ok"})
