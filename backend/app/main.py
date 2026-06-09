@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import routes_demo
+from app.api import routes_demo, routes_profile
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.response import ok
@@ -19,3 +19,4 @@ def health_check():
 
 
 app.include_router(routes_demo.router)
+app.include_router(routes_profile.router)
