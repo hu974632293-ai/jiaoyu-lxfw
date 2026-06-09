@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api import routes_demo
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.response import ok
@@ -15,3 +16,6 @@ def on_startup():
 @app.get("/health")
 def health_check():
     return ok({"status": "ok"})
+
+
+app.include_router(routes_demo.router)

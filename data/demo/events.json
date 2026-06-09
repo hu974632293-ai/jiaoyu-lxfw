@@ -1,0 +1,16 @@
+[
+  {
+    "event_name": "新加坡升学路径线上说明会",
+    "event_type": "线上",
+    "start_time": "2026-06-12T19:30:00",
+    "location": "腾讯会议",
+    "max_participants": 120
+  },
+  {
+    "event_name": "德国双元制职业教育咨询日",
+    "event_type": "线下",
+    "start_time": "2026-06-13T14:00:00",
+    "location": "广州高教大厦",
+    "max_participants": 60
+  }
+]

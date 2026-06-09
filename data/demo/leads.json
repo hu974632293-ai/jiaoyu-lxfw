@@ -1,0 +1,17 @@
+[
+  {
+    "customer_name": "张三",
+    "contact_info": "1348907728",
+    "background_info": "姓名 张三 性别 男 年龄 19岁 高中毕业 家庭经济条件较好 希望出国升学"
+  },
+  {
+    "customer_name": "李同学",
+    "contact_info": "13800000001",
+    "background_info": "17岁 中职在读 希望通过新加坡项目提升学历并解决就业问题"
+  },
+  {
+    "customer_name": "王同学",
+    "contact_info": "13800000002",
+    "background_info": "23岁 高中以上学历 动手能力强 有德国职业培训和就业移民意向"
+  }
+]
