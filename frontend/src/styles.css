@@ -5,8 +5,71 @@ body {
   color: #172033;
 }
 
+button,
+textarea,
+input {
+  font: inherit;
+}
+
 .app-shell {
-  max-width: 1120px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 28px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.topbar h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+.topbar p {
+  margin: 0;
+  color: #647087;
+}
+
+.api-link {
+  color: #1769aa;
+  text-decoration: none;
+  border: 1px solid #c8def2;
+  background: #e8f2fb;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  border: 1px solid #d7dce5;
+  background: white;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  border-color: #1769aa;
+  background: #e8f2fb;
+  color: #123d5f;
+  font-weight: 700;
+}
+
+.panel {
+  background: white;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.06);
 }
