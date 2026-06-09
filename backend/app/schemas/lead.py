@@ -10,3 +10,5 @@ class LeadCreate(BaseModel):
 
 class LeadStatusUpdate(BaseModel):
     status: str
+    reason: str = ""
+    operator_username: str | None = None

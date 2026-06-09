@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     routes_audit,
+    routes_crm,
     routes_demo,
     routes_events,
     routes_knowledge,
@@ -43,6 +44,7 @@ def health_check():
 app.include_router(routes_demo.router)
 app.include_router(routes_profile.router)
 app.include_router(routes_leads.router)
+app.include_router(routes_crm.router)
 app.include_router(routes_projects.router)
 app.include_router(routes_events.router)
 app.include_router(routes_reports.router)

@@ -8,10 +8,18 @@ type Lead = { id: number; customer_name: string; status: string };
 type LeadDetail = {
   id: number;
   customer_name: string;
-  contact_info: string;
-  background_info: string;
+  contact_info: string | null;
+  background_info: string | null;
   status: string;
 };
+type TimelineItem = {
+  type: string;
+  title: string;
+  content: string;
+  created_at: string | null;
+  meta: Record<string, unknown>;
+};
+type DisplayTimelineItem = { time: string; title: string; detail: string; taskId?: number; taskStatus?: string };
 
 const statusMap: Record<string, string> = {
   new: "新线索",
@@ -20,7 +28,29 @@ const statusMap: Record<string, string> = {
   consulting: "咨询中",
   converted: "已成交",
   lost: "暂缓/流失",
+  新增意向: "新增意向",
 };
+
+function formatTimelineTime(raw: string | null) {
+  if (!raw) {
+    return "刚刚";
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return raw;
+  }
+  return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function normalizeTimeline(items: TimelineItem[]): DisplayTimelineItem[] {
+  return items.map((item) => ({
+    time: formatTimelineTime(item.created_at),
+    title: item.title,
+    detail: item.content,
+    taskId: typeof item.meta.task_id === "number" ? item.meta.task_id : undefined,
+    taskStatus: typeof item.meta.status === "string" ? item.meta.status : undefined,
+  }));
+}
 
 export default function LeadsPage({ onNavigate }: PageProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -29,13 +59,17 @@ export default function LeadsPage({ onNavigate }: PageProps) {
   const [keyword, setKeyword] = useState("");
   const [message, setMessage] = useState("正在加载真实 CRM 线索...");
   const [followUpText, setFollowUpText] = useState("家长关注新加坡本科费用，希望周末参加说明会。");
-  const [localTimeline, setLocalTimeline] = useState(crmTimeline);
+  const [taskTitle, setTaskTitle] = useState("邀约客户参加周末说明会");
+  const [timeline, setTimeline] = useState<DisplayTimelineItem[]>(crmTimeline.map((item) => ({ time: item.time, title: item.title, detail: item.detail })));
 
   async function load() {
     setMessage("正在刷新真实线索...");
     try {
       const data = await apiRequest<Lead[]>("/api/leads");
       setLeads(data);
+      if (data.length && !data.some((item) => item.id === selectedId)) {
+        setSelectedId(data[0].id);
+      }
       setMessage(data.length ? "真实 CRM 线索已加载" : "真实接口返回空列表，展示原型样例");
     } catch (error) {
       setLeads([]);
@@ -51,25 +85,87 @@ export default function LeadsPage({ onNavigate }: PageProps) {
     }
   }
 
+  async function loadTimeline(leadId: number) {
+    try {
+      const data = await apiRequest<TimelineItem[]>(`/api/leads/${leadId}/timeline`);
+      setTimeline(data.length ? normalizeTimeline(data) : []);
+    } catch {
+      setTimeline([]);
+    }
+  }
+
+  async function refreshSelectedLead(leadId = selectedId) {
+    await Promise.all([loadDetail(leadId), loadTimeline(leadId)]);
+  }
+
   async function updateStatus(status: string) {
     setMessage("正在调用真实状态流转接口...");
     try {
       await apiRequest(`/api/leads/${selectedId}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, reason: "CRM 页面快捷阶段流转", operator_username: "admin" }),
       });
       setMessage(`状态已更新为：${statusMap[status] ?? status}`);
-      setLocalTimeline((items) => [{ time: "刚刚", title: "状态流转", detail: `通过真实 API 更新为 ${statusMap[status] ?? status}` }, ...items]);
       await load();
-      await loadDetail(selectedId);
+      await refreshSelectedLead();
     } catch (error) {
       setMessage(error instanceof Error ? `状态更新失败：${error.message}` : "状态更新失败");
     }
   }
 
-  function addFollowUp() {
-    setLocalTimeline((items) => [{ time: "刚刚", title: "新增跟进（原型）", detail: followUpText }, ...items]);
-    setMessage("跟进已追加到前端原型时间线，后端跟进 API 后续阶段实现");
+  async function addFollowUp() {
+    if (!followUpText.trim()) {
+      setMessage("请先填写跟进内容");
+      return;
+    }
+    setMessage("正在写入真实跟进记录...");
+    try {
+      await apiRequest(`/api/leads/${selectedId}/follow-ups`, {
+        method: "POST",
+        body: JSON.stringify({
+          follow_type: "电话",
+          content: followUpText,
+          next_action: taskTitle,
+          operator_username: "admin",
+        }),
+      });
+      setMessage("跟进已写入后端，并进入真实时间线");
+      await refreshSelectedLead();
+    } catch (error) {
+      setMessage(error instanceof Error ? `新增跟进失败：${error.message}` : "新增跟进失败");
+    }
+  }
+
+  async function createTask() {
+    if (!taskTitle.trim()) {
+      setMessage("请先填写任务标题");
+      return;
+    }
+    setMessage("正在创建真实 CRM 任务...");
+    try {
+      await apiRequest("/api/crm/tasks", {
+        method: "POST",
+        body: JSON.stringify({ lead_id: selectedId, title: taskTitle, owner_username: "admin" }),
+      });
+      setMessage("任务已创建，并进入真实时间线");
+      await refreshSelectedLead();
+    } catch (error) {
+      setMessage(error instanceof Error ? `创建任务失败：${error.message}` : "创建任务失败");
+    }
+  }
+
+  async function completeTask(taskId: number) {
+    setMessage("正在完成真实 CRM 任务...");
+    try {
+      await apiRequest(`/api/crm/tasks/${taskId}/complete`, {
+        method: "PATCH",
+        body: JSON.stringify({ operator_username: "admin" }),
+      });
+      setMessage("任务已完成，并写入审计日志");
+      await refreshSelectedLead();
+    } catch (error) {
+      setMessage(error instanceof Error ? `完成任务失败：${error.message}` : "完成任务失败");
+    }
   }
 
   useEffect(() => {
@@ -77,7 +173,7 @@ export default function LeadsPage({ onNavigate }: PageProps) {
   }, []);
 
   useEffect(() => {
-    loadDetail(selectedId);
+    refreshSelectedLead(selectedId);
   }, [selectedId]);
 
   const rows = useMemo(() => {
@@ -97,6 +193,7 @@ export default function LeadsPage({ onNavigate }: PageProps) {
   }, [keyword, leads]);
 
   const selected = rows.find((item) => item.id === selectedId) ?? rows[0] ?? crmPrototypeRows[0];
+  const pendingTasks = timeline.filter((item) => item.taskId && item.title === "创建任务" && item.taskStatus !== "已完成");
 
   return (
     <div className="page-stack">
@@ -104,7 +201,7 @@ export default function LeadsPage({ onNavigate }: PageProps) {
         <div>
           <p className="eyebrow">完整 CRM</p>
           <h2>线索列表、详情、跟进时间线和阶段流转</h2>
-          <p>列表和状态更新优先调用一期真实 API；跟进、任务、活动和画像详情先以原型数据补齐交互。</p>
+          <p>线索详情、跟进、任务、阶段历史和时间线已优先接入真实后端，接口失败时展示明确空态。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={load}>
@@ -164,8 +261,8 @@ export default function LeadsPage({ onNavigate }: PageProps) {
 
         <aside className="panel-block detail-panel">
           <div className="section-title">
-            <h3>{selected.customer_name}</h3>
-            <span className="status-pill success">{selected.statusLabel}</span>
+            <h3>{detail?.customer_name ?? selected.customer_name}</h3>
+            <span className="status-pill success">{statusMap[detail?.status ?? selected.status] ?? selected.statusLabel}</span>
           </div>
           <dl className="detail-list">
             <div>
@@ -189,23 +286,48 @@ export default function LeadsPage({ onNavigate }: PageProps) {
           </div>
 
           <label className="stacked-input">
-            <span>新增跟进（原型）</span>
+            <span>新增跟进</span>
             <textarea value={followUpText} onChange={(event) => setFollowUpText(event.target.value)} rows={3} />
           </label>
-          <button className="icon-button" onClick={addFollowUp}>
-            <CheckCircle2 size={16} aria-hidden="true" />
-            追加跟进
-          </button>
+          <label className="stacked-input">
+            <span>下一步任务</span>
+            <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} />
+          </label>
+          <div className="inline-actions">
+            <button className="icon-button" onClick={addFollowUp}>
+              <CheckCircle2 size={16} aria-hidden="true" />
+              写入跟进
+            </button>
+            <button className="icon-button secondary" onClick={createTask}>
+              <Plus size={16} aria-hidden="true" />
+              创建任务
+            </button>
+          </div>
         </aside>
       </section>
 
       <section className="panel-block">
         <div className="section-title">
-          <h3>客户时间线</h3>
+          <h3>真实客户时间线</h3>
           <span>创建、画像、问答、跟进、状态变化、活动报名</span>
         </div>
+        {pendingTasks.length > 0 && (
+          <div className="task-list">
+            {pendingTasks.map((task) => (
+              <article className="task-row" key={task.taskId}>
+                <div>
+                  <strong>{task.detail}</strong>
+                  <span>待办任务 / 来源真实 CRM API</span>
+                </div>
+                <button className="ghost-button" onClick={() => completeTask(task.taskId!)}>
+                  完成
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
         <div className="timeline">
-          {localTimeline.map((item, index) => (
+          {timeline.map((item, index) => (
             <article key={`${item.time}-${item.title}-${index}`}>
               <span>{item.time}</span>
               <div>
@@ -214,6 +336,7 @@ export default function LeadsPage({ onNavigate }: PageProps) {
               </div>
             </article>
           ))}
+          {!timeline.length && <div className="empty-state">当前线索暂无真实时间线记录。</div>}
         </div>
       </section>
     </div>
