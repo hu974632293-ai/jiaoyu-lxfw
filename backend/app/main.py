@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import routes_demo, routes_events, routes_knowledge, routes_leads, routes_profile, routes_projects, routes_reports
 from app.core.config import settings
@@ -6,6 +7,14 @@ from app.core.database import init_db
 from app.core.response import ok
 
 app = FastAPI(title=settings.app_name)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
