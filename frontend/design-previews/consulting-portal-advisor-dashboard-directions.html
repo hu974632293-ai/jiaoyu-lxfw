@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>官网首页与顾问后台 UI 方向</title>
+    <style>
+      :root {
+        color: #172033;
+        background: #eef2f5;
+        font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #eef2f5;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      .preview-shell {
+        display: grid;
+        gap: 28px;
+        padding: 28px;
+      }
+
+      .preview-intro {
+        max-width: 1100px;
+      }
+
+      .preview-intro h1,
+      .preview-intro p,
+      .direction h2,
+      .direction h3,
+      .direction p {
+        margin: 0;
+      }
+
+      .preview-intro h1 {
+        font-size: 30px;
+        letter-spacing: 0;
+      }
+
+      .preview-intro p {
+        margin-top: 8px;
+        color: #627085;
+        line-height: 1.7;
+      }
+
+      .direction {
+        --ink: #172033;
+        --muted: #68758a;
+        --line: #dde5ef;
+        --panel: #ffffff;
+        --soft: #f6f8fb;
+        --accent: #1f6fb2;
+        --accent-2: #0f8a6b;
+        --warn: #bf6a24;
+        color: var(--ink);
+        display: grid;
+        gap: 18px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--board, #ffffff);
+        box-shadow: 0 18px 46px rgba(31, 45, 61, 0.11);
+      }
+
+      .direction-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: end;
+      }
+
+      .direction-head h2 {
+        font-size: 24px;
+        letter-spacing: 0;
+      }
+
+      .direction-head p {
+        max-width: 860px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .tags span {
+        padding: 7px 10px;
+        border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+        border-radius: 999px;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .screen {
+        overflow: hidden;
+        min-height: 640px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--screen, var(--panel));
+      }
+
+      .screen-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 92%, var(--soft));
+      }
+
+      .screen-label strong {
+        font-size: 15px;
+      }
+
+      .screen-label span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .portal,
+      .dashboard {
+        min-height: 588px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 18px 22px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        color: #fff;
+        background: var(--accent);
+      }
+
+      .links {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .pill-button {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--accent);
+        font-weight: 700;
+      }
+
+      .ghost-button {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 9px 13px;
+        color: var(--ink);
+        background: transparent;
+        font-weight: 700;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.04fr 0.96fr;
+        gap: 22px;
+        padding: 24px 28px 20px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .hero h3 {
+        font-size: 34px;
+        line-height: 1.14;
+        letter-spacing: 0;
+      }
+
+      .hero p {
+        margin-top: 14px;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .visual-card {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--panel) 86%, var(--soft));
+      }
+
+      .metric-row,
+      .process-row,
+      .client-row,
+      .task-row,
+      .mini-table-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .metric-row:last-child,
+      .process-row:last-child,
+      .client-row:last-child,
+      .task-row:last-child,
+      .mini-table-row:last-child {
+        border-bottom: 0;
+      }
+
+      .metric-row span,
+      .process-row span,
+      .client-row span,
+      .task-row span,
+      .mini-table-row span,
+      .small-muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric-row b,
+      .process-row b,
+      .client-row b,
+      .task-row b,
+      .mini-table-row b {
+        font-size: 13px;
+      }
+
+      .section-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        padding: 0 28px 28px;
+      }
+
+      .service-tile {
+        min-height: 118px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      .service-tile strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .service-tile p {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 148px minmax(0, 1fr);
+      }
+
+      .side {
+        padding: 18px 14px;
+        border-right: 1px solid var(--line);
+        background: var(--side, color-mix(in srgb, var(--panel) 88%, var(--soft)));
+      }
+
+      .side .brand {
+        margin-bottom: 20px;
+      }
+
+      .menu {
+        display: grid;
+        gap: 8px;
+      }
+
+      .menu span {
+        padding: 9px 10px;
+        border-radius: 9px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .menu .active {
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+        font-weight: 800;
+      }
+
+      .work {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-width: 0;
+      }
+
+      .work-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .work-top h3 {
+        font-size: 18px;
+      }
+
+      .work-top p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
+      .work-grid {
+        display: grid;
+        grid-template-columns: 1.18fr 0.82fr;
+        gap: 14px;
+        padding: 16px;
+      }
+
+      .panel {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      .panel h4 {
+        margin: 0 0 12px;
+        font-size: 14px;
+      }
+
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .stage {
+        min-height: 86px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--soft);
+      }
+
+      .stage strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .stage span {
+        display: block;
+        margin-top: 8px;
+        color: var(--accent);
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .form-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .input-like,
+      .textarea-like {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--soft);
+        color: var(--muted);
+        padding: 10px 11px;
+        font-size: 12px;
+      }
+
+      .textarea-like {
+        min-height: 82px;
+      }
+
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .option-1 {
+        --board: #f4f0e8;
+        --screen: #fbf8f1;
+        --panel: #fffdf8;
+        --soft: #f4efe5;
+        --line: #ded2bf;
+        --ink: #253241;
+        --muted: #756b5d;
+        --accent: #8c5f2c;
+        --accent-2: #2f7d68;
+      }
+
+      .option-1 .hero {
+        background:
+          linear-gradient(115deg, rgba(255, 253, 248, 0.96), rgba(255, 253, 248, 0.76)),
+          linear-gradient(135deg, #f7eddc, #d8e7dd);
+      }
+
+      .option-2 {
+        --board: #edf3f8;
+        --screen: #f8fbfe;
+        --panel: #ffffff;
+        --soft: #eef5fb;
+        --line: #d4e0eb;
+        --ink: #162231;
+        --muted: #5f6f82;
+        --accent: #165d9d;
+        --accent-2: #0b7f77;
+      }
+
+      .option-2 .hero {
+        background:
+          linear-gradient(120deg, rgba(248, 251, 254, 0.96), rgba(248, 251, 254, 0.6)),
+          linear-gradient(135deg, #dcecf8, #e4f4ee);
+      }
+
+      .option-3 {
+        --board: #f1f2f4;
+        --screen: #fafafa;
+        --panel: #ffffff;
+        --soft: #f0f2f5;
+        --line: #d7dce2;
+        --ink: #191d24;
+        --muted: #666f7c;
+        --accent: #2d4e73;
+        --accent-2: #8a6a2f;
+      }
+
+      .option-3 .hero {
+        background:
+          linear-gradient(115deg, rgba(250, 250, 250, 0.96), rgba(250, 250, 250, 0.7)),
+          linear-gradient(135deg, #e7ebf0, #efe9dc);
+      }
+
+      @media (max-width: 1100px) {
+        .screens,
+        .hero,
+        .work-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .screen {
+          min-height: auto;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .preview-shell {
+          padding: 16px;
+        }
+
+        .direction {
+          padding: 16px;
+        }
+
+        .direction-head {
+          grid-template-columns: 1fr;
+        }
+
+        .tags {
+          justify-content: flex-start;
+        }
+
+        .links {
+          display: none;
+        }
+
+        .section-strip,
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+
+        .side {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .pipeline {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="preview-shell">
+      <section class="preview-intro">
+        <h1>官网首页 + 顾问后台：3 套 UI 方向</h1>
+        <p>
+          这份预览只用于选择风格，不接入正式 React 路由。三套都遵守“公开官网门户 + 登录入口 + 顾问客户增长后台”的边界：官网不展示内部 CRM，顾问后台保留新建线索、研判、推荐、跟进和客户 360 入口。
+        </p>
+      </section>
+
+      <section class="direction option-1">
+        <div class="direction-head">
+          <div>
+            <h2>方向 1：温润咨询品牌</h2>
+            <p>更像一家可信教育咨询机构，官网重视信任和服务路径；后台采用紧凑但不压迫的客户经营界面，适合给客户、家长和内部团队都留下“专业但有人情味”的第一印象。</p>
+          </div>
+          <div class="tags"><span>品牌信任</span><span>低压咨询</span><span>成熟顾问</span></div>
+        </div>
+
+        <div class="screens">
+          <article class="screen">
+            <div class="screen-label"><strong>官网首页效果</strong><span>建立信任 -> 解释服务 -> 引导咨询</span></div>
+            <div class="portal">
+              <nav class="nav">
+                <div class="brand"><span class="brand-mark">E</span>启航教育服务</div>
+                <div class="links"><span>企业介绍</span><span>业务服务</span><span>项目课程</span><span>活动讲座</span><button class="ghost-button">登录后台</button></div>
+              </nav>
+              <section class="hero">
+                <div>
+                  <p class="eyebrow">教育咨询品牌门户</p>
+                  <h3>把升学规划、项目选择和后续服务做成一条清晰路径</h3>
+                  <p>面向学生和家长，先解释服务范围，再通过咨询、项目和活动承接真实意向。公开页面只展示可信信息，不暴露内部运营数据。</p>
+                  <div class="hero-actions"><button class="pill-button">立即咨询</button><button class="ghost-button">查看项目</button><button class="ghost-button">活动报名</button></div>
+                </div>
+                <div class="visual-card">
+                  <div class="process-row"><b>01 服务匹配</b><span>留学规划 / 项目咨询</span></div>
+                  <div class="process-row"><b>02 背景评估</b><span>顾问跟进</span></div>
+                  <div class="process-row"><b>03 项目推荐</b><span>可解释建议</span></div>
+                  <div class="process-row"><b>04 后续服务</b><span>申请与学生支持</span></div>
+                </div>
+              </section>
+              <div class="section-strip">
+                <div class="service-tile"><strong>德国双元制</strong><p>适合重视实践路径和职业发展的学生，入口以咨询和说明会为主。</p></div>
+                <div class="service-tile"><strong>新加坡升学</strong><p>围绕预算、语言、专业方向和申请周期做快速匹配。</p></div>
+                <div class="service-tile"><strong>客服 Agent</strong><p>回答公司、业务、政策、FAQ 和活动问题，保留 fallback 说明。</p></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screen">
+            <div class="screen-label"><strong>顾问后台效果</strong><span>线索录入 + 研判 + 跟进闭环</span></div>
+            <div class="dashboard">
+              <aside class="side">
+                <div class="brand"><span class="brand-mark">顾</span>客户增长</div>
+                <div class="menu"><span class="active">增长队列</span><span>新建线索</span><span>客户 360</span><span>跟进任务</span><span>活动报名</span></div>
+              </aside>
+              <section class="work">
+                <div class="work-top">
+                  <div><h3>今日客户增长</h3><p>优先处理新线索、待研判和下一步跟进。</p></div>
+                  <button class="pill-button">新建线索</button>
+                </div>
+                <div class="work-grid">
+                  <div class="panel">
+                    <h4>增长漏斗</h4>
+                    <div class="pipeline">
+                      <div class="stage"><strong>新线索</strong><span>18</span></div>
+                      <div class="stage"><strong>已研判</strong><span>12</span></div>
+                      <div class="stage"><strong>咨询中</strong><span>9</span></div>
+                      <div class="stage"><strong>邀约活动</strong><span>6</span></div>
+                      <div class="stage"><strong>成交</strong><span>3</span></div>
+                    </div>
+                    <div class="client-row"><b>李同学 / 新加坡本硕</b><span class="status-chip">高潜</span></div>
+                    <div class="client-row"><b>张同学 / 德国双元制</b><span class="status-chip">待跟进</span></div>
+                    <div class="client-row"><b>王同学 / 语言提升</b><span class="status-chip">邀约</span></div>
+                  </div>
+                  <div class="panel">
+                    <h4>快速录入</h4>
+                    <div class="form-stack">
+                      <div class="input-like">客户姓名 / 联系方式</div>
+                      <div class="textarea-like">粘贴客户背景资料，触发画像研判</div>
+                      <button class="pill-button">保存并研判</button>
+                    </div>
+                    <div class="task-row"><b>下一步</b><span>创建跟进任务</span></div>
+                    <div class="task-row"><b>推荐</b><span>新加坡本硕路径</span></div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="direction option-2">
+        <div class="direction-head">
+          <div>
+            <h2>方向 2：清爽数据增长</h2>
+            <p>官网更现代、轻快，强调服务效率和可追踪；后台更像 SaaS 增长中台，信息密度更高，适合你后续接入 Ant Design 做表格、筛选、抽屉和任务流。</p>
+          </div>
+          <div class="tags"><span>现代 SaaS</span><span>高信息密度</span><span>适合 Ant Design</span></div>
+        </div>
+
+        <div class="screens">
+          <article class="screen">
+            <div class="screen-label"><strong>官网首页效果</strong><span>清爽、年轻、强调行动入口</span></div>
+            <div class="portal">
+              <nav class="nav">
+                <div class="brand"><span class="brand-mark">A</span>Atlas Edu</div>
+                <div class="links"><span>服务</span><span>项目</span><span>讲座</span><span>FAQ</span><button class="ghost-button">后台登录</button></div>
+              </nav>
+              <section class="hero">
+                <div>
+                  <p class="eyebrow">公开获客门户</p>
+                  <h3>用一次咨询，把学生背景、项目方向和活动报名串起来</h3>
+                  <p>首页突出咨询转化、热门项目和活动报名，让潜在客户用最少步骤完成判断和留资。</p>
+                  <div class="hero-actions"><button class="pill-button">开始咨询</button><button class="ghost-button">匹配项目</button><button class="ghost-button">近期活动</button></div>
+                </div>
+                <div class="visual-card">
+                  <div class="metric-row"><b>本周咨询</b><span>126</span></div>
+                  <div class="metric-row"><b>活动报名</b><span>42</span></div>
+                  <div class="metric-row"><b>热门方向</b><span>新加坡 / 德国 / 语言</span></div>
+                  <div class="metric-row"><b>FAQ 状态</b><span>Dify fallback 可用</span></div>
+                </div>
+              </section>
+              <div class="section-strip">
+                <div class="service-tile"><strong>咨询入口</strong><p>姓名、联系方式、目标国家和预算，快速沉淀为线索。</p></div>
+                <div class="service-tile"><strong>项目入口</strong><p>用卡片和筛选突出适合人群、周期、费用和材料。</p></div>
+                <div class="service-tile"><strong>活动入口</strong><p>说明会、招生官见面会和政策讲座直接报名。</p></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screen">
+            <div class="screen-label"><strong>顾问后台效果</strong><span>更接近业务系统，可直接扩展表格和筛选</span></div>
+            <div class="dashboard">
+              <aside class="side">
+                <div class="brand"><span class="brand-mark">CRM</span></div>
+                <div class="menu"><span class="active">客户增长</span><span>线索池</span><span>研判中心</span><span>任务</span><span>报告</span></div>
+              </aside>
+              <section class="work">
+                <div class="work-top">
+                  <div><h3>顾问增长工作台</h3><p>筛选客户、触发研判、创建跟进和进入客户 360。</p></div>
+                  <button class="pill-button">+ 新建线索</button>
+                </div>
+                <div class="work-grid">
+                  <div class="panel">
+                    <h4>客户队列</h4>
+                    <div class="mini-table-row"><b>客户 / 推荐项目</b><span>阶段</span></div>
+                    <div class="mini-table-row"><b>陈同学 - 新加坡本科</b><span class="status-chip">咨询中</span></div>
+                    <div class="mini-table-row"><b>刘同学 - 德国双元制</b><span class="status-chip">待研判</span></div>
+                    <div class="mini-table-row"><b>赵同学 - 背景提升</b><span class="status-chip">活动邀约</span></div>
+                    <div class="mini-table-row"><b>周同学 - 语言培训</b><span class="status-chip">跟进</span></div>
+                  </div>
+                  <div class="panel">
+                    <h4>研判与任务</h4>
+                    <div class="metric-row"><b>今日待研判</b><span>7</span></div>
+                    <div class="metric-row"><b>高潜客户</b><span>11</span></div>
+                    <div class="metric-row"><b>逾期跟进</b><span>2</span></div>
+                    <div class="form-stack">
+                      <div class="textarea-like">粘贴客户资料或上传来源文件</div>
+                      <button class="pill-button">触发画像研判</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="direction option-3">
+        <div class="direction-head">
+          <div>
+            <h2>方向 3：稳重专家机构</h2>
+            <p>视觉更克制、权威，适合强调政策、升学路径和机构可信度。后台布局更像“专家服务台”，操作少但重点明确，适合后续给管理者和老师后台保持统一政企感。</p>
+          </div>
+          <div class="tags"><span>稳重政企</span><span>专家可信</span><span>低装饰</span></div>
+        </div>
+
+        <div class="screens">
+          <article class="screen">
+            <div class="screen-label"><strong>官网首页效果</strong><span>权威、清晰、减少视觉噪音</span></div>
+            <div class="portal">
+              <nav class="nav">
+                <div class="brand"><span class="brand-mark">信</span>诚育国际教育</div>
+                <div class="links"><span>机构</span><span>服务</span><span>政策</span><span>活动</span><button class="ghost-button">后台入口</button></div>
+              </nav>
+              <section class="hero">
+                <div>
+                  <p class="eyebrow">国际教育服务机构</p>
+                  <h3>以可追踪流程，降低家庭升学决策的不确定性</h3>
+                  <p>通过公开服务说明、政策 FAQ、项目咨询和线下讲座建立信任；内部客户研判和跟进只在顾问后台处理。</p>
+                  <div class="hero-actions"><button class="pill-button">预约顾问</button><button class="ghost-button">查看服务</button><button class="ghost-button">政策 FAQ</button></div>
+                </div>
+                <div class="visual-card">
+                  <div class="process-row"><b>服务范围</b><span>升学 / 语言 / 活动 / 学生支持</span></div>
+                  <div class="process-row"><b>公开材料</b><span>项目说明、费用、周期、FAQ</span></div>
+                  <div class="process-row"><b>留资方式</b><span>咨询表单、活动报名</span></div>
+                  <div class="process-row"><b>内部承接</b><span>顾问后台跟进</span></div>
+                </div>
+              </section>
+              <div class="section-strip">
+                <div class="service-tile"><strong>政策咨询</strong><p>集中回答国家、院校、申请条件和材料问题。</p></div>
+                <div class="service-tile"><strong>项目规划</strong><p>以适合人群和验收结果来组织项目信息。</p></div>
+                <div class="service-tile"><strong>活动讲座</strong><p>用正式、可信的报名入口承接线下转化。</p></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screen">
+            <div class="screen-label"><strong>顾问后台效果</strong><span>稳重、任务优先、减少无关噪音</span></div>
+            <div class="dashboard">
+              <aside class="side">
+                <div class="brand"><span class="brand-mark">服</span>顾问服务</div>
+                <div class="menu"><span class="active">今日待办</span><span>线索登记</span><span>客户档案</span><span>研判记录</span><span>报告快照</span></div>
+              </aside>
+              <section class="work">
+                <div class="work-top">
+                  <div><h3>客户服务台</h3><p>按今日必须推进的客户任务组织页面。</p></div>
+                  <button class="pill-button">登记客户</button>
+                </div>
+                <div class="work-grid">
+                  <div class="panel">
+                    <h4>今日重点客户</h4>
+                    <div class="client-row"><b>高潜客户：林同学</b><span>进入 360</span></div>
+                    <div class="client-row"><b>待补资料：许同学</b><span>创建任务</span></div>
+                    <div class="client-row"><b>活动邀约：德国说明会</b><span>发送邀请</span></div>
+                    <div class="client-row"><b>阶段更新：咨询中 -> 方案确认</b><span>记录</span></div>
+                  </div>
+                  <div class="panel">
+                    <h4>客户录入</h4>
+                    <div class="form-stack">
+                      <div class="input-like">客户姓名</div>
+                      <div class="input-like">手机号 / 微信</div>
+                      <div class="textarea-like">目标国家、成绩、预算、家庭关注点</div>
+                      <button class="pill-button">保存线索</button>
+                    </div>
+                    <div class="task-row"><b>建议</b><span>保存后触发研判</span></div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
