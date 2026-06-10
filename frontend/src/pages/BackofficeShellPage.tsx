@@ -1,11 +1,11 @@
-import { FileText, RefreshCw, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import Phase2AssistantsPage from "./Phase2AssistantsPage";
 import ReportsPage from "./ReportsPage";
-import SystemAdminPage from "./SystemAdminPage";
+import SystemDemoPage from "./SystemDemoPage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
@@ -30,7 +30,7 @@ const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent>
   operations: OperationsResourcesPage,
   reports: ReportsPage,
   assistants: Phase2AssistantsPage,
-  systemDemo: SystemAdminPage,
+  systemDemo: SystemDemoPage,
 };
 
 const legacyPageMap: Record<PageKey, BackofficePageKey> = {
@@ -101,14 +101,6 @@ export default function BackofficeShellPage({
           </label>
           <button className="ghost-button" onClick={onLogout}>
             退出到官网
-          </button>
-          <a className="icon-button secondary" href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer" title="打开 OpenAPI">
-            <FileText size={16} aria-hidden="true" />
-            OpenAPI
-          </a>
-          <button className="icon-button" onClick={onSeedDemo} title="调用 POST /api/demo/seed 初始化演示数据">
-            <RefreshCw size={16} aria-hidden="true" />
-            初始化演示数据
           </button>
         </div>
       </header>
