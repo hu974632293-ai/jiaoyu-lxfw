@@ -4,6 +4,7 @@ import { apiRequest } from "./api/client";
 import DashboardPage from "./pages/DashboardPage";
 import EnterpriseAssistantPage from "./pages/EnterpriseAssistantPage";
 import LeadsPage from "./pages/LeadsPage";
+import LoginPage from "./pages/LoginPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import PublicPortalPage from "./pages/PublicPortalPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -113,31 +114,7 @@ export default function App() {
   }
 
   if (mode === "login") {
-    return (
-      <main className="login-shell">
-        <section>
-          <p className="eyebrow">登录入口占位</p>
-          <h1>演示角色进入后台生产力工具</h1>
-          <p>Task 1 先建立登录层。真实账号、Token、会话管理和后端权限校验属于后续 V2/V3 增强。</p>
-          <button className="ghost-button" onClick={logoutToPortal}>
-            返回官网
-          </button>
-        </section>
-        <section className="login-panel">
-          <h2>选择演示角色</h2>
-          <div className="role-login-grid">
-            {roleOptions.map((option) => (
-              <button className="nav-item" key={option.key} onClick={() => enterBackoffice(option.key)}>
-                <span>
-                  <strong>{option.label}</strong>
-                  <small>{option.focus}</small>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      </main>
-    );
+    return <LoginPage onLogin={enterBackoffice} onBackToPortal={logoutToPortal} />;
   }
 
   return (

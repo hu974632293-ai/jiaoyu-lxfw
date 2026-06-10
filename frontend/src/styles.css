@@ -340,6 +340,12 @@ button:disabled {
   background: #f6f8fb;
 }
 
+.login-intro {
+  display: grid;
+  gap: 16px;
+  max-width: 720px;
+}
+
 .login-panel {
   border: 1px solid var(--line);
   background: white;
@@ -355,6 +361,61 @@ button:disabled {
 .role-login-grid {
   display: grid;
   gap: 10px;
+}
+
+.role-login-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #dde4eb;
+  background: #fbfdff;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+}
+
+.role-login-card:hover {
+  border-color: #b9d3ea;
+  background: #edf6ff;
+}
+
+.role-login-card svg {
+  color: var(--blue);
+  margin-top: 2px;
+}
+
+.role-login-card span {
+  display: grid;
+  gap: 4px;
+}
+
+.role-login-card small,
+.login-disclaimer,
+.login-note-list {
+  color: var(--muted);
+}
+
+.login-note-list {
+  display: grid;
+  gap: 8px;
+}
+
+.login-note-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-note-list svg {
+  color: var(--green);
+}
+
+.login-disclaimer {
+  margin: 14px 0 0;
+  line-height: 1.7;
+  font-size: 13px;
 }
 
 .topbar {
