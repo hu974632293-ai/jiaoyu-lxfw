@@ -83,6 +83,25 @@ def _ensure_sqlite_compatible_columns():
                 "checked_in_at": "DATETIME",
             },
         )
+    if "knowledge_chat_log" in table_names:
+        _add_missing_columns(
+            "knowledge_chat_log",
+            {column["name"] for column in inspector.get_columns("knowledge_chat_log")},
+            {
+                "scene": "VARCHAR(64) DEFAULT 'customer_service'",
+                "fallback_reason": "TEXT DEFAULT ''",
+            },
+        )
+    if "knowledge_source" in table_names:
+        _add_missing_columns(
+            "knowledge_source",
+            {column["name"] for column in inspector.get_columns("knowledge_source")},
+            {
+                "scene": "VARCHAR(64) DEFAULT 'customer_service'",
+                "owner": "VARCHAR(64) DEFAULT ''",
+                "description": "TEXT DEFAULT ''",
+            },
+        )
 
 
 def _add_missing_columns(table_name: str, existing_columns: set[str], required_columns: dict[str, str]) -> None:

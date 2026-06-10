@@ -11,9 +11,11 @@ class KnowledgeChatLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     lead_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("crm_lead.id"))
+    scene: Mapped[str] = mapped_column(String(64), default="customer_service")
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, default="")
     citations: Mapped[str] = mapped_column(Text, default="[]")
     dify_conversation_id: Mapped[str] = mapped_column(String(128), default="")
     status: Mapped[str] = mapped_column(String(32), default="success")
+    fallback_reason: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
