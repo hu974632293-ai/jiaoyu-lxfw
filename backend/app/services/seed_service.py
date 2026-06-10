@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.models.assistant import KnowledgeSource
+from app.models.enterprise import OrganizationUnit
 from app.models.event import EventLecture
 from app.models.lead import CrmLead
 from app.models.operation import AuditLog, Notification
@@ -21,6 +22,13 @@ DEFAULT_KNOWLEDGE_SOURCES = [
     ("留学政策", "policy", "留学政策", "教研部", "新加坡、德国等方向政策资料。", "启用"),
     ("新人指南", "enterprise_guide", "企业新人指南", "人事部", "入职流程、组织架构和制度说明。", "待同步"),
     ("海外生活", "student_life", "学生生活支持", "学生服务部", "海外医疗、交通和紧急求助说明。", "待同步"),
+]
+
+DEFAULT_ORG_UNITS = [
+    ("总经理办公室", "部门", "总部统筹 / 8000", 1),
+    ("升学规划部", "部门", "升学咨询 / 8010", 2),
+    ("双元制事业部", "部门", "赵凯 / 企业微信 / 8012", 3),
+    ("学生服务部", "部门", "周老师 / 企业微信 / 8020", 4),
 ]
 
 
@@ -69,6 +77,17 @@ def seed_demo_data(db: Session):
                 )
             )
 
+    if db.query(OrganizationUnit).count() == 0:
+        for unit_name, unit_type, contact_info, sort_order in DEFAULT_ORG_UNITS:
+            db.add(
+                OrganizationUnit(
+                    unit_name=unit_name,
+                    unit_type=unit_type,
+                    contact_info=contact_info,
+                    sort_order=sort_order,
+                )
+            )
+
     db.commit()
     ensure_default_admin_data(db)
     return {
@@ -81,4 +100,5 @@ def seed_demo_data(db: Session):
         "events": db.query(EventLecture).count(),
         "leads": db.query(CrmLead).count(),
         "knowledge_sources": db.query(KnowledgeSource).count(),
+        "organization_units": db.query(OrganizationUnit).count(),
     }
