@@ -1,4 +1,17 @@
-import { ArrowRight, Building2, CalendarDays, CheckCircle2, HelpCircle, Mail, Phone, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  Compass,
+  HelpCircle,
+  Mail,
+  MapPinned,
+  NotebookPen,
+  Phone,
+  Route,
+  Sparkles,
+} from "lucide-react";
 import { eventPrototypeRows, projectRows, publicFaqs, publicServices, publicTrustPoints } from "../data/prototype";
 import { publicNavItems } from "../navigation";
 import type { PublicPageKey } from "../navigation";
@@ -19,6 +32,19 @@ const pageTitle: Record<PublicPageKey, string> = {
   contact: "联系我们",
 };
 
+const homepagePathSteps = [
+  { no: "01", title: "了解目标", desc: "国家、预算、阶段、孩子当前状态" },
+  { no: "02", title: "判断路径", desc: "升学、就业、语言或背景提升优先级" },
+  { no: "03", title: "匹配项目", desc: "用公开项目摘要形成初步选择" },
+  { no: "04", title: "顾问承接", desc: "提交咨询后进入一对一跟进" },
+];
+
+const homepageAtlasItems = [
+  { title: "新加坡方向", desc: "本科衔接、短周期、家长咨询高频" },
+  { title: "德国方向", desc: "双元制、语言准备、就业导向" },
+  { title: "多国家支持", desc: "语言培训、背景提升、行前服务" },
+];
+
 export default function PublicPortalPage({ activePage, onNavigate, onLogin }: PublicPortalPageProps) {
   return (
     <main className="public-shell brand-portal">
@@ -31,7 +57,7 @@ export default function PublicPortalPage({ activePage, onNavigate, onLogin }: Pu
           {publicNavItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button className={activePage === item.key ? "active" : ""} onClick={() => onNavigate(item.key)}>
+              <button key={item.key} className={activePage === item.key ? "active" : ""} onClick={() => onNavigate(item.key)}>
                 <Icon size={16} aria-hidden="true" />
                 {item.label}
               </button>
@@ -56,80 +82,138 @@ export default function PublicPortalPage({ activePage, onNavigate, onLogin }: Pu
 
 function HomePage({ onNavigate, onLogin }: Pick<PublicPortalPageProps, "onNavigate" | "onLogin">) {
   return (
-    <div className="public-page-stack">
-      <section className="public-hero premium-hero">
-        <div className="public-hero-copy">
-          <p className="eyebrow">教育咨询品牌门户</p>
-          <h1>把升学规划、项目选择和后续服务做成一条清晰路径</h1>
+    <div className="homepage-editorial">
+      <section className="editorial-hero" aria-label="官网首页首屏">
+        <div className="editorial-hero-copy">
+          <p className="eyebrow">LXF STUDY PATH JOURNAL</p>
+          <h1>把复杂升学选择，整理成一条家长和学生都看得懂的路线。</h1>
           <p>
-            面向学生、家长和合作方，提供留学规划、国际本科、德国双元制、语言培训、背景提升和学生服务支持。公开官网用于建立信任、解释服务并发起咨询。
+            澜桥国际教育面向学生、家长和合作方，提供留学规划、国际本科、德国双元制、语言培训、背景提升和学生服务支持。官网只承接公开咨询与项目了解，内部跟进留在登录后的业务后台。
           </p>
-          <div className="public-actions">
+          <div className="public-actions editorial-actions">
             <button className="icon-button" onClick={() => onNavigate("contact")}>
               预约一对一咨询
               <ArrowRight size={16} aria-hidden="true" />
             </button>
             <button className="icon-button secondary" onClick={() => onNavigate("publicProjects")}>
-              查看适合项目
+              查看项目方向
             </button>
             <button className="ghost-button" onClick={onLogin}>
               登录后台
             </button>
           </div>
+          <div className="editorial-proof-row" aria-label="官网信任提示">
+            <span>规划评估</span>
+            <span>项目匹配</span>
+            <span>活动报名</span>
+            <span>学生服务</span>
+          </div>
         </div>
-        <aside className="public-hero-visual">
-          <div className="hero-photo" />
-          <div className="agent-card">
-            <Sparkles size={18} aria-hidden="true" />
-            <strong>客服 Agent 在线</strong>
-            <span>回答业务、政策、项目、活动和 FAQ；未配置 Dify 时保留 fallback。</span>
+
+        <aside className="editorial-hero-scene" aria-label="升学路径视觉">
+          <div className="editorial-photo-frame" />
+          <div className="editorial-note-card">
+            <NotebookPen size={18} aria-hidden="true" />
+            <strong>顾问手记</strong>
+            <span>先判断路径是否适合，再讨论项目和材料。</span>
+          </div>
+          <div className="editorial-agent-bubble">
+            <Sparkles size={17} aria-hidden="true" />
+            <span>客服 Agent 回答业务、政策、项目、活动和 FAQ。</span>
+          </div>
+          <div className="editorial-route-card">
+            {homepagePathSteps.map((step) => (
+              <article key={step.no}>
+                <b>{step.no}</b>
+                <strong>{step.title}</strong>
+                <span>{step.desc}</span>
+              </article>
+            ))}
           </div>
         </aside>
       </section>
 
-      <section className="public-conversion-strip" aria-label="咨询路径">
-        <article>
-          <strong>1. 说明服务</strong>
-          <span>先了解公司、业务、项目和活动。</span>
-        </article>
-        <article>
-          <strong>2. 提交咨询</strong>
-          <span>留下目标国家、预算、阶段和联系方式。</span>
-        </article>
-        <article>
-          <strong>3. 顾问承接</strong>
-          <span>进入客户增长后台完成研判和跟进。</span>
-        </article>
+      <section className="editorial-journey" aria-label="咨询路径">
+        <div className="editorial-section-copy">
+          <p className="eyebrow">咨询不是填表结束</p>
+          <h2>我们先把家庭决策拆开，再把下一步交给顾问承接。</h2>
+        </div>
+        <div className="journey-rail">
+          {publicTrustPoints.map((item, index) => (
+            <article key={item.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <strong>{item.title}</strong>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
-      <SectionHeader eyebrow="核心服务" title="以家庭决策为中心组织服务入口" actionLabel="全部服务" onAction={() => onNavigate("services")} />
-      <ServiceGrid />
+      <section className="editorial-services" aria-label="核心服务">
+        <div className="editorial-section-copy">
+          <p className="eyebrow">核心服务</p>
+          <h2>不是把项目摆满，而是帮你判断哪条路值得继续看。</h2>
+        </div>
+        <div className="service-ledger">
+          {publicServices.slice(0, 4).map((item) => (
+            <article key={item.title}>
+              <span>{item.audience}</span>
+              <strong>{item.title}</strong>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+        <button className="ghost-button editorial-link-button" onClick={() => onNavigate("services")}>
+          查看全部服务
+          <ArrowRight size={13} aria-hidden="true" />
+        </button>
+      </section>
 
-      <SectionHeader eyebrow="信任建立" title="用清晰流程降低陌生访客决策成本" />
-      <div className="public-trust-grid">
-        {publicTrustPoints.map((item) => (
-          <article>
-            <CheckCircle2 size={18} aria-hidden="true" />
-            <strong>{item.title}</strong>
-            <p>{item.desc}</p>
-          </article>
-        ))}
-      </div>
+      <section className="global-atlas" aria-label="全球项目地图">
+        <div className="atlas-copy">
+          <p className="eyebrow">GLOBAL ATLAS</p>
+          <h2>从目标目的地，展开一套升学方案。</h2>
+          <p>
+            当前官网只展示方向性项目摘要，不伪造院校合作、录取率或真实案例。后续项目库丰富后，这里可以升级成完整的项目探索地图。
+          </p>
+          <button className="icon-button secondary" onClick={() => onNavigate("publicProjects")}>
+            查看公开项目
+            <MapPinned size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="atlas-visual" aria-hidden="true">
+          <span className="atlas-pin one" />
+          <span className="atlas-pin two" />
+          <span className="atlas-pin three" />
+          <div className="atlas-orbit" />
+          <Compass className="atlas-compass" size={74} />
+        </div>
+        <div className="atlas-items">
+          {homepageAtlasItems.map((item) => (
+            <article key={item.title}>
+              <Route size={17} aria-hidden="true" />
+              <strong>{item.title}</strong>
+              <span>{item.desc}</span>
+            </article>
+          ))}
+        </div>
+      </section>
 
-      <section className="public-two-column">
-        <div>
-          <SectionHeader eyebrow="热门项目" title="公开可见的项目/课程摘要" actionLabel="查看项目" onAction={() => onNavigate("publicProjects")} />
+      <section className="homepage-conversion-board" aria-label="项目活动和咨询转化">
+        <div className="homepage-featured-list">
+          <SectionHeader eyebrow="项目摘要" title="先看方向，再预约顾问判断" actionLabel="查看项目" onAction={() => onNavigate("publicProjects")} />
           <ProjectPreview />
         </div>
-        <div>
-          <SectionHeader eyebrow="近期活动" title="讲座和说明会承接报名需求" actionLabel="活动报名" onAction={() => onNavigate("publicEvents")} />
+        <div className="homepage-featured-list">
+          <SectionHeader eyebrow="近期活动" title="用说明会降低第一次咨询成本" actionLabel="活动报名" onAction={() => onNavigate("publicEvents")} />
           <EventPreview />
         </div>
       </section>
 
-      <section className="public-two-column">
+      <section className="homepage-final-row">
         <div>
-          <SectionHeader eyebrow="FAQ" title="回答高频问题，保留 fallback 说明" actionLabel="更多 FAQ" onAction={() => onNavigate("faq")} />
+          <SectionHeader eyebrow="FAQ" title="先回答高频问题，复杂情况再交给顾问" actionLabel="更多 FAQ" onAction={() => onNavigate("faq")} />
           <FaqPreview />
         </div>
         <ContactCard onNavigate={onNavigate} />
@@ -238,7 +322,7 @@ function ServiceGrid({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-card-grid">
       {rows.map((item) => (
-        <article className="public-card">
+        <article className="public-card" key={item.title}>
           <strong>{item.title}</strong>
           <p>{item.desc}</p>
           <span>{item.audience}</span>
@@ -253,7 +337,7 @@ function ProjectPreview({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-list">
       {rows.map((item) => (
-        <article>
+        <article key={item.name}>
           <div>
             <strong>{item.name}</strong>
             <span>{item.country} / {item.category}</span>
@@ -271,7 +355,7 @@ function EventPreview({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-list">
       {rows.map((item) => (
-        <article>
+        <article key={item.name}>
           <div>
             <strong>{item.name}</strong>
             <span>{item.type} / {item.target}</span>
@@ -289,7 +373,7 @@ function FaqPreview({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-faq-list">
       {rows.map((item) => (
-        <article>
+        <article key={item.question}>
           <HelpCircle size={17} aria-hidden="true" />
           <div>
             <strong>{item.question}</strong>
