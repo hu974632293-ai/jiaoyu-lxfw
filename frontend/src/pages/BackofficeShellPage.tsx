@@ -1,7 +1,8 @@
 import { FileText, RefreshCw, ShieldCheck } from "lucide-react";
+import Customer360Page from "./Customer360Page";
+import CustomerGrowthPage from "./CustomerGrowthPage";
 import EnterpriseAssistantPage from "./EnterpriseAssistantPage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
-import LeadsPage from "./LeadsPage";
 import ProjectsPage from "./ProjectsPage";
 import ReportsPage from "./ReportsPage";
 import SystemAdminPage from "./SystemAdminPage";
@@ -23,11 +24,9 @@ type BackofficeShellPageProps = {
 };
 
 type BackofficeComponent = (props: PageProps) => JSX.Element;
-type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview">;
+type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "customerGrowth" | "customer360">;
 
 const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
-  customerGrowth: LeadsPage,
-  customer360: LeadsPage,
   operations: ProjectsPage,
   reports: ReportsPage,
   assistants: EnterpriseAssistantPage,
@@ -67,6 +66,12 @@ export default function BackofficeShellPage({
   function renderCurrentPage() {
     if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
+    }
+    if (activePage === "customerGrowth") {
+      return <CustomerGrowthPage onNavigate={onNavigate} />;
+    }
+    if (activePage === "customer360") {
+      return <Customer360Page selectedLeadId={selectedLeadId} onNavigate={onNavigate} />;
     }
 
     const CurrentPage = backofficeComponents[activePage];

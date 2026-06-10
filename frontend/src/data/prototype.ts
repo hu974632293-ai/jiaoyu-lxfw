@@ -31,6 +31,20 @@ export const growthFocusItems = [
   { leadId: 3, title: "陈浩设置长期培育提醒", meta: "预算不足 / 3 个月后再触达", priority: "低" },
 ];
 
+export const pipelineStages = [
+  { label: "新线索", count: 12 },
+  { label: "已画像", count: 9 },
+  { label: "咨询中", count: 15 },
+  { label: "活动邀约", count: 7 },
+  { label: "成交/流失", count: 6 },
+];
+
+export const customerAdviceItems = [
+  { title: "先确认预算上限", detail: "王晨家长关注费用，下一次回访需要补齐预算区间和可接受付款节奏。" },
+  { title: "匹配活动邀约", detail: "推荐优先邀约新加坡升学说明会，再根据反馈判断是否进入项目方案沟通。" },
+  { title: "补充风险说明", detail: "客户 360 中应保留 Dify fallback 与规则画像结论，避免把 AI 建议当作最终承诺。" },
+];
+
 export const workflowCards = [
   {
     key: "crm",
