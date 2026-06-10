@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Filter, RefreshCw, Users } from "lucide-react";
+import { ArrowRight, ClipboardList, Filter, RefreshCw, Sparkles, UserPlus, Users } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { crmPrototypeRows, pipelineStages } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
 
 type Lead = { id: number; customer_name: string; status: string };
+type LeadCreated = { id: number };
+type AssessmentResult = {
+  assessment_id: number;
+  matched_project: string;
+  singapore_score: number;
+  germany_score: number;
+  missing_fields: string[];
+};
 
 type CustomerGrowthPageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
@@ -25,6 +33,11 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [message, setMessage] = useState("正在加载客户增长队列...");
+  const [customerName, setCustomerName] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [sourceText, setSourceText] = useState("19岁 高中毕业 希望新加坡升学，家长关注预算和就业前景。");
+  const [createdId, setCreatedId] = useState<number | null>(null);
+  const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
 
   async function load() {
     setMessage("正在刷新真实客户队列...");
@@ -41,6 +54,54 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   useEffect(() => {
     load();
   }, []);
+
+  async function createLead() {
+    const name = customerName.trim();
+    if (!name) {
+      setMessage("请先填写客户姓名");
+      return;
+    }
+    setMessage("正在新建线索...");
+    try {
+      const data = await apiRequest<LeadCreated>("/api/leads", {
+        method: "POST",
+        body: JSON.stringify({
+          customer_name: name,
+          contact_info: contactInfo.trim(),
+          background_info: sourceText.trim(),
+          owner_id: 1,
+        }),
+      });
+      setCreatedId(data.id);
+      setMessage("新建线索成功，可继续触发研判或进入客户 360");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? `新建线索失败：${error.message}` : "新建线索失败");
+    }
+  }
+
+  async function assessLead() {
+    const rawInput = sourceText.trim();
+    if (!rawInput) {
+      setMessage("请先粘贴资料");
+      return;
+    }
+    setMessage("正在触发研判...");
+    try {
+      const data = await apiRequest<AssessmentResult>("/api/profile/assess", {
+        method: "POST",
+        body: JSON.stringify({
+          lead_id: createdId,
+          raw_input: rawInput,
+          source_type: "text",
+        }),
+      });
+      setAssessment(data);
+      setMessage(`触发研判完成，推荐：${data.matched_project || "待补充资料"}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? `触发研判失败：${error.message}` : "触发研判失败");
+    }
+  }
 
   const rows = useMemo(() => {
     const realRows = leads.map((lead) => {
@@ -68,13 +129,75 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         <div>
           <p className="eyebrow">客户增长</p>
           <h2>从新线索到成交/流失的增长队列</h2>
-          <p>这里聚焦 CRM 流水线、客户队列和下一步推进；单个客户的画像、咨询、任务、活动和报告进入客户 360。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={load}>
             <RefreshCw size={16} aria-hidden="true" />
             刷新队列
           </button>
+        </div>
+      </section>
+
+      <section className="split-layout secondary">
+        <div className="panel-block">
+          <div className="section-title">
+            <h3>新建线索</h3>
+            <UserPlus size={18} aria-hidden="true" />
+          </div>
+          <div className="form-grid compact">
+            <label className="stacked-input">
+              <span>客户姓名</span>
+              <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="例如：王晨" />
+            </label>
+            <label className="stacked-input">
+              <span>联系方式</span>
+              <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机号 / 微信 / 邮箱" />
+            </label>
+          </div>
+          <label className="stacked-input">
+            <span>粘贴资料</span>
+            <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={4} />
+          </label>
+          <div className="inline-actions">
+            <button className="icon-button" onClick={createLead}>
+              <UserPlus size={16} aria-hidden="true" />
+              新建线索
+            </button>
+            <button className="icon-button secondary" onClick={assessLead}>
+              <Sparkles size={16} aria-hidden="true" />
+              触发研判
+            </button>
+            {createdId ? (
+              <button className="ghost-button" onClick={() => onNavigate("customer360", createdId)}>
+                客户 360 <ArrowRight size={13} aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="panel-block">
+          <div className="section-title">
+            <h3>研判结果</h3>
+            <ClipboardList size={18} aria-hidden="true" />
+          </div>
+          {assessment ? (
+            <dl className="detail-list">
+              <div>
+                <dt>推荐项目</dt>
+                <dd>{assessment.matched_project || "待补充资料"}</dd>
+              </div>
+              <div>
+                <dt>匹配评分</dt>
+                <dd>新加坡 {assessment.singapore_score} / 德国 {assessment.germany_score}</dd>
+              </div>
+              <div>
+                <dt>缺失字段</dt>
+                <dd>{assessment.missing_fields.join("、") || "暂无"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="empty-state">新建或粘贴资料后可触发研判。</div>
+          )}
         </div>
       </section>
 
