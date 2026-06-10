@@ -1,21 +1,10 @@
-import { useMemo, useState } from "react";
-import { FileText, RefreshCw, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { apiRequest } from "./api/client";
-import DashboardPage from "./pages/DashboardPage";
-import EnterpriseAssistantPage from "./pages/EnterpriseAssistantPage";
-import LeadsPage from "./pages/LeadsPage";
+import BackofficeShellPage from "./pages/BackofficeShellPage";
 import LoginPage from "./pages/LoginPage";
-import ProjectsPage from "./pages/ProjectsPage";
 import PublicPortalPage from "./pages/PublicPortalPage";
-import ReportsPage from "./pages/ReportsPage";
-import SystemAdminPage from "./pages/SystemAdminPage";
-import { roleOptions } from "./data/prototype";
 import type { RoleKey } from "./data/prototype";
-import {
-  backofficeNavItems,
-  roleDefaultPage,
-  roleVisiblePages,
-} from "./navigation";
+import { roleDefaultPage } from "./navigation";
 import type { AppMode, BackofficePageKey, PublicPageKey } from "./navigation";
 
 export type PageKey =
@@ -36,30 +25,6 @@ export type PageProps = {
   seedStatus: string;
 };
 
-type BackofficeComponent = (props: PageProps) => JSX.Element;
-
-const backofficeComponents: Record<BackofficePageKey, BackofficeComponent> = {
-  growthOverview: DashboardPage,
-  customerGrowth: LeadsPage,
-  customer360: LeadsPage,
-  operations: ProjectsPage,
-  reports: ReportsPage,
-  assistants: EnterpriseAssistantPage,
-  systemDemo: SystemAdminPage,
-};
-
-const legacyPageMap: Record<PageKey, BackofficePageKey> = {
-  dashboard: "growthOverview",
-  crm: "customerGrowth",
-  projects: "operations",
-  events: "operations",
-  enterprise: "assistants",
-  student: "assistants",
-  knowledge: "operations",
-  reports: "reports",
-  admin: "systemDemo",
-};
-
 export default function App() {
   const [mode, setMode] = useState<AppMode>("public");
   const [publicPage, setPublicPage] = useState<PublicPageKey>("home");
@@ -67,11 +32,6 @@ export default function App() {
   const [role, setRole] = useState<RoleKey>("admin");
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(1);
   const [seedStatus, setSeedStatus] = useState("演示数据未初始化");
-
-  const currentRole = roleOptions.find((item) => item.key === role) ?? roleOptions[0];
-  const visiblePages = useMemo(() => roleVisiblePages[role], [role]);
-  const current = backofficeNavItems.find((page) => page.key === backofficePage) ?? backofficeNavItems[0];
-  const CurrentPage = backofficeComponents[backofficePage];
 
   function openLogin() {
     setMode("login");
@@ -95,10 +55,6 @@ export default function App() {
     setBackofficePage(page);
   }
 
-  function navigateLegacy(page: PageKey) {
-    navigateBackoffice(legacyPageMap[page]);
-  }
-
   async function seedDemo() {
     setSeedStatus("正在初始化演示数据...");
     try {
@@ -118,89 +74,15 @@ export default function App() {
   }
 
   return (
-    <main className="workspace-shell">
-      <header className="topbar">
-        <div className="brand">
-          <ShieldCheck size={26} aria-hidden="true" />
-          <div>
-            <h1>教育服务运营工作台</h1>
-            <p>登录后后台：客户增长流水线与角色生产力工具</p>
-          </div>
-        </div>
-        <div className="top-actions">
-          <label className="role-switcher">
-            <span>当前角色</span>
-            <select value={role} onChange={(event) => enterBackoffice(event.target.value as RoleKey)}>
-              {roleOptions.map((option) => (
-                <option value={option.key} key={option.key}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="ghost-button" onClick={logoutToPortal}>
-            退出到官网
-          </button>
-          <a className="icon-button secondary" href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer" title="打开 OpenAPI">
-            <FileText size={16} aria-hidden="true" />
-            OpenAPI
-          </a>
-          <button className="icon-button" onClick={seedDemo} title="调用 POST /api/demo/seed 初始化演示数据">
-            <RefreshCw size={16} aria-hidden="true" />
-            初始化演示数据
-          </button>
-        </div>
-      </header>
-
-      <section className="status-strip" aria-label="系统状态">
-        <span className="status-pill success">Dify 状态：fallback 可用</span>
-        <span className="status-pill">角色重点：{currentRole.focus}</span>
-        <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span>
-        <span className={seedStatus.includes("成功") ? "status-pill success" : seedStatus.includes("失败") || seedStatus.includes("请求") ? "status-pill danger" : "status-pill"}>
-          {seedStatus}
-        </span>
-      </section>
-
-      <div className="workspace-grid">
-        <aside className="sidebar" aria-label="后台一级导航">
-          {backofficeNavItems.map((item) => {
-            const Icon = item.icon;
-            const disabled = !visiblePages.includes(item.key);
-            return (
-              <button
-                className={backofficePage === item.key ? "nav-item active" : "nav-item"}
-                disabled={disabled}
-                key={item.key}
-                onClick={() => navigateBackoffice(item.key)}
-                title={disabled ? `${currentRole.label}角色暂不展示该入口` : item.desc}
-              >
-                <Icon size={18} aria-hidden="true" />
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{disabled ? "当前角色隐藏" : item.desc}</small>
-                </span>
-              </button>
-            );
-          })}
-        </aside>
-
-        <section className="content-frame">
-          <CurrentPage role={role} onNavigate={navigateLegacy} onSeedDemo={seedDemo} seedStatus={seedStatus} />
-        </section>
-
-        <aside className="context-panel" aria-label="后台上下文">
-          <div className="context-block">
-            <h2>当前上下文</h2>
-            <p className="muted">角色：{currentRole.label}</p>
-            <p className="muted">模块：{current.label}</p>
-            <p className="muted">客户 ID：{selectedLeadId ?? "未选择"}</p>
-            <div className="compact-card">
-              <strong>Task 1 说明</strong>
-              <span>旧后台页面暂时复用；客户 360 和后台壳层会在后续 Task 拆分。</span>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </main>
+    <BackofficeShellPage
+      role={role}
+      activePage={backofficePage}
+      selectedLeadId={selectedLeadId}
+      onNavigate={navigateBackoffice}
+      onRoleChange={enterBackoffice}
+      onLogout={logoutToPortal}
+      onSeedDemo={seedDemo}
+      seedStatus={seedStatus}
+    />
   );
 }
