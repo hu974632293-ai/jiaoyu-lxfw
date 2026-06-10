@@ -5,8 +5,9 @@ import GrowthOverviewPage from "./GrowthOverviewPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
 import SystemDemoPage from "./SystemDemoPage";
-import EnterpriseAssistantPage from "./EnterpriseAssistantPage";
-import StudentAssistantPage from "./StudentAssistantPage";
+import EmployeeWorkspacePage from "./EmployeeWorkspacePage";
+import TeacherStudentServicePage from "./TeacherStudentServicePage";
+import StudentServicePage from "./StudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
@@ -28,9 +29,9 @@ type BackofficeComponent = (props: PageProps) => JSX.Element;
 type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "customerGrowth" | "customer360" | "managementDashboard">;
 
 const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
-  employeeWorkspace: EnterpriseAssistantPage,
-  teacherStudentService: StudentAssistantPage,
-  studentService: StudentAssistantPage,
+  employeeWorkspace: EmployeeWorkspacePage,
+  teacherStudentService: TeacherStudentServicePage,
+  studentService: StudentServicePage,
   systemGovernance: SystemDemoPage,
   operations: OperationsResourcesPage,
   reports: ReportsPage,

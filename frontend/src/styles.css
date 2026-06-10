@@ -800,6 +800,61 @@ td span {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.role-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.role-action-card {
+  display: grid;
+  gap: 8px;
+  min-height: 118px;
+  padding: 14px;
+  text-align: left;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.role-action-card:hover {
+  border-color: #b9d3ea;
+  background: #edf6ff;
+}
+
+.role-action-card svg {
+  color: var(--blue);
+}
+
+.role-action-card strong {
+  font-size: 17px;
+}
+
+.role-action-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.guide-list {
+  display: grid;
+  gap: 10px;
+}
+
+.guide-list article {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  background: var(--soft);
+  border: 1px solid #e1e6ec;
+  border-radius: 6px;
+}
+
+.guide-list span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .workflow-card {
   border: 1px solid #dce3ea;
   background: #fbfdff;
@@ -1460,6 +1515,7 @@ textarea {
   .customer-overview-grid,
   .operations-resource-grid,
   .assistant-entry-grid,
+  .role-action-grid,
   .recent-customer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1483,6 +1539,7 @@ textarea {
   .public-trust-grid,
   .workflow-grid,
   .quick-command-grid,
+  .role-action-grid,
   .service-grid,
   .parameter-grid,
   .role-grid,
@@ -1499,6 +1556,7 @@ textarea {
   .customer-overview-grid,
   .operations-resource-grid,
   .assistant-entry-grid,
+  .role-action-grid,
   .recent-customer-grid {
     grid-template-columns: 1fr;
   }
