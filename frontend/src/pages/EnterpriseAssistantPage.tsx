@@ -95,7 +95,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
       ]);
       setMessage(data.status === "fallback" ? "已使用企业指南 fallback" : "企业助手 API 调用成功");
       if (data.intent === "create_lead" || data.intent === "update_lead_status") {
-        onNavigate("crm");
+        onNavigate("customerGrowth");
       }
     } catch (error) {
       setMessages((items) => [
@@ -187,7 +187,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
             <RefreshCw size={16} aria-hidden="true" />
             刷新数据
           </button>
-          <button className="icon-button secondary" onClick={() => onNavigate("crm")}>查看客户增长</button>
+          <button className="icon-button secondary" onClick={() => onNavigate("customerGrowth")}>查看客户增长</button>
           <button className="icon-button" onClick={() => onNavigate("reports")}>日报汇总报告</button>
         </div>
       </section>

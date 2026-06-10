@@ -7,20 +7,9 @@ import type { RoleKey } from "./data/prototype";
 import { roleDefaultPage } from "./navigation";
 import type { AppMode, BackofficePageKey, PublicPageKey } from "./navigation";
 
-export type PageKey =
-  | "dashboard"
-  | "crm"
-  | "projects"
-  | "events"
-  | "enterprise"
-  | "student"
-  | "knowledge"
-  | "reports"
-  | "admin";
-
 export type PageProps = {
   role: RoleKey;
-  onNavigate: (page: PageKey) => void;
+  onNavigate: (page: BackofficePageKey, leadId?: number) => void;
   onSeedDemo: () => Promise<void>;
   seedStatus: string;
 };

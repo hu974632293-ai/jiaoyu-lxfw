@@ -199,7 +199,7 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
             <RefreshCw size={16} aria-hidden="true" />
             刷新项目
           </button>
-          <button className="icon-button" onClick={() => onNavigate("crm")}>
+          <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>
             <ArrowRight size={16} aria-hidden="true" />
             查看相关客户
           </button>

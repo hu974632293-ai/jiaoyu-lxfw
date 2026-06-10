@@ -10,7 +10,7 @@ import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
 import type { BackofficePageKey } from "../navigation";
-import type { PageKey, PageProps } from "../App";
+import type { PageProps } from "../App";
 
 type BackofficeShellPageProps = {
   role: RoleKey;
@@ -33,18 +33,6 @@ const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent>
   systemDemo: SystemDemoPage,
 };
 
-const legacyPageMap: Record<PageKey, BackofficePageKey> = {
-  dashboard: "growthOverview",
-  crm: "customerGrowth",
-  projects: "operations",
-  events: "operations",
-  enterprise: "assistants",
-  student: "assistants",
-  knowledge: "operations",
-  reports: "reports",
-  admin: "systemDemo",
-};
-
 export default function BackofficeShellPage({
   role,
   activePage,
@@ -59,10 +47,6 @@ export default function BackofficeShellPage({
   const visiblePages = roleVisiblePages[role];
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? backofficeNavItems[0];
 
-  function navigateLegacy(page: PageKey) {
-    onNavigate(legacyPageMap[page]);
-  }
-
   function renderCurrentPage() {
     if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
@@ -75,7 +59,7 @@ export default function BackofficeShellPage({
     }
 
     const CurrentPage = backofficeComponents[activePage];
-    return <CurrentPage role={role} onNavigate={navigateLegacy} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    return <CurrentPage role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
   }
 
   return (

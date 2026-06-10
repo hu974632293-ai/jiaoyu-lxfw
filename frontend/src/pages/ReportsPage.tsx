@@ -156,7 +156,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
             ))}
             {!reports.length && <div className="empty-state">暂无报告快照，点击生成报告后出现。</div>}
           </div>
-          <button className="icon-button secondary full-width" onClick={() => onNavigate("crm")}>跳转相关客户</button>
+          <button className="icon-button secondary full-width" onClick={() => onNavigate("customerGrowth")}>跳转相关客户</button>
         </aside>
       </section>
     </div>

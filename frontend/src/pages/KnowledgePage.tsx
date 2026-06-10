@@ -194,7 +194,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
             <RefreshCw size={16} aria-hidden="true" />
             刷新知识库
           </button>
-          <button className="icon-button" onClick={() => onNavigate("crm")}>关联客户</button>
+          <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>关联客户</button>
         </div>
       </section>
 
