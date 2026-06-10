@@ -3,7 +3,7 @@ import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
 import EnterpriseAssistantPage from "./EnterpriseAssistantPage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
-import ProjectsPage from "./ProjectsPage";
+import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
 import SystemAdminPage from "./SystemAdminPage";
 import { roleOptions } from "../data/prototype";
@@ -27,7 +27,7 @@ type BackofficeComponent = (props: PageProps) => JSX.Element;
 type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "customerGrowth" | "customer360">;
 
 const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
-  operations: ProjectsPage,
+  operations: OperationsResourcesPage,
   reports: ReportsPage,
   assistants: EnterpriseAssistantPage,
   systemDemo: SystemAdminPage,
