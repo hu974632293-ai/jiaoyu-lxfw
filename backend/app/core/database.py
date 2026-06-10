@@ -44,19 +44,55 @@ def _ensure_sqlite_compatible_columns():
     if not settings.database_url.startswith("sqlite"):
         return
     inspector = inspect(engine)
-    if "course_project" not in inspector.get_table_names():
-        return
-    existing_columns = {column["name"] for column in inspector.get_columns("course_project")}
-    required_columns = {
-        "cost_range": "VARCHAR(64) DEFAULT ''",
-        "duration": "VARCHAR(64) DEFAULT ''",
-        "admission_requirements": "TEXT DEFAULT ''",
-        "tags": "TEXT DEFAULT '[]'",
-        "recommendation_rule": "TEXT DEFAULT ''",
-        "knowledge_source": "VARCHAR(128) DEFAULT ''",
-        "status": "VARCHAR(32) DEFAULT '招生中'",
+    table_names = set(inspector.get_table_names())
+    if "course_project" in table_names:
+        _add_missing_columns(
+            "course_project",
+            {column["name"] for column in inspector.get_columns("course_project")},
+            {
+                "cost_range": "VARCHAR(64) DEFAULT ''",
+                "duration": "VARCHAR(64) DEFAULT ''",
+                "admission_requirements": "TEXT DEFAULT ''",
+                "tags": "TEXT DEFAULT '[]'",
+                "recommendation_rule": "TEXT DEFAULT ''",
+                "knowledge_source": "VARCHAR(128) DEFAULT ''",
+                "status": "VARCHAR(32) DEFAULT '招生中'",
+            },
+        )
+    if "event_lecture" in table_names:
+        _add_missing_columns(
+            "event_lecture",
+            {column["name"] for column in inspector.get_columns("event_lecture")},
+            {
+                "target_audience": "VARCHAR(255) DEFAULT ''",
+                "speaker": "VARCHAR(64) DEFAULT ''",
+                "status": "VARCHAR(32) DEFAULT '草稿'",
+                "description": "TEXT DEFAULT ''",
+            },
+        )
+    if "event_registration" in table_names:
+        _add_missing_columns(
+            "event_registration",
+            {column["name"] for column in inspector.get_columns("event_registration")},
+            {
+                "subject_type": "VARCHAR(32) DEFAULT 'lead'",
+                "subject_id": "INTEGER",
+                "subject_name": "VARCHAR(64) DEFAULT ''",
+                "contact_info": "VARCHAR(255) DEFAULT ''",
+                "source_channel": "VARCHAR(64) DEFAULT ''",
+                "checked_in_at": "DATETIME",
+            },
+        )
+
+
+def _add_missing_columns(table_name: str, existing_columns: set[str], required_columns: dict[str, str]) -> None:
+    missing_columns = {
+        column_name: column_definition
+        for column_name, column_definition in required_columns.items()
+        if column_name not in existing_columns
     }
+    if not missing_columns:
+        return
     with engine.begin() as connection:
-        for column_name, column_definition in required_columns.items():
-            if column_name not in existing_columns:
-                connection.execute(text(f"ALTER TABLE course_project ADD COLUMN {column_name} {column_definition}"))
+        for column_name, column_definition in missing_columns.items():
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"))
