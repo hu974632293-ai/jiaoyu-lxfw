@@ -90,13 +90,9 @@ export default function BackofficeShellPage({
       </header>
 
       <section className="status-strip" aria-label="系统状态">
-        <span className="status-pill success">Dify 状态：fallback 可用</span>
         <span className="status-pill">角色重点：{currentRole.focus}</span>
         <span className="status-pill">当前模块：{current.label}</span>
         <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span>
-        <span className={seedStatus.includes("成功") ? "status-pill success" : seedStatus.includes("失败") || seedStatus.includes("请求") ? "status-pill danger" : "status-pill"}>
-          {seedStatus}
-        </span>
       </section>
 
       <div className="workspace-grid">
