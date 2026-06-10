@@ -1098,10 +1098,52 @@ td span {
   align-items: stretch;
 }
 
-.system-demo-grid .panel-block {
+.system-demo-grid .panel-block,
+.governance-control-grid .panel-block {
   display: grid;
   align-content: start;
   gap: 12px;
+}
+
+.management-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 14px;
+  align-items: start;
+}
+
+.management-report-grid,
+.governance-control-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.management-report-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.governance-control-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.management-report-grid article {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #e1e6ec;
+  background: var(--soft);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.management-report-grid span {
+  color: var(--green);
+  font-size: 13px;
+}
+
+.management-report-grid p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .customer-main-panel {
@@ -1494,6 +1536,7 @@ textarea {
   .system-demo-grid,
   .assistant-layout,
   .student-layout,
+  .management-layout,
   .knowledge-layout,
   .report-layout,
   .admin-grid {
@@ -1516,6 +1559,8 @@ textarea {
   .operations-resource-grid,
   .assistant-entry-grid,
   .role-action-grid,
+  .governance-control-grid,
+  .management-report-grid,
   .recent-customer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1557,6 +1602,8 @@ textarea {
   .operations-resource-grid,
   .assistant-entry-grid,
   .role-action-grid,
+  .governance-control-grid,
+  .management-report-grid,
   .recent-customer-grid {
     grid-template-columns: 1fr;
   }

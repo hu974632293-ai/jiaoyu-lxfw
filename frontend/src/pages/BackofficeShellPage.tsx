@@ -2,12 +2,14 @@ import { ShieldCheck } from "lucide-react";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
+import ManagementDashboardPage from "./ManagementDashboardPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
 import SystemDemoPage from "./SystemDemoPage";
 import EmployeeWorkspacePage from "./EmployeeWorkspacePage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import StudentServicePage from "./StudentServicePage";
+import SystemGovernancePage from "./SystemGovernancePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
@@ -32,7 +34,7 @@ const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent>
   employeeWorkspace: EmployeeWorkspacePage,
   teacherStudentService: TeacherStudentServicePage,
   studentService: StudentServicePage,
-  systemGovernance: SystemDemoPage,
+  systemGovernance: SystemGovernancePage,
   operations: OperationsResourcesPage,
   reports: ReportsPage,
   systemDemo: SystemDemoPage,
@@ -56,8 +58,11 @@ export default function BackofficeShellPage({
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
 
   function renderCurrentPage() {
-    if (activePage === "growthOverview" || activePage === "managementDashboard") {
+    if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
+    }
+    if (activePage === "managementDashboard") {
+      return <ManagementDashboardPage onNavigate={onNavigate} />;
     }
     if (activePage === "customerGrowth") {
       return <CustomerGrowthPage onNavigate={onNavigate} />;
