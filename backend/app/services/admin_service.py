@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -70,8 +71,13 @@ def ensure_default_admin_data(db: Session) -> None:
     if admin and admin_role and not db.query(SysUserRole).filter_by(user_id=admin.id, role_id=admin_role.id).first():
         db.add(SysUserRole(user_id=admin.id, role_id=admin_role.id))
 
-    if db.query(Notification).count() == 0:
-        for title, content, target_type, target_id in DEFAULT_NOTIFICATIONS:
+    for title, content, target_type, target_id in DEFAULT_NOTIFICATIONS:
+        notification = db.query(Notification).filter_by(title=title, target_type=target_type, target_id=target_id).first()
+        if notification:
+            notification.content = content
+            notification.status = "未读"
+            notification.created_at = datetime.utcnow()
+        else:
             db.add(Notification(title=title, content=content, target_type=target_type, target_id=target_id))
 
     db.commit()
@@ -201,7 +207,7 @@ def list_audit_logs(db: Session) -> list[dict[str, Any]]:
 
 def list_notifications(db: Session) -> list[dict[str, Any]]:
     users = {item.id: item for item in db.query(SysUser).all()}
-    notifications = db.query(Notification).order_by(Notification.id.desc()).limit(50).all()
+    notifications = db.query(Notification).order_by(Notification.created_at.desc(), Notification.id.desc()).limit(50).all()
     return [
         {
             "id": item.id,

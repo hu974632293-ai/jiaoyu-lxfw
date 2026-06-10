@@ -1,65 +1,124 @@
 from app.models.assistant import (
+    AgentActionLog,
+    AgentIntentLog,
+    AgentPromptConfig,
     AssistantConversation,
     AssistantIntentLog,
+    ControlledQueryLog,
+    DifyFallbackLog,
     KnowledgeSource,
     KnowledgeSyncJob,
     Nl2SqlQueryLog,
 )
-from app.models.crm import CrmFollowUp, CrmStageHistory, CrmTask
-from app.models.enterprise import EmployeeProfile, OrganizationUnit, WorkDailyReport
+from app.models.crm import CrmFollowUp, CrmStageHistory, CrmTask, LeadFollowUp, LeadStageHistory, LeadTask
+from app.models.enterprise import (
+    DailyReportSummary,
+    EmployeeDailyReport,
+    EmployeeDirectory,
+    EmployeeProfile,
+    OrganizationUnit,
+    WorkDailyReport,
+)
 from app.models.user import SysUser
-from app.models.lead import CrmLead, LeadProfileAssessment
-from app.models.project import CourseProject
-from app.models.event import EventLecture, EventRegistration
-from app.models.knowledge import KnowledgeChatLog
-from app.models.operation import AuditLog, EventCheckIn, Notification, ReportJob
+from app.models.lead import (
+    CrmLead,
+    Customer,
+    Lead,
+    LeadProfileAssessment,
+    LeadRecommendation,
+    LeadSourceFile,
+    ProfileRule,
+    ProfileRuleHit,
+)
+from app.models.project import CourseProject, ProjectMaterial, ProjectPathway, ProjectRule, ProjectTag
+from app.models.event import Event, EventCheckin, EventLecture, EventRegistration
+from app.models.knowledge import ChatMessage, ChatSession, KnowledgeChatLog, KnowledgeChunk
+from app.models.operation import AuditLog, EventCheckIn, Notification, ReportJob, TodoItem
 from app.models.permission import SysPermission, SysRole, SysRolePermission, SysUserRole
-from app.models.report import ReportSnapshot
+from app.models.report import ReportGenerationLog, RecommendationLog, ReportMetric, ReportSnapshot
 from app.models.student import (
     StudentAcademicEvent,
+    StudentAcademicNode,
+    StudentAdminService,
     StudentApplicationProgress,
     StudentFeedbackTicket,
     StudentGrade,
+    StudentLeaveApproval,
     StudentLeaveRequest,
     StudentProfile,
     StudentPsychAlert,
     StudentPsychProfile,
+    PsychFollowUp,
 )
 
 __all__ = [
+    "AgentActionLog",
+    "AgentIntentLog",
+    "AgentPromptConfig",
     "AssistantConversation",
     "AssistantIntentLog",
+    "ControlledQueryLog",
+    "DifyFallbackLog",
     "KnowledgeSource",
     "KnowledgeSyncJob",
     "Nl2SqlQueryLog",
     "CrmFollowUp",
     "CrmStageHistory",
     "CrmTask",
+    "LeadFollowUp",
+    "LeadStageHistory",
+    "LeadTask",
+    "DailyReportSummary",
+    "EmployeeDailyReport",
+    "EmployeeDirectory",
     "EmployeeProfile",
     "OrganizationUnit",
     "WorkDailyReport",
     "SysUser",
     "CrmLead",
+    "Customer",
+    "Lead",
     "LeadProfileAssessment",
+    "LeadRecommendation",
+    "LeadSourceFile",
+    "ProfileRule",
+    "ProfileRuleHit",
     "CourseProject",
+    "ProjectMaterial",
+    "ProjectPathway",
+    "ProjectRule",
+    "ProjectTag",
+    "Event",
+    "EventCheckin",
     "EventLecture",
     "EventRegistration",
+    "ChatMessage",
+    "ChatSession",
     "KnowledgeChatLog",
+    "KnowledgeChunk",
     "AuditLog",
     "EventCheckIn",
     "Notification",
     "ReportJob",
+    "TodoItem",
     "SysPermission",
     "SysRole",
     "SysRolePermission",
     "SysUserRole",
+    "ReportGenerationLog",
+    "RecommendationLog",
+    "ReportMetric",
     "ReportSnapshot",
     "StudentAcademicEvent",
+    "StudentAcademicNode",
+    "StudentAdminService",
     "StudentApplicationProgress",
     "StudentFeedbackTicket",
     "StudentGrade",
+    "StudentLeaveApproval",
     "StudentLeaveRequest",
     "StudentProfile",
     "StudentPsychAlert",
     "StudentPsychProfile",
+    "PsychFollowUp",
 ]

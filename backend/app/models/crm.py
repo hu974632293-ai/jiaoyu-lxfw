@@ -18,11 +18,36 @@ class CrmFollowUp(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class LeadFollowUp(Base):
+    __tablename__ = "lead_follow_up"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    lead_id: Mapped[int] = mapped_column(Integer, ForeignKey("lead.id"), nullable=False)
+    follow_type: Mapped[str] = mapped_column(String(32), default="电话")
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    next_action: Mapped[str] = mapped_column(Text, default="")
+    operator_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class CrmTask(Base):
     __tablename__ = "crm_task"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     lead_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("crm_lead.id"))
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    due_time: Mapped[datetime | None] = mapped_column(DateTime)
+    status: Mapped[str] = mapped_column(String(32), default="待处理")
+    owner_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class LeadTask(Base):
+    __tablename__ = "lead_task"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    lead_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("lead.id"))
     title: Mapped[str] = mapped_column(String(128), nullable=False)
     due_time: Mapped[datetime | None] = mapped_column(DateTime)
     status: Mapped[str] = mapped_column(String(32), default="待处理")
@@ -38,6 +63,18 @@ class CrmStageHistory(Base):
     lead_id: Mapped[int] = mapped_column(Integer, ForeignKey("crm_lead.id"), nullable=False)
     from_status: Mapped[str] = mapped_column(String(32), default="")
     to_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    operator_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class LeadStageHistory(Base):
+    __tablename__ = "lead_stage_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    lead_id: Mapped[int] = mapped_column(Integer, ForeignKey("lead.id"), nullable=False)
+    from_stage: Mapped[str] = mapped_column(String(32), default="")
+    to_stage: Mapped[str] = mapped_column(String(32), nullable=False)
     operator_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
     reason: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

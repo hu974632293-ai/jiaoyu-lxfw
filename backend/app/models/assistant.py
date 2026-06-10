@@ -34,6 +34,45 @@ class AssistantIntentLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class AgentIntentLog(Base):
+    __tablename__ = "agent_intent_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("chat_session.id"))
+    intent: Mapped[str] = mapped_column(String(64), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0)
+    parsed_payload: Mapped[str] = mapped_column(Text, default="{}")
+    status: Mapped[str] = mapped_column(String(32), default="识别完成")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AgentActionLog(Base):
+    __tablename__ = "agent_action_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    assistant_type: Mapped[str] = mapped_column(String(32), default="")
+    action_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(64), default="")
+    target_id: Mapped[int | None] = mapped_column(Integer)
+    payload_json: Mapped[str] = mapped_column(Text, default="{}")
+    status: Mapped[str] = mapped_column(String(32), default="success")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AgentPromptConfig(Base):
+    __tablename__ = "agent_prompt_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scene: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_text: Mapped[str] = mapped_column(Text, nullable=False)
+    version: Mapped[str] = mapped_column(String(32), default="v1")
+    status: Mapped[str] = mapped_column(String(32), default="启用")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Nl2SqlQueryLog(Base):
     __tablename__ = "nl2sql_query_log"
 
@@ -43,6 +82,30 @@ class Nl2SqlQueryLog(Base):
     sql_template: Mapped[str] = mapped_column(Text, default="")
     result_json: Mapped[str] = mapped_column(Text, default="{}")
     status: Mapped[str] = mapped_column(String(32), default="success")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ControlledQueryLog(Base):
+    __tablename__ = "controlled_query_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    sql_template: Mapped[str] = mapped_column(Text, default="")
+    result_json: Mapped[str] = mapped_column(Text, default="{}")
+    status: Mapped[str] = mapped_column(String(32), default="success")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class DifyFallbackLog(Base):
+    __tablename__ = "dify_fallback_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scene: Mapped[str] = mapped_column(String(64), default="")
+    request_text: Mapped[str] = mapped_column(Text, default="")
+    fallback_reason: Mapped[str] = mapped_column(Text, default="")
+    fallback_answer: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="fallback")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

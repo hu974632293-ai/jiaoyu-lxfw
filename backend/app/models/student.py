@@ -32,6 +32,33 @@ class StudentLeaveRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class StudentAdminService(Base):
+    __tablename__ = "student_admin_service"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("student_profile.id"), nullable=False)
+    service_type: Mapped[str] = mapped_column(String(64), default="请假")
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="待处理")
+    handler_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StudentLeaveApproval(Base):
+    __tablename__ = "student_leave_approval"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    service_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("student_admin_service.id"))
+    leave_request_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("student_leave_request.id"))
+    approver_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    approval_status: Mapped[str] = mapped_column(String(32), default="待审批")
+    approval_comment: Mapped[str] = mapped_column(Text, default="")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class StudentGrade(Base):
     __tablename__ = "student_grade"
 
@@ -51,6 +78,18 @@ class StudentAcademicEvent(Base):
     student_id: Mapped[int] = mapped_column(Integer, ForeignKey("student_profile.id"), nullable=False)
     event_name: Mapped[str] = mapped_column(String(128), nullable=False)
     event_type: Mapped[str] = mapped_column(String(32), default="考务")
+    due_time: Mapped[datetime | None] = mapped_column(DateTime)
+    status: Mapped[str] = mapped_column(String(32), default="未完成")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class StudentAcademicNode(Base):
+    __tablename__ = "student_academic_node"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("student_profile.id"), nullable=False)
+    node_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    node_type: Mapped[str] = mapped_column(String(32), default="考务")
     due_time: Mapped[datetime | None] = mapped_column(DateTime)
     status: Mapped[str] = mapped_column(String(32), default="未完成")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -105,4 +144,16 @@ class StudentPsychAlert(Base):
     status: Mapped[str] = mapped_column(String(32), default="待跟进")
     handler_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
     handled_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PsychFollowUp(Base):
+    __tablename__ = "psych_follow_up"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    alert_id: Mapped[int] = mapped_column(Integer, ForeignKey("student_psych_alert.id"), nullable=False)
+    handler_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    follow_up_content: Mapped[str] = mapped_column(Text, nullable=False)
+    next_step: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="已记录")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

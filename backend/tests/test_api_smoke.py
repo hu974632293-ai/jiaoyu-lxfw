@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.core.database import init_db
+from app.core.database import Base, init_db
 from app.main import app
 
 
@@ -95,3 +95,84 @@ def test_permission_role_audit_and_notification_api():
     notifications_payload = notifications_response.json()
     assert notifications_payload["code"] == 0
     assert any(item["title"] == "高潜客户需要今日回访" for item in notifications_payload["data"])
+
+
+def test_final_business_table_metadata_is_registered():
+    expected_tables = {
+        "sys_user",
+        "sys_role",
+        "sys_permission",
+        "sys_user_role",
+        "sys_role_permission",
+        "audit_log",
+        "notification",
+        "todo_item",
+        "customer",
+        "lead",
+        "lead_source_file",
+        "lead_profile_assessment",
+        "profile_rule",
+        "profile_rule_hit",
+        "lead_recommendation",
+        "lead_follow_up",
+        "lead_task",
+        "lead_stage_history",
+        "course_project",
+        "project_pathway",
+        "project_tag",
+        "project_rule",
+        "project_material",
+        "event",
+        "event_registration",
+        "event_checkin",
+        "knowledge_source",
+        "knowledge_chunk",
+        "chat_session",
+        "chat_message",
+        "agent_intent_log",
+        "agent_action_log",
+        "agent_prompt_config",
+        "controlled_query_log",
+        "dify_fallback_log",
+        "employee_profile",
+        "employee_daily_report",
+        "daily_report_summary",
+        "organization_unit",
+        "employee_directory",
+        "student_profile",
+        "student_admin_service",
+        "student_leave_approval",
+        "student_feedback_ticket",
+        "student_academic_node",
+        "student_application_progress",
+        "student_psych_profile",
+        "student_psych_alert",
+        "psych_follow_up",
+        "report_snapshot",
+        "report_metric",
+        "report_generation_log",
+        "recommendation_log",
+    }
+
+    assert expected_tables.issubset(set(Base.metadata.tables))
+
+
+def test_demo_seed_covers_final_business_domains():
+    response = client.post("/api/demo/seed")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 0
+    data = payload["data"]
+    for key in [
+        "customers",
+        "leads",
+        "employees",
+        "students",
+        "events",
+        "reports",
+        "roles",
+        "permissions",
+        "knowledge_sources",
+    ]:
+        assert data[key] > 0

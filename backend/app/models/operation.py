@@ -20,6 +20,21 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class TodoItem(Base):
+    __tablename__ = "todo_item"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    owner_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
+    role_code: Mapped[str] = mapped_column(String(64), default="")
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="")
+    target_type: Mapped[str] = mapped_column(String(64), default="")
+    target_id: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(32), default="待处理")
+    due_time: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 
