@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 7 Skill 组合自由发挥效果图</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: #172033;
+        background: #e8edf2;
+        font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      }
+
+      .page {
+        display: grid;
+        gap: 30px;
+        padding: 30px;
+      }
+
+      .intro {
+        max-width: 1180px;
+        display: grid;
+        gap: 8px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .intro p,
+      .combo-note,
+      .muted {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .direction {
+        --ink: #172033;
+        --muted: #647181;
+        --panel: #ffffff;
+        --line: #d7e0e8;
+        --soft: #f6f8fa;
+        --accent: #245f95;
+        --accent-2: #326f53;
+        color: var(--ink);
+        background: var(--stage);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 24px;
+        box-shadow: 0 20px 50px rgba(31, 45, 61, 0.12);
+        overflow: hidden;
+      }
+
+      .direction-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: end;
+        margin-bottom: 18px;
+      }
+
+      .skill-combo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .skill-combo span,
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        width: max-content;
+        padding: 5px 9px;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 12%, white);
+        border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .screen {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: calc(var(--radius) - 4px);
+        overflow: hidden;
+      }
+
+      .screen-title {
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: var(--button-radius);
+        padding: 8px 11px;
+        color: white;
+        background: var(--accent);
+        font-weight: 800;
+      }
+
+      .btn.secondary {
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, white);
+      }
+
+      .metric {
+        display: grid;
+        gap: 3px;
+      }
+
+      .metric strong {
+        font-size: 28px;
+        line-height: 1;
+      }
+
+      .metric span,
+      .row span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .row {
+        display: grid;
+        gap: 5px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .combo-a {
+        --stage: linear-gradient(120deg, #fbf8ef, #ffffff 46%, #eaf3f5);
+        --radius: 18px;
+        --button-radius: 999px;
+        --accent: #7a4a20;
+        --accent-2: #2d6c70;
+        font-family: "Georgia", "Microsoft YaHei", serif;
+      }
+
+      .editorial-layout {
+        display: grid;
+        grid-template-columns: 1.05fr 0.85fr;
+        gap: 16px;
+      }
+
+      .editorial-hero {
+        min-height: 500px;
+        padding: 26px;
+        background:
+          linear-gradient(120deg, rgba(122, 74, 32, 0.14), transparent 44%),
+          linear-gradient(180deg, #fffaf0, #ffffff);
+      }
+
+      .editorial-hero h3 {
+        max-width: 620px;
+        margin-top: 76px;
+        font-size: 52px;
+        line-height: 1.02;
+        font-weight: 500;
+      }
+
+      .editorial-side {
+        display: grid;
+        gap: 16px;
+      }
+
+      .ticket,
+      .editorial-card {
+        padding: 18px;
+        background: #fffdf7;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+
+      .ticket {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .ticket strong {
+        font-size: 40px;
+        color: var(--accent);
+      }
+
+      .combo-b {
+        --stage: radial-gradient(circle at 12% 0%, rgba(55, 182, 255, 0.22), transparent 34%), linear-gradient(135deg, #07111f, #101d31 58%, #162b44);
+        --ink: #eaf6ff;
+        --muted: #9eb4c7;
+        --panel: #0c1b2e;
+        --line: rgba(137, 191, 255, 0.22);
+        --soft: #122944;
+        --accent: #39b9ff;
+        --accent-2: #2dd4bf;
+        --radius: 10px;
+        --button-radius: 6px;
+        font-family: "Segoe UI Semibold", "Microsoft YaHei", sans-serif;
+      }
+
+      .command-layout {
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1.1fr) 390px;
+        gap: 14px;
+        min-height: 520px;
+      }
+
+      .rail {
+        display: grid;
+        align-content: start;
+        justify-items: center;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .rail span {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        background: rgba(57, 185, 255, 0.14);
+        border: 1px solid var(--line);
+      }
+
+      .command-main {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .signal-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .signal-grid .metric,
+      .command-card {
+        padding: 14px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .map-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+      }
+
+      .map-grid span {
+        min-height: 54px;
+        border: 1px solid var(--line);
+        background: rgba(57, 185, 255, 0.07);
+      }
+
+      .command-side {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+      }
+
+      .combo-c {
+        --stage: linear-gradient(180deg, #eef3f7, #e4ebf1);
+        --radius: 6px;
+        --button-radius: 4px;
+        --accent: #1f5e89;
+        --accent-2: #4b6750;
+        font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+      }
+
+      .ledger-layout {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 14px;
+        min-height: 520px;
+      }
+
+      .ledger-nav {
+        padding: 18px;
+        background: #f8fafc;
+      }
+
+      .ledger-nav h3 {
+        margin-bottom: 20px;
+        font-size: 24px;
+      }
+
+      .ledger-nav .row {
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+
+      .ledger-main {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .ledger-summary {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .ledger-summary .metric {
+        padding: 12px;
+        background: #f7f9fb;
+        border-left: 4px solid var(--accent);
+      }
+
+      .ledger-table {
+        display: grid;
+        border: 1px solid var(--line);
+      }
+
+      .ledger-table div {
+        display: grid;
+        grid-template-columns: 1fr 1fr 0.8fr 0.8fr;
+        gap: 12px;
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .combo-d {
+        --stage: linear-gradient(135deg, #f4f7ff, #ecfff8 52%, #fff7ea);
+        --radius: 24px;
+        --button-radius: 14px;
+        --accent: #4a6dff;
+        --accent-2: #00a978;
+        font-family: "Trebuchet MS", "Microsoft YaHei", sans-serif;
+      }
+
+      .flow-layout {
+        display: grid;
+        gap: 18px;
+      }
+
+      .flow-hero {
+        display: grid;
+        grid-template-columns: 0.95fr 1.05fr;
+        gap: 18px;
+        min-height: 310px;
+        padding: 22px;
+      }
+
+      .flow-hero h3 {
+        font-size: 46px;
+        line-height: 1.05;
+      }
+
+      .flow-lane {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .flow-step {
+        display: grid;
+        gap: 10px;
+        min-height: 150px;
+        padding: 14px;
+        background: color-mix(in srgb, var(--accent) 7%, white);
+        border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+        border-radius: 18px;
+      }
+
+      .flow-step b {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        color: white;
+        background: var(--accent);
+        border-radius: 12px;
+      }
+
+      .combo-e {
+        --stage: linear-gradient(135deg, #f5f3ee, #e9edf3);
+        --radius: 14px;
+        --button-radius: 8px;
+        --accent: #283d63;
+        --accent-2: #9b6b12;
+        font-family: "Palatino Linotype", "Microsoft YaHei", serif;
+      }
+
+      .canvas-layout {
+        position: relative;
+        min-height: 560px;
+        background:
+          linear-gradient(90deg, rgba(40, 61, 99, 0.07) 1px, transparent 1px),
+          linear-gradient(rgba(40, 61, 99, 0.07) 1px, transparent 1px),
+          #fbfaf6;
+        background-size: 28px 28px;
+      }
+
+      .canvas-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255,255,255,0.74);
+      }
+
+      .canvas-card {
+        position: absolute;
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 14px 34px rgba(40, 61, 99, 0.12);
+      }
+
+      .canvas-card h3 {
+        font-size: 22px;
+      }
+
+      .canvas-card.one {
+        left: 28px;
+        top: 92px;
+        width: 360px;
+      }
+
+      .canvas-card.two {
+        left: 430px;
+        top: 136px;
+        width: 320px;
+      }
+
+      .canvas-card.three {
+        right: 32px;
+        top: 84px;
+        width: 360px;
+      }
+
+      .canvas-card.four {
+        left: 250px;
+        bottom: 34px;
+        width: 480px;
+      }
+
+      .canvas-card.five {
+        right: 78px;
+        bottom: 50px;
+        width: 280px;
+      }
+
+      @media (max-width: 1100px) {
+        .editorial-layout,
+        .command-layout,
+        .ledger-layout,
+        .flow-hero {
+          grid-template-columns: 1fr;
+        }
+
+        .command-layout,
+        .ledger-layout,
+        .canvas-layout {
+          min-height: auto;
+        }
+
+        .rail {
+          grid-template-columns: repeat(6, auto);
+          justify-content: start;
+        }
+
+        .ledger-summary,
+        .flow-lane,
+        .signal-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .canvas-card {
+          position: static;
+          width: auto !important;
+          margin: 12px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          padding: 14px;
+        }
+
+        .direction-head,
+        .ledger-summary,
+        .flow-lane,
+        .signal-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .skill-combo {
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="intro">
+        <h1>Task 7 自由发挥版 UI 效果图</h1>
+        <p>每一版对应不同 skill 组合，重点比较组件形态、层次、字体、布局和高级感。以下效果图不接入正式前端，仅用于选择方向。</p>
+      </header>
+
+      <section class="direction combo-a" id="editorial">
+        <div class="direction-head">
+          <div>
+            <h2>效果图 1：服务策展 Editorial Portal</h2>
+            <p class="combo-note">擅长把官网、登录和业务入口做成高信任叙事，不像普通后台首页。</p>
+          </div>
+          <div class="skill-combo"><span>product-design:get-context</span><span>product-design:ideate</span><span>frontend-design</span></div>
+        </div>
+        <div class="editorial-layout">
+          <article class="screen editorial-hero">
+            <span class="screen-title">官网首页 / 咨询入口</span>
+            <h3>把留学咨询做成一条可追踪的服务路径</h3>
+            <p class="muted">首屏像一本服务手册的封面：公司可信度、项目、政策、活动、客服 Agent 和登录入口同时建立秩序。</p>
+            <div style="display:flex; gap:10px; margin-top:24px;"><span class="btn">发起咨询</span><span class="btn secondary">查看项目</span></div>
+          </article>
+          <div class="editorial-side">
+            <article class="ticket"><strong>01</strong><div><h3>登录页</h3><p class="muted">角色不混放，以身份票据进入对应后台。</p></div></article>
+            <article class="ticket"><strong>02</strong><div><h3>顾问客户增长</h3><p class="muted">新建线索像主编辑动作，研判和客户 360 是后续栏目。</p></div></article>
+            <article class="editorial-card"><span class="pill">适合</span><h3>官网、公关展示、服务可信度</h3><p class="muted">字体更像出版物，留白和内容节奏优先，后台只吸收它的标题层级。</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="direction combo-b" id="command">
+        <div class="direction-head">
+          <div>
+            <h2>效果图 2：智能运营 Command Center</h2>
+            <p class="combo-note">擅长管理者、管理员、研判和报告场景，强调实时数据、风险和 AI 能力。</p>
+          </div>
+          <div class="skill-combo"><span>frontend-design</span><span>impeccable craft</span><span>browser verification</span></div>
+        </div>
+        <div class="screen command-layout">
+          <aside class="rail"><span>增</span><span>客</span><span>师</span><span>报</span><span>治</span></aside>
+          <section class="command-main">
+            <div><span class="screen-title">经营管理后台</span><h3 style="font-size:34px;">今日运营态势</h3></div>
+            <div class="signal-grid">
+              <div class="metric"><span>新线索</span><strong>12</strong></div>
+              <div class="metric"><span>高潜客户</span><strong>8</strong></div>
+              <div class="metric"><span>心理预警</span><strong>3</strong></div>
+              <div class="metric"><span>报告</span><strong>4</strong></div>
+            </div>
+            <div class="command-card"><h3>客户研判热区</h3><div class="map-grid"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+          </section>
+          <aside class="command-side">
+            <div class="command-card"><span class="screen-title">顾问</span><h3>新建线索 + 研判</h3><p class="muted">把手动录入、粘贴资料、触发研判压缩成命令面板。</p></div>
+            <div class="command-card"><span class="screen-title">老师</span><h3>待办雷达</h3><p class="muted">请假、反馈、心理预警按风险优先级排序。</p></div>
+            <div class="command-card"><span class="screen-title">管理员</span><h3>OpenAPI / seed / fallback</h3><p class="muted">治理入口像系统控制台，不给管理者暴露写控制。</p></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="direction combo-c" id="ledger">
+        <div class="direction-head">
+          <div>
+            <h2>效果图 3：可信台账 Governance Ledger</h2>
+            <p class="combo-note">擅长政企、权限、审计、日报、投诉处理等高可信场景，少装饰、多证据。</p>
+          </div>
+          <div class="skill-combo"><span>design-taste-frontend</span><span>frontend-design</span><span>verification-before-completion</span></div>
+        </div>
+        <div class="screen ledger-layout">
+          <aside class="ledger-nav">
+            <h3>系统治理</h3>
+            <div class="row"><b>用户</b><span>启用</span></div>
+            <div class="row"><b>角色</b><span>6 类</span></div>
+            <div class="row"><b>权限</b><span>矩阵</span></div>
+            <div class="row"><b>审计</b><span>可追溯</span></div>
+            <div class="row"><b>知识来源</b><span>fallback</span></div>
+          </aside>
+          <section class="ledger-main">
+            <div><span class="screen-title">管理员系统治理 / 老师处理台账</span><h3 style="font-size:30px;">权限、审批、投诉和报告一张账</h3></div>
+            <div class="ledger-summary">
+              <div class="metric"><span>待审批</span><strong>5</strong></div>
+              <div class="metric"><span>投诉</span><strong>9</strong></div>
+              <div class="metric"><span>审计</span><strong>42</strong></div>
+              <div class="metric"><span>通知</span><strong>17</strong></div>
+              <div class="metric"><span>报告</span><strong>4</strong></div>
+            </div>
+            <div class="ledger-table">
+              <div><b>对象</b><b>动作</b><b>状态</b><b>责任人</b></div>
+              <div><span>陈雨</span><span>请假审批</span><span>待处理</span><span>周老师</span></div>
+              <div><span>林可</span><span>投诉反馈</span><span>跟进中</span><span>王老师</span></div>
+              <div><span>admin</span><span>seed 初始化</span><span>可审计</span><span>管理员</span></div>
+              <div><span>Dify</span><span>fallback</span><span>可用</span><span>系统</span></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="direction combo-d" id="flow">
+        <div class="direction-head">
+          <div>
+            <h2>效果图 4：任务动线 Service Flow OS</h2>
+            <p class="combo-note">擅长把顾问、员工、老师、学生的闭环流程讲清楚，适合后续做轻动效和流程演示。</p>
+          </div>
+          <div class="skill-combo"><span>impeccable craft</span><span>gsap motion thinking</span><span>frontend-design</span></div>
+        </div>
+        <div class="flow-layout">
+          <article class="screen flow-hero">
+            <div>
+              <span class="screen-title">跨角色业务流</span>
+              <h3>不是工作台，是任务从入口到闭环的动线</h3>
+            </div>
+            <div class="row"><b>适合页面</b><span>顾问客户增长、员工日报、老师审批、学生服务台、管理报告。</span></div>
+          </article>
+          <div class="flow-lane">
+            <article class="flow-step"><b>1</b><h3>官网咨询</h3><p class="muted">客服 Agent、活动报名、项目浏览。</p></article>
+            <article class="flow-step"><b>2</b><h3>新建线索</h3><p class="muted">顾问手动录入或员工快捷录入。</p></article>
+            <article class="flow-step"><b>3</b><h3>画像研判</h3><p class="muted">规则命中、推荐项目、风险提示。</p></article>
+            <article class="flow-step"><b>4</b><h3>学生服务</h3><p class="muted">请假、投诉、进度、心理辅助。</p></article>
+            <article class="flow-step"><b>5</b><h3>管理报告</h3><p class="muted">经营、日报、心理、投诉周报。</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="direction combo-e" id="canvas">
+        <div class="direction-head">
+          <div>
+            <h2>效果图 5：空间画布 Workbench Canvas</h2>
+            <p class="combo-note">擅长把复杂后台做成可操作画布，适合顾问客户 360、管理员排障和管理者复盘。</p>
+          </div>
+          <div class="skill-combo"><span>image-to-code mindset</span><span>frontend-design</span><span>browser screenshot QA</span></div>
+        </div>
+        <div class="screen canvas-layout">
+          <div class="canvas-top"><b>客户 360 / 系统治理画布</b><span class="pill">可拖拽式信息组织概念</span></div>
+          <article class="canvas-card one"><span class="screen-title">顾问</span><h3>客户画像</h3><p class="muted">背景、预算、国家、风险和推荐项目放在同一画布。</p><span class="btn">新增跟进</span></article>
+          <article class="canvas-card two"><span class="screen-title">员工</span><h3>日报便签</h3><p class="muted">口述日报变成可归档结构化块。</p></article>
+          <article class="canvas-card three"><span class="screen-title">老师</span><h3>学生预警板</h3><p class="muted">请假、反馈、进度、心理辅助预警并列。</p></article>
+          <article class="canvas-card four"><span class="screen-title">管理者</span><h3>报告快照</h3><p class="muted">每个报告像证据卡片，能回溯到客户、日报、投诉和学生节点。</p></article>
+          <article class="canvas-card five"><span class="screen-title">管理员</span><h3>治理工具</h3><p class="muted">OpenAPI、seed、fallback、权限审计集中。</p></article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
