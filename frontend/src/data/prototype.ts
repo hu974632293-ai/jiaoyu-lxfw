@@ -109,6 +109,29 @@ export const eventPrototypeRows = [
   { name: "留学行前生活支持", type: "学生服务", time: "06-21 15:00", target: "在读学生", signed: 34, capacity: 60, status: "待签到" },
 ];
 
+export const publicServices = [
+  { title: "留学规划", desc: "结合学生背景、预算和目标国家设计申请路径。", audience: "高中、本科和专科升学家庭" },
+  { title: "国际本科", desc: "面向升学家庭，提供新加坡等方向的本科路径规划。", audience: "希望低风险衔接海外本科的学生" },
+  { title: "德国双元制", desc: "就业导向，强调语言准备、企业实习和职业路径。", audience: "关注就业、成本和实践机会的学生" },
+  { title: "语言培训", desc: "提供语言基础提升、考试准备和课程衔接。", audience: "需要补强语言能力的申请人" },
+  { title: "背景提升", desc: "围绕竞赛、科研、文书素材和能力证明做规划。", audience: "需要提升申请竞争力的学生" },
+  { title: "学生服务", desc: "覆盖申请进度、学业节点、请假反馈和生活支持。", audience: "在读学生和家长" },
+];
+
+export const publicTrustPoints = [
+  { title: "规划评估", desc: "从背景、目标、预算和时间窗口出发，先判断路径是否匹配。" },
+  { title: "项目资源", desc: "围绕国家、学制、费用、招生条件和适合人群整理项目选择。" },
+  { title: "过程可追踪", desc: "咨询、材料、活动、申请节点和后续服务都有明确跟进动作。" },
+  { title: "服务闭环", desc: "咨询后可沉淀为线索，由顾问继续推进项目匹配和活动邀约。" },
+];
+
+export const publicFaqs = [
+  { question: "公司主要提供哪些服务？", answer: "提供留学规划、国际本科、德国双元制、语言培训、背景提升和学生服务支持。" },
+  { question: "没有配置 Dify 时 FAQ 是否可用？", answer: "可用。系统会展示 fallback 答案和原因，不阻断公开咨询。" },
+  { question: "如何预约项目咨询？", answer: "可通过官网联系表单、活动报名或电话微信咨询入口提交需求。" },
+  { question: "官网咨询会直接看到内部 CRM 吗？", answer: "不会。官网只承接公开咨询和报名，内部客户跟进在登录后的后台完成。" },
+];
+
 export const enterpriseQuickCommands = [
   "帮我录入一个客户：王晨，高三，想去新加坡读本科，家长关注费用",
   "提交今天日报：跟进 8 个客户，2 个高潜，风险是德国项目材料不齐",

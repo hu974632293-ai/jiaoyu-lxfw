@@ -5,13 +5,13 @@ import DashboardPage from "./pages/DashboardPage";
 import EnterpriseAssistantPage from "./pages/EnterpriseAssistantPage";
 import LeadsPage from "./pages/LeadsPage";
 import ProjectsPage from "./pages/ProjectsPage";
+import PublicPortalPage from "./pages/PublicPortalPage";
 import ReportsPage from "./pages/ReportsPage";
 import SystemAdminPage from "./pages/SystemAdminPage";
 import { roleOptions } from "./data/prototype";
 import type { RoleKey } from "./data/prototype";
 import {
   backofficeNavItems,
-  publicNavItems,
   roleDefaultPage,
   roleVisiblePages,
 } from "./navigation";
@@ -109,54 +109,7 @@ export default function App() {
   }
 
   if (mode === "public") {
-    return (
-      <main className="public-shell">
-        <header className="public-topbar">
-          <button className="public-brand" onClick={() => setPublicPage("home")}>
-            教育服务官网
-          </button>
-          <nav className="public-nav" aria-label="公开官网导航">
-            {publicNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  className={publicPage === item.key ? "active" : ""}
-                  key={item.key}
-                  onClick={() => setPublicPage(item.key)}
-                >
-                  <Icon size={16} aria-hidden="true" />
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
-          <button className="icon-button" onClick={openLogin}>
-            登录后台
-          </button>
-        </header>
-
-        <section className="public-content">
-          <div className="public-placeholder">
-            <p className="eyebrow">公开官网门户占位</p>
-            <h1>面向学生、家长和合作方的教育服务入口</h1>
-            <p>
-              Task 1 先建立应用层级。完整官网内容会在 Task 2 实现；当前未登录用户不会直接进入 CRM、客户 360、系统治理或演示控制台。
-            </p>
-            <div className="public-actions">
-              <button className="icon-button secondary" onClick={() => setPublicPage("publicProjects")}>
-                查看项目
-              </button>
-              <button className="icon-button secondary" onClick={() => setPublicPage("contact")}>
-                咨询服务
-              </button>
-              <button className="icon-button" onClick={openLogin}>
-                登录后台
-              </button>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
+    return <PublicPortalPage activePage={publicPage} onNavigate={setPublicPage} onLogin={openLogin} />;
   }
 
   if (mode === "login") {
