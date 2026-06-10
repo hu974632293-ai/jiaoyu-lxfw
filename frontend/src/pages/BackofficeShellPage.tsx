@@ -3,9 +3,10 @@ import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
-import Phase2AssistantsPage from "./Phase2AssistantsPage";
 import ReportsPage from "./ReportsPage";
 import SystemDemoPage from "./SystemDemoPage";
+import EnterpriseAssistantPage from "./EnterpriseAssistantPage";
+import StudentAssistantPage from "./StudentAssistantPage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
@@ -24,12 +25,15 @@ type BackofficeShellPageProps = {
 };
 
 type BackofficeComponent = (props: PageProps) => JSX.Element;
-type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "customerGrowth" | "customer360">;
+type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "customerGrowth" | "customer360" | "managementDashboard">;
 
 const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
+  employeeWorkspace: EnterpriseAssistantPage,
+  teacherStudentService: StudentAssistantPage,
+  studentService: StudentAssistantPage,
+  systemGovernance: SystemDemoPage,
   operations: OperationsResourcesPage,
   reports: ReportsPage,
-  assistants: Phase2AssistantsPage,
   systemDemo: SystemDemoPage,
 };
 
@@ -45,10 +49,13 @@ export default function BackofficeShellPage({
 }: BackofficeShellPageProps) {
   const currentRole = roleOptions.find((item) => item.key === role) ?? roleOptions[0];
   const visiblePages = roleVisiblePages[role];
-  const current = backofficeNavItems.find((page) => page.key === activePage) ?? backofficeNavItems[0];
+  const visibleNavItems = visiblePages
+    .map((pageKey) => backofficeNavItems.find((item) => item.key === pageKey))
+    .filter((item): item is (typeof backofficeNavItems)[number] => Boolean(item));
+  const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
 
   function renderCurrentPage() {
-    if (activePage === "growthOverview") {
+    if (activePage === "growthOverview" || activePage === "managementDashboard") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
     }
     if (activePage === "customerGrowth") {
@@ -69,7 +76,7 @@ export default function BackofficeShellPage({
           <ShieldCheck size={26} aria-hidden="true" />
           <div>
             <h1>教育服务运营工作台</h1>
-            <p>登录后后台：客户增长流水线与角色生产力工具</p>
+            <p>按角色进入对应业务后台</p>
           </div>
         </div>
         <div className="top-actions">
@@ -97,21 +104,19 @@ export default function BackofficeShellPage({
 
       <div className="workspace-grid">
         <aside className="sidebar" aria-label="后台一级导航">
-          {backofficeNavItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
-            const disabled = !visiblePages.includes(item.key);
             return (
               <button
                 className={activePage === item.key ? "nav-item active" : "nav-item"}
-                disabled={disabled}
                 key={item.key}
                 onClick={() => onNavigate(item.key)}
-                title={disabled ? `${currentRole.label}角色暂不展示该入口` : item.desc}
+                title={item.desc}
               >
                 <Icon size={18} aria-hidden="true" />
                 <span>
                   <strong>{item.label}</strong>
-                  <small>{disabled ? "当前角色隐藏" : item.desc}</small>
+                  <small>{item.desc}</small>
                 </span>
               </button>
             );
