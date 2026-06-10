@@ -1,9 +1,9 @@
 import { FileText, RefreshCw, ShieldCheck } from "lucide-react";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
-import EnterpriseAssistantPage from "./EnterpriseAssistantPage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
+import Phase2AssistantsPage from "./Phase2AssistantsPage";
 import ReportsPage from "./ReportsPage";
 import SystemAdminPage from "./SystemAdminPage";
 import { roleOptions } from "../data/prototype";
@@ -29,7 +29,7 @@ type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "cu
 const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
   operations: OperationsResourcesPage,
   reports: ReportsPage,
-  assistants: EnterpriseAssistantPage,
+  assistants: Phase2AssistantsPage,
   systemDemo: SystemAdminPage,
 };
 

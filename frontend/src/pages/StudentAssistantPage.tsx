@@ -274,7 +274,7 @@ export default function StudentAssistantPage({ role, onNavigate }: PageProps) {
           <p>学生可提交请假和反馈，老师处理审批与预警；心理预警只做辅助识别，不替代专业心理诊断。</p>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={() => onNavigate("knowledge")}>生活支持问答</button>
+          <button className="icon-button secondary" onClick={() => onNavigate("knowledge")}>进入运营资源问答</button>
           <button className="icon-button" onClick={() => onNavigate("reports")}>生成学生周报</button>
         </div>
       </section>
