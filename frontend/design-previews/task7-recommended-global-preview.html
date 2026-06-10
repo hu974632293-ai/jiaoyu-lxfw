@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>推荐组合全局预览</title>
+    <style>
+      :root {
+        color: #172333;
+        background: #e7edf3;
+        font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+        --ink: #172333;
+        --muted: #617181;
+        --line: #c9d6e1;
+        --panel: #ffffff;
+        --soft: #f5f8fa;
+        --blue: #245f95;
+        --green: #456b52;
+        --amber: #9b6b12;
+        --red: #a94442;
+        --dark: #0d1d31;
+        --dark-line: rgba(137, 191, 255, 0.24);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(36, 95, 149, 0.05) 1px, transparent 1px),
+          linear-gradient(rgba(36, 95, 149, 0.05) 1px, transparent 1px),
+          #e7edf3;
+        background-size: 28px 28px;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .preview-app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 252px minmax(0, 1fr);
+      }
+
+      .preview-nav {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 22px 16px;
+        background: #f8fafc;
+        border-right: 1px solid var(--line);
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 18px;
+      }
+
+      .preview-brand {
+        display: grid;
+        gap: 6px;
+      }
+
+      .preview-brand b {
+        font-size: 22px;
+      }
+
+      .preview-brand span,
+      .muted {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+
+      .nav-list button {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        padding: 10px;
+        text-align: left;
+        color: var(--ink);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+      }
+
+      .nav-list button.active {
+        color: var(--blue);
+        background: #edf4fa;
+        border-color: #bfd3e4;
+      }
+
+      .nav-index {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        color: white;
+        background: var(--blue);
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .preview-note {
+        padding: 12px;
+        background: #eef3f7;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-size: 13px;
+      }
+
+      .page-stage {
+        padding: 24px;
+      }
+
+      .screen {
+        display: none;
+        min-height: calc(100vh - 48px);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 22px 54px rgba(31, 45, 61, 0.12);
+      }
+
+      .screen.active {
+        display: grid;
+      }
+
+      .screen.public {
+        background: #fffaf0;
+        font-family: "Georgia", "Microsoft YaHei", serif;
+      }
+
+      .public-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 26px;
+        border-bottom: 1px solid #e3d8c8;
+      }
+
+      .public-menu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        color: #6f5c48;
+        font-size: 14px;
+      }
+
+      .public-hero {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 28px;
+        padding: 42px;
+      }
+
+      .public-hero h1 {
+        margin: 0;
+        max-width: 760px;
+        font-size: 64px;
+        line-height: 1.02;
+        font-weight: 500;
+        color: #321f13;
+      }
+
+      .public-hero p {
+        max-width: 620px;
+        color: #6f5c48;
+        line-height: 1.75;
+      }
+
+      .public-panel {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        padding: 22px;
+        background: #fffdf7;
+        border: 1px solid #e3d8c8;
+        border-radius: 12px;
+      }
+
+      .service-ticket {
+        display: grid;
+        grid-template-columns: 70px 1fr;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid #eadfce;
+      }
+
+      .service-ticket b {
+        color: #7a4a20;
+        font-size: 34px;
+      }
+
+      .cta-row,
+      .toolbar,
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .btn {
+        border: 0;
+        border-radius: 4px;
+        padding: 9px 12px;
+        color: white;
+        background: var(--blue);
+        font-weight: 800;
+      }
+
+      .btn.secondary {
+        color: var(--blue);
+        background: #e9f1f8;
+        border: 1px solid #bed1e3;
+      }
+
+      .work-shell {
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr);
+        min-height: calc(100vh - 48px);
+      }
+
+      .work-side {
+        padding: 18px;
+        background: #f8fafc;
+        border-right: 1px solid var(--line);
+      }
+
+      .work-side h2 {
+        margin: 0 0 18px;
+        font-size: 24px;
+      }
+
+      .side-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .work-main {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        padding: 20px;
+      }
+
+      .page-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: end;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .page-head h1 {
+        margin: 0;
+        font-size: 31px;
+        letter-spacing: 0;
+      }
+
+      .eyebrow {
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+
+      .metric-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        padding: 13px;
+        background: var(--soft);
+        border-left: 4px solid var(--blue);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 28px;
+        line-height: 1;
+      }
+
+      .layout-two {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .panel {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+
+      .panel.dark {
+        color: #eaf6ff;
+        background: var(--dark);
+        border-color: var(--dark-line);
+      }
+
+      .section-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .section-title h3 {
+        margin: 0;
+      }
+
+      .ledger-table {
+        display: grid;
+        border: 1px solid var(--line);
+      }
+
+      .ledger-table div {
+        display: grid;
+        grid-template-columns: 1fr 1fr 0.8fr 0.8fr;
+        gap: 12px;
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .ledger-table div:first-child {
+        color: var(--blue);
+        background: #f4f7fa;
+        font-weight: 800;
+      }
+
+      .tag {
+        display: inline-flex;
+        width: max-content;
+        padding: 5px 8px;
+        border-radius: 999px;
+        color: var(--blue);
+        background: #e9f1f8;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 9px;
+        color: var(--ink);
+        background: white;
+      }
+
+      .queue {
+        display: grid;
+        gap: 9px;
+      }
+
+      .queue-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .queue-row span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .command {
+        background:
+          radial-gradient(circle at 10% 0%, rgba(55, 182, 255, 0.2), transparent 34%),
+          linear-gradient(135deg, #07111f, #101d31 58%, #162b44);
+      }
+
+      .command .work-shell {
+        grid-template-columns: 76px minmax(0, 1fr);
+      }
+
+      .command-rail {
+        display: grid;
+        align-content: start;
+        justify-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: rgba(8, 20, 36, 0.82);
+        border-right: 1px solid var(--dark-line);
+      }
+
+      .command-rail span {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        color: #eaf6ff;
+        background: rgba(57, 185, 255, 0.14);
+        border: 1px solid var(--dark-line);
+        border-radius: 10px;
+        font-weight: 900;
+      }
+
+      .command .work-main,
+      .command .page-head,
+      .command .muted {
+        color: #eaf6ff;
+      }
+
+      .command .page-head {
+        border-color: var(--dark-line);
+      }
+
+      .command .metric,
+      .command-card {
+        color: #eaf6ff;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--dark-line);
+        border-left: 1px solid var(--dark-line);
+        border-radius: 6px;
+      }
+
+      .command .metric span,
+      .command-card span,
+      .command-card p {
+        color: #9eb4c7;
+      }
+
+      .signal-map {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 8px;
+      }
+
+      .signal-map span {
+        min-height: 52px;
+        border: 1px solid var(--dark-line);
+        background: rgba(57, 185, 255, 0.07);
+      }
+
+      .login-layout {
+        display: grid;
+        grid-template-columns: 0.8fr 1.2fr;
+        min-height: calc(100vh - 48px);
+      }
+
+      .login-art {
+        padding: 34px;
+        background: #fffaf0;
+        border-right: 1px solid #e3d8c8;
+      }
+
+      .login-art h1 {
+        margin: 80px 0 18px;
+        font-family: Georgia, "Microsoft YaHei", serif;
+        font-size: 50px;
+        line-height: 1.05;
+        font-weight: 500;
+      }
+
+      .login-panel {
+        display: grid;
+        align-content: center;
+        gap: 16px;
+        padding: 44px;
+      }
+
+      .role-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .role-card {
+        display: grid;
+        gap: 8px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        background: var(--soft);
+        border-radius: 6px;
+      }
+
+      .canvas {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .canvas .panel {
+        min-height: 150px;
+      }
+
+      @media (max-width: 1100px) {
+        .preview-app {
+          grid-template-columns: 1fr;
+        }
+
+        .preview-nav {
+          position: static;
+          height: auto;
+        }
+
+        .nav-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .public-hero,
+        .work-shell,
+        .layout-two,
+        .login-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .metric-strip,
+        .role-grid,
+        .canvas {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page-stage {
+          padding: 12px;
+        }
+
+        .public-hero,
+        .work-main,
+        .login-panel {
+          padding: 18px;
+        }
+
+        .public-hero h1,
+        .login-art h1 {
+          font-size: 38px;
+        }
+
+        .nav-list,
+        .metric-strip,
+        .form-grid,
+        .role-grid,
+        .canvas {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="preview-app">
+      <aside class="preview-nav">
+        <div class="preview-brand">
+          <b>推荐组合全局预览</b>
+          <span>官网用服务策展，后台用可信台账，经营管理吸收智能指挥舱。</span>
+        </div>
+        <nav class="nav-list" aria-label="预览页面导航">
+          <button class="active" data-target="home"><span class="nav-index">01</span><span>公开官网</span></button>
+          <button data-target="login"><span class="nav-index">02</span><span>登录入口</span></button>
+          <button data-target="consultant"><span class="nav-index">03</span><span>顾问客户增长</span></button>
+          <button data-target="employee"><span class="nav-index">04</span><span>员工工作台</span></button>
+          <button data-target="teacher"><span class="nav-index">05</span><span>老师学生服务</span></button>
+          <button data-target="student"><span class="nav-index">06</span><span>学生服务台</span></button>
+          <button data-target="manager"><span class="nav-index">07</span><span>经营管理</span></button>
+          <button data-target="admin"><span class="nav-index">08</span><span>系统治理</span></button>
+        </nav>
+        <div class="preview-note">这是独立预览，不改正式路由。选定后再进入正式 React 页面实现。</div>
+      </aside>
+
+      <section class="page-stage">
+        <article id="home" class="screen public active">
+          <header class="public-top">
+            <b>教育服务</b>
+            <div class="public-menu"><span>公司介绍</span><span>业务服务</span><span>项目/课程</span><span>活动</span><span>FAQ</span><span>登录</span></div>
+          </header>
+          <section class="public-hero">
+            <div>
+              <span class="eyebrow">PUBLIC PORTAL</span>
+              <h1>从第一次咨询到申请进度，都有清楚的服务路径。</h1>
+              <p>官网不展示内部 CRM，只建立信任、解释服务、承接咨询、项目、政策、活动和客服 Agent。</p>
+              <div class="cta-row"><button class="btn">发起咨询</button><button class="btn secondary">查看活动</button><button class="btn secondary">登录后台</button></div>
+            </div>
+            <aside class="public-panel">
+              <div class="service-ticket"><b>01</b><div><h3>咨询入口</h3><p class="muted">客服 Agent 回答公司、业务、政策、FAQ。</p></div></div>
+              <div class="service-ticket"><b>02</b><div><h3>项目筛选</h3><p class="muted">留学规划、国际本科、德国双元制、语言和背景提升。</p></div></div>
+              <div class="service-ticket"><b>03</b><div><h3>活动报名</h3><p class="muted">讲座、直播、行前支持活动转化为线索。</p></div></div>
+            </aside>
+          </section>
+        </article>
+
+        <article id="login" class="screen">
+          <section class="login-layout">
+            <div class="login-art">
+              <span class="eyebrow">ROLE ACCESS</span>
+              <h1>一个入口，进入不同角色的真实后台。</h1>
+              <p class="muted">无权限入口不展示；每个角色只看到自己的业务任务。</p>
+            </div>
+            <div class="login-panel">
+              <div class="page-head"><div><span class="eyebrow">登录</span><h1>选择演示身份</h1></div><span class="tag">后台入口</span></div>
+              <div class="role-grid">
+                <div class="role-card"><b>顾问</b><span class="muted">客户增长</span></div>
+                <div class="role-card"><b>员工</b><span class="muted">日报/录入</span></div>
+                <div class="role-card"><b>老师</b><span class="muted">学生服务</span></div>
+                <div class="role-card"><b>学生</b><span class="muted">请假/进度</span></div>
+                <div class="role-card"><b>管理者</b><span class="muted">经营报告</span></div>
+                <div class="role-card"><b>管理员</b><span class="muted">系统治理</span></div>
+              </div>
+            </div>
+          </section>
+        </article>
+
+        <article id="consultant" class="screen">
+          <section class="work-shell">
+            <aside class="work-side"><h2>客户增长</h2><div class="side-row"><b>新建线索</b><span>主操作</span></div><div class="side-row"><b>客户 360</b><span>画像</span></div><div class="side-row"><b>活动邀约</b><span>转化</span></div></aside>
+            <main class="work-main">
+              <header class="page-head"><div><span class="eyebrow">顾问</span><h1>从新线索到阶段流转</h1></div><button class="btn">新建线索</button></header>
+              <section class="metric-strip"><div class="metric"><span>今日新增</span><strong>12</strong></div><div class="metric"><span>高潜客户</span><strong>8</strong></div><div class="metric"><span>待跟进</span><strong>27</strong></div><div class="metric"><span>活动转化</span><strong>42%</strong></div></section>
+              <section class="layout-two"><div class="panel"><div class="section-title"><h3>手动录入客户线索</h3><span class="tag">显著主入口</span></div><div class="form-grid"><label>客户姓名<input value="王晨" /></label><label>联系方式<input value="138****4210" /></label></div><label>粘贴资料<textarea rows="4">高三，希望新加坡升学，家长关注预算和就业。</textarea></label><div class="actions"><button class="btn">新建线索</button><button class="btn secondary">触发研判</button></div></div><aside class="panel"><h3>客户 360 摘要</h3><div class="queue"><div class="queue-row"><span>推荐项目</span><b>新加坡本科</b></div><div class="queue-row"><span>风险</span><b>预算待确认</b></div><div class="queue-row"><span>下一步</span><b>17:30 回访</b></div></div></aside></section>
+            </main>
+          </section>
+        </article>
+
+        <article id="employee" class="screen">
+          <section class="work-shell">
+            <aside class="work-side"><h2>员工工作台</h2><div class="side-row"><b>录入客户</b><span>快捷</span></div><div class="side-row"><b>提交日报</b><span>结构化</span></div><div class="side-row"><b>组织架构</b><span>只读</span></div></aside>
+            <main class="work-main">
+              <header class="page-head"><div><span class="eyebrow">员工</span><h1>客户快捷操作与日报台账</h1></div><span class="tag">白名单查询</span></header>
+              <section class="metric-strip"><div class="metric"><span>录入客户</span><strong>6</strong></div><div class="metric"><span>日报</span><strong>18</strong></div><div class="metric"><span>风险</span><strong>3</strong></div><div class="metric"><span>组织</span><strong>4</strong></div></section>
+              <section class="layout-two"><div class="panel"><div class="section-title"><h3>日报</h3><button class="btn secondary">提交日报</button></div><label>日报内容<textarea rows="5">今天跟进 8 个客户，2 个高潜进入活动邀约。</textarea></label><div class="ledger-table"><div><b>进展</b><b>风险</b><b>下一步</b><b>状态</b></div><div><span>8 客户</span><span>材料不齐</span><span>补清单</span><span>已提交</span></div></div></div><aside class="panel"><h3>新人指南</h3><div class="queue"><div class="queue-row"><span>客户录入</span><b>先建线索</b></div><div class="queue-row"><span>日报口径</span><b>进展/风险</b></div><div class="queue-row"><span>组织架构</span><b>受控只读</b></div></div></aside></section>
+            </main>
+          </section>
+        </article>
+
+        <article id="teacher" class="screen">
+          <section class="work-shell">
+            <aside class="work-side"><h2>学生服务</h2><div class="side-row"><b>请假审批</b><span>5</span></div><div class="side-row"><b>反馈处理</b><span>9</span></div><div class="side-row"><b>心理预警</b><span>3</span></div></aside>
+            <main class="work-main">
+              <header class="page-head"><div><span class="eyebrow">老师</span><h1>学生服务工作台</h1></div><span class="tag">心理预警仅辅助</span></header>
+              <section class="layout-two"><div class="panel"><h3>待办台账</h3><div class="ledger-table"><div><b>学生</b><b>事项</b><b>状态</b><b>处理</b></div><div><span>陈雨</span><span>请假审批</span><span>待处理</span><span>同意</span></div><div><span>林可</span><span>投诉反馈</span><span>跟进中</span><span>更新</span></div><div><span>赵宁</span><span>心理预警</span><span>高</span><span>跟进</span></div></div></div><aside class="panel"><h3>学业/进度</h3><div class="queue"><div class="queue-row"><span>语言测试</span><b>06-16</b></div><div class="queue-row"><span>推荐信</span><b>待上传</b></div><div class="queue-row"><span>签证准备</span><b>进行中</b></div></div></aside></section>
+            </main>
+          </section>
+        </article>
+
+        <article id="student" class="screen">
+          <section class="work-shell">
+            <aside class="work-side"><h2>学生服务台</h2><div class="side-row"><b>请假申请</b><span>提交</span></div><div class="side-row"><b>投诉建议</b><span>工单</span></div><div class="side-row"><b>申请进度</b><span>查询</span></div></aside>
+            <main class="work-main">
+              <header class="page-head"><div><span class="eyebrow">学生</span><h1>请假、反馈、进度和生活支持</h1></div><span class="tag">心理支持不替代诊断</span></header>
+              <section class="canvas"><div class="panel"><h3>请假申请</h3><p class="muted">家庭事务，请假两天。</p><button class="btn">提交</button></div><div class="panel"><h3>投诉建议</h3><p class="muted">住宿网络不稳定，生成反馈工单。</p><button class="btn secondary">提交建议</button></div><div class="panel"><h3>考务节点</h3><div class="queue-row"><span>语言测试模拟考</span><b>06-16</b></div></div><div class="panel"><h3>申请进度</h3><div class="queue-row"><span>材料补充</span><b>进行中</b></div></div><div class="panel"><h3>生活支持</h3><p class="muted">住宿、行前准备、生活问答。</p></div><div class="panel"><h3>服务对话</h3><p class="muted">学生服务台已受理。</p></div></section>
+            </main>
+          </section>
+        </article>
+
+        <article id="manager" class="screen command">
+          <section class="work-shell">
+            <aside class="command-rail"><span>增</span><span>客</span><span>师</span><span>报</span><span>险</span></aside>
+            <main class="work-main">
+              <header class="page-head"><div><span class="eyebrow">管理者</span><h1>经营管理后台</h1></div><button class="btn">生成报告</button></header>
+              <section class="metric-strip"><div class="metric"><span>新增线索</span><strong>12</strong></div><div class="metric"><span>高潜客户</span><strong>8</strong></div><div class="metric"><span>心理预警</span><strong>3</strong></div><div class="metric"><span>投诉周报</span><strong>1</strong></div></section>
+              <section class="layout-two"><div class="command-card"><h3>增长热区</h3><div class="signal-map"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div><aside class="command-card"><h3>风险队列</h3><div class="queue"><div class="queue-row"><span>高潜客户今日回访</span><b>高</b></div><div class="queue-row"><span>心理预警待跟进</span><b>高</b></div><div class="queue-row"><span>投诉处理周报</span><b>中</b></div></div></aside></section>
+            </main>
+          </section>
+        </article>
+
+        <article id="admin" class="screen">
+          <section class="work-shell">
+            <aside class="work-side"><h2>系统治理</h2><div class="side-row"><b>用户</b><span>启用</span></div><div class="side-row"><b>角色</b><span>6</span></div><div class="side-row"><b>权限</b><span>矩阵</span></div><div class="side-row"><b>审计</b><span>日志</span></div><div class="side-row"><b>OpenAPI</b><span>入口</span></div><div class="side-row"><b>seed</b><span>控制</span></div></aside>
+            <main class="work-main">
+              <header class="page-head"><div><span class="eyebrow">管理员</span><h1>用户、角色、权限、审计和系统控制</h1></div><div class="actions"><button class="btn">初始化 seed</button><button class="btn secondary">OpenAPI</button></div></header>
+              <section class="metric-strip"><div class="metric"><span>用户</span><strong>6</strong></div><div class="metric"><span>权限</span><strong>42</strong></div><div class="metric"><span>审计</span><strong>18</strong></div><div class="metric"><span>通知</span><strong>17</strong></div></section>
+              <section class="layout-two"><div class="panel"><h3>权限台账</h3><div class="ledger-table"><div><b>用户</b><b>角色</b><b>权限</b><b>状态</b></div><div><span>admin</span><span>管理员</span><span>system:*</span><span>启用</span></div><div><span>limin</span><span>顾问</span><span>crm:write</span><span>启用</span></div><div><span>zhou</span><span>老师</span><span>student:approve</span><span>启用</span></div></div></div><aside class="panel"><h3>fallback / 知识来源</h3><div class="queue"><div class="queue-row"><span>Dify fallback</span><b>可用</b></div><div class="queue-row"><span>NL2SQL</span><b>只读</b></div><div class="queue-row"><span>知识来源</span><b>已登记</b></div></div></aside></section>
+            </main>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const buttons = Array.from(document.querySelectorAll("[data-target]"));
+      const screens = Array.from(document.querySelectorAll(".screen"));
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          buttons.forEach((item) => item.classList.remove("active"));
+          screens.forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          document.getElementById(button.dataset.target).classList.add("active");
+        });
+      });
+    </script>
+  </body>
+</html>
