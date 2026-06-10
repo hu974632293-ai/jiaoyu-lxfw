@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 7 UI 风格效果图</title>
+    <style>
+      :root {
+        color: #172033;
+        background: #eef2f5;
+        font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #eef2f5;
+      }
+
+      .preview-shell {
+        display: grid;
+        gap: 28px;
+        padding: 28px;
+      }
+
+      .preview-title {
+        display: grid;
+        gap: 8px;
+        max-width: 1180px;
+      }
+
+      .preview-title h1,
+      .preview-title p,
+      .style-board h2,
+      .style-board p {
+        margin: 0;
+      }
+
+      .preview-title p,
+      .style-board p,
+      .mini-screen span,
+      .mini-card span,
+      .mini-row span {
+        color: var(--muted);
+      }
+
+      .style-board {
+        --ink: #172033;
+        --muted: #657184;
+        --panel: #ffffff;
+        --line: #d9e0e7;
+        --soft: #f7f9fb;
+        --accent: #1f6fb2;
+        --accent-2: #22805f;
+        --danger: #b44242;
+        display: grid;
+        gap: 18px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--board);
+        color: var(--ink);
+        box-shadow: 0 18px 42px rgba(31, 45, 61, 0.1);
+      }
+
+      .style-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: end;
+      }
+
+      .style-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .style-tags span,
+      .status {
+        padding: 5px 8px;
+        border-radius: 999px;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, white);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .screen-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .mini-screen {
+        display: grid;
+        gap: 12px;
+        min-height: 268px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .mini-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+      }
+
+      .brand-mark::before {
+        content: "";
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      }
+
+      .mini-hero {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--soft);
+      }
+
+      .mini-hero strong {
+        font-size: 20px;
+      }
+
+      .mini-actions,
+      .mini-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .mini-button {
+        border: 0;
+        border-radius: 6px;
+        padding: 7px 10px;
+        color: white;
+        background: var(--accent);
+        font-weight: 700;
+      }
+
+      .mini-button.secondary {
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 12%, white);
+      }
+
+      .mini-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mini-card,
+      .mini-row {
+        display: grid;
+        gap: 5px;
+        padding: 9px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--panel) 88%, var(--soft));
+      }
+
+      .mini-card strong {
+        font-size: 20px;
+      }
+
+      .mini-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .mini-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+      }
+
+      .mini-table {
+        display: grid;
+        gap: 6px;
+      }
+
+      .mini-table div {
+        display: grid;
+        grid-template-columns: 1.1fr 0.8fr 0.7fr;
+        gap: 8px;
+        padding: 7px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .screen-name {
+        font-weight: 800;
+        color: var(--accent);
+      }
+
+      .minimal {
+        --board: linear-gradient(180deg, #ffffff, #f3f6f9);
+        --accent: #1f6fb2;
+        --accent-2: #22805f;
+        --soft: #f6f8fa;
+        --line: #dce3ea;
+      }
+
+      .tech {
+        --board: radial-gradient(circle at top left, rgba(45, 212, 191, 0.18), transparent 36%), linear-gradient(135deg, #081526, #101f36 58%, #182a43);
+        --ink: #eaf6ff;
+        --muted: #9fb5c8;
+        --panel: #0d1d31;
+        --line: rgba(133, 184, 255, 0.22);
+        --soft: #122843;
+        --accent: #37b6ff;
+        --accent-2: #2dd4bf;
+      }
+
+      .tech .mini-screen {
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+      }
+
+      .vivid {
+        --board: linear-gradient(135deg, #fff4d8, #ffe3ef 48%, #ddf7ff);
+        --ink: #251b38;
+        --muted: #6a5b78;
+        --panel: #fffaf4;
+        --line: rgba(122, 72, 161, 0.22);
+        --soft: #fff0bd;
+        --accent: #e94f8b;
+        --accent-2: #00a7a7;
+      }
+
+      .vivid .mini-screen {
+        border-radius: 14px;
+        box-shadow: 8px 8px 0 rgba(37, 27, 56, 0.08);
+      }
+
+      .government {
+        --board: linear-gradient(180deg, #eef3f7, #e6edf3);
+        --ink: #182333;
+        --muted: #5f6d7b;
+        --panel: #ffffff;
+        --line: #c9d5df;
+        --soft: #f4f7fa;
+        --accent: #245f95;
+        --accent-2: #476b4f;
+      }
+
+      .government .mini-screen {
+        border-radius: 6px;
+      }
+
+      @media (max-width: 1100px) {
+        .screen-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .preview-shell {
+          padding: 14px;
+        }
+
+        .style-head,
+        .screen-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .style-tags {
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="preview-shell">
+      <header class="preview-title">
+        <h1>教育服务业务系统 UI 风格效果图</h1>
+        <p>四套方向仅用于 Task 7 评审，不接入正式前端路由。每套覆盖官网首页、登录页、顾问客户增长、员工工作台、老师学生服务工作台、管理员系统治理。</p>
+      </header>
+
+      <section class="style-board minimal" id="minimal">
+        <div class="style-head">
+          <div>
+            <h2>方案 A：简约大气</h2>
+            <p>留白克制、信息层级清楚，适合长期办公和低学习成本交付。</p>
+          </div>
+          <div class="style-tags"><span>耐看</span><span>低噪音</span><span>办公优先</span></div>
+        </div>
+        <div class="screen-grid">
+          <article class="mini-screen">
+            <div class="mini-top"><span class="brand-mark">官网首页</span><span class="status">咨询</span></div>
+            <div class="mini-hero"><strong>教育服务，从咨询到申请闭环</strong><span>项目、政策、活动和客服 Agent。</span></div>
+            <div class="mini-actions"><span class="mini-button">发起咨询</span><span class="mini-button secondary">查看活动</span></div>
+          </article>
+          <article class="mini-screen">
+            <div class="screen-name">登录页</div>
+            <div class="mini-hero"><strong>登录后台</strong><span>按角色进入对应业务后台。</span></div>
+            <div class="mini-list"><div class="mini-row"><span>顾问</span><b>客户增长</b></div><div class="mini-row"><span>老师</span><b>学生服务</b></div></div>
+          </article>
+          <article class="mini-screen">
+            <div class="screen-name">顾问客户增长</div>
+            <div class="mini-metrics"><div class="mini-card"><span>新增</span><strong>12</strong></div><div class="mini-card"><span>高潜</span><strong>8</strong></div><div class="mini-card"><span>活动</span><strong>42%</strong></div></div>
+            <div class="mini-list"><div class="mini-row"><span>新建线索</span><b>主入口</b></div><div class="mini-row"><span>客户 360</span><b>进入</b></div></div>
+          </article>
+          <article class="mini-screen">
+            <div class="screen-name">员工工作台</div>
+            <div class="mini-tabs"><span class="mini-button">录入客户</span><span class="mini-button secondary">提交日报</span></div>
+            <div class="mini-list"><div class="mini-row"><span>组织架构</span><b>已加载</b></div><div class="mini-row"><span>新人指南</span><b>内部</b></div></div>
+          </article>
+          <article class="mini-screen">
+            <div class="screen-name">老师学生服务工作台</div>
+            <div class="mini-list"><div class="mini-row"><span>请假审批</span><b>5</b></div><div class="mini-row"><span>反馈处理</span><b>9</b></div><div class="mini-row"><span>心理预警</span><b>3</b></div></div>
+          </article>
+          <article class="mini-screen">
+            <div class="screen-name">管理员系统治理</div>
+            <div class="mini-table"><div><b>用户</b><span>角色</span><span>状态</span></div><div><b>admin</b><span>管理员</span><span>启用</span></div><div><b>审计</b><span>通知</span><span>OpenAPI</span></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="style-board tech" id="tech">
+        <div class="style-head">
+          <div>
+            <h2>方案 B：科技高级感</h2>
+            <p>深色数据面板、强对比状态和智能能力展示，适合路演和 AI 能力表达。</p>
+          </div>
+          <div class="style-tags"><span>数据感</span><span>AI 能力</span><span>高对比</span></div>
+        </div>
+        <div class="screen-grid">
+          <article class="mini-screen"><div class="mini-top"><span class="brand-mark">官网首页</span><span class="status">Agent 在线</span></div><div class="mini-hero"><strong>智能研判驱动教育服务</strong><span>咨询、画像、项目推荐和活动转化。</span></div><div class="mini-actions"><span class="mini-button">智能咨询</span><span class="mini-button secondary">项目匹配</span></div></article>
+          <article class="mini-screen"><div class="screen-name">登录页</div><div class="mini-hero"><strong>Role Access</strong><span>权限进入独立后台。</span></div><div class="mini-metrics"><div class="mini-card"><span>角色</span><strong>6</strong></div><div class="mini-card"><span>权限</span><strong>42</strong></div><div class="mini-card"><span>审计</span><strong>ON</strong></div></div></article>
+          <article class="mini-screen"><div class="screen-name">顾问客户增长</div><div class="mini-metrics"><div class="mini-card"><span>Score</span><strong>86</strong></div><div class="mini-card"><span>Risk</span><strong>中</strong></div><div class="mini-card"><span>Match</span><strong>2</strong></div></div><div class="mini-list"><div class="mini-row"><span>触发研判</span><b>运行</b></div><div class="mini-row"><span>推荐项目</span><b>新加坡</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">员工工作台</div><div class="mini-tabs"><span class="mini-button">NL 指令</span><span class="mini-button secondary">只读查询</span></div><div class="mini-list"><div class="mini-row"><span>日报结构化</span><b>成功</b></div><div class="mini-row"><span>状态更新</span><b>审计</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">老师学生服务工作台</div><div class="mini-list"><div class="mini-row"><span>请假审批</span><b>队列</b></div><div class="mini-row"><span>心理预警</span><b>辅助</b></div><div class="mini-row"><span>进度节点</span><b>同步</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">管理员系统治理</div><div class="mini-table"><div><b>Module</b><span>API</span><span>State</span></div><div><b>OpenAPI</b><span>/docs</span><span>Ready</span></div><div><b>fallback</b><span>Dify</span><span>Safe</span></div></div></article>
+        </div>
+      </section>
+
+      <section class="style-board vivid" id="vivid">
+        <div class="style-head">
+          <div>
+            <h2>方案 C：绚烂花哨</h2>
+            <p>更强活动感和路演冲击力，官网吸引力强，后台需要压住色彩占比。</p>
+          </div>
+          <div class="style-tags"><span>醒目</span><span>活动感</span><span>路演优先</span></div>
+        </div>
+        <div class="screen-grid">
+          <article class="mini-screen"><div class="mini-top"><span class="brand-mark">官网首页</span><span class="status">报名</span></div><div class="mini-hero"><strong>找到适合你的海外成长路径</strong><span>咨询、活动、项目一屏启动。</span></div><div class="mini-actions"><span class="mini-button">马上报名</span><span class="mini-button secondary">问客服</span></div></article>
+          <article class="mini-screen"><div class="screen-name">登录页</div><div class="mini-hero"><strong>选择你的身份</strong><span>顾问、员工、老师、学生、管理者、管理员。</span></div><div class="mini-tabs"><span class="mini-button">顾问</span><span class="mini-button secondary">学生</span></div></article>
+          <article class="mini-screen"><div class="screen-name">顾问客户增长</div><div class="mini-metrics"><div class="mini-card"><span>Lead</span><strong>12</strong></div><div class="mini-card"><span>Hot</span><strong>8</strong></div><div class="mini-card"><span>Event</span><strong>26</strong></div></div><div class="mini-list"><div class="mini-row"><span>新建线索</span><b>醒目</b></div><div class="mini-row"><span>活动邀约</span><b>高亮</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">员工工作台</div><div class="mini-tabs"><span class="mini-button">录入客户</span><span class="mini-button secondary">日报</span></div><div class="mini-list"><div class="mini-row"><span>新人指南</span><b>卡片</b></div><div class="mini-row"><span>组织架构</span><b>清单</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">老师学生服务工作台</div><div class="mini-list"><div class="mini-row"><span>请假审批</span><b>5</b></div><div class="mini-row"><span>反馈处理</span><b>9</b></div><div class="mini-row"><span>心理预警</span><b>3</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">管理员系统治理</div><div class="mini-table"><div><b>用户</b><span>权限</span><span>通知</span></div><div><b>seed</b><span>OpenAPI</span><span>fallback</span></div><div><b>审计</b><span>知识来源</span><span>状态</span></div></div></article>
+        </div>
+      </section>
+
+      <section class="style-board government" id="government">
+        <div class="style-head">
+          <div>
+            <h2>方案 D：稳重政企</h2>
+            <p>可信、克制、表格和状态清晰，适合国企/教育服务背景和真实交付。</p>
+          </div>
+          <div class="style-tags"><span>可信</span><span>审计感</span><span>交付优先</span></div>
+        </div>
+        <div class="screen-grid">
+          <article class="mini-screen"><div class="mini-top"><span class="brand-mark">官网首页</span><span class="status">可信咨询</span></div><div class="mini-hero"><strong>教育服务咨询与学生支持</strong><span>公司、业务、政策、活动和 FAQ。</span></div><div class="mini-actions"><span class="mini-button">咨询</span><span class="mini-button secondary">登录后台</span></div></article>
+          <article class="mini-screen"><div class="screen-name">登录页</div><div class="mini-hero"><strong>统一登录入口</strong><span>不同角色进入对应业务后台。</span></div><div class="mini-list"><div class="mini-row"><span>管理者</span><b>经营管理</b></div><div class="mini-row"><span>管理员</span><b>系统治理</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">顾问客户增长</div><div class="mini-metrics"><div class="mini-card"><span>新线索</span><strong>12</strong></div><div class="mini-card"><span>高潜</span><strong>8</strong></div><div class="mini-card"><span>待办</span><strong>27</strong></div></div><div class="mini-list"><div class="mini-row"><span>新建线索</span><b>主按钮</b></div><div class="mini-row"><span>阶段流转</span><b>可审计</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">员工工作台</div><div class="mini-tabs"><span class="mini-button">录入客户</span><span class="mini-button secondary">提交日报</span></div><div class="mini-list"><div class="mini-row"><span>组织架构</span><b>只读</b></div><div class="mini-row"><span>受控查询</span><b>白名单</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">老师学生服务工作台</div><div class="mini-list"><div class="mini-row"><span>请假审批</span><b>待处理</b></div><div class="mini-row"><span>投诉反馈</span><b>跟进中</b></div><div class="mini-row"><span>心理预警</span><b>辅助</b></div></div></article>
+          <article class="mini-screen"><div class="screen-name">管理员系统治理</div><div class="mini-table"><div><b>用户</b><span>角色</span><span>权限</span></div><div><b>审计</b><span>通知</span><span>知识来源</span></div><div><b>OpenAPI</b><span>seed</span><span>fallback</span></div></div></article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
