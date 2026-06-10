@@ -705,6 +705,12 @@ td span {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.growth-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .metric-card {
   border: 1px solid var(--line);
   background: white;
@@ -744,6 +750,13 @@ td span {
 
 .split-layout.secondary {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.growth-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 14px;
+  align-items: start;
 }
 
 .crm-layout {
@@ -812,6 +825,57 @@ td span {
   gap: 4px;
   color: var(--blue);
   font-style: normal;
+}
+
+.growth-focus-list,
+.recent-customer-grid,
+.report-summary-list {
+  display: grid;
+  gap: 10px;
+}
+
+.growth-focus-card,
+.customer-summary-card {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #e1e6ec;
+  background: var(--soft);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.growth-focus-card:hover,
+.customer-summary-card:hover {
+  border-color: #b9d3ea;
+  background: #edf6ff;
+}
+
+.growth-focus-card small,
+.customer-summary-card small,
+.report-summary-list small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.growth-focus-card em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--blue);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.recent-customer-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.customer-summary-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .task-list,
@@ -1176,6 +1240,7 @@ textarea {
   .workspace-grid,
   .split-layout,
   .split-layout.secondary,
+  .growth-overview-grid,
   .public-hero,
   .public-two-column,
   .crm-layout,
@@ -1194,6 +1259,11 @@ textarea {
   }
 
   .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .growth-metric-grid,
+  .recent-customer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1220,6 +1290,11 @@ textarea {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .growth-metric-grid,
+  .recent-customer-grid {
     grid-template-columns: 1fr;
   }
 

@@ -1,6 +1,6 @@
 import { FileText, RefreshCw, ShieldCheck } from "lucide-react";
-import DashboardPage from "./DashboardPage";
 import EnterpriseAssistantPage from "./EnterpriseAssistantPage";
+import GrowthOverviewPage from "./GrowthOverviewPage";
 import LeadsPage from "./LeadsPage";
 import ProjectsPage from "./ProjectsPage";
 import ReportsPage from "./ReportsPage";
@@ -23,9 +23,9 @@ type BackofficeShellPageProps = {
 };
 
 type BackofficeComponent = (props: PageProps) => JSX.Element;
+type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview">;
 
-const backofficeComponents: Record<BackofficePageKey, BackofficeComponent> = {
-  growthOverview: DashboardPage,
+const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
   customerGrowth: LeadsPage,
   customer360: LeadsPage,
   operations: ProjectsPage,
@@ -59,10 +59,18 @@ export default function BackofficeShellPage({
   const currentRole = roleOptions.find((item) => item.key === role) ?? roleOptions[0];
   const visiblePages = roleVisiblePages[role];
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? backofficeNavItems[0];
-  const CurrentPage = backofficeComponents[activePage];
 
   function navigateLegacy(page: PageKey) {
     onNavigate(legacyPageMap[page]);
+  }
+
+  function renderCurrentPage() {
+    if (activePage === "growthOverview") {
+      return <GrowthOverviewPage onNavigate={onNavigate} />;
+    }
+
+    const CurrentPage = backofficeComponents[activePage];
+    return <CurrentPage role={role} onNavigate={navigateLegacy} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
   }
 
   return (
@@ -134,7 +142,7 @@ export default function BackofficeShellPage({
         </aside>
 
         <section className="content-frame">
-          <CurrentPage role={role} onNavigate={navigateLegacy} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />
+          {renderCurrentPage()}
         </section>
       </div>
     </main>

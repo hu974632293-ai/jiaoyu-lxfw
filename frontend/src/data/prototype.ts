@@ -18,6 +18,19 @@ export const dashboardMetrics = [
   { label: "最近报告", value: "4", trend: "本周已生成", state: "success" },
 ];
 
+export const growthMetrics = [
+  { label: "今日新增", value: "12", trend: "+18%", state: "success" },
+  { label: "高潜客户", value: "8", trend: "3 个需今日回访", state: "warning" },
+  { label: "待跟进", value: "27", trend: "6 个超时", state: "danger" },
+  { label: "活动转化", value: "42%", trend: "本周讲座", state: "success" },
+];
+
+export const growthFocusItems = [
+  { leadId: 1, title: "王晨 17:30 回访家长", meta: "新加坡本科 / 高潜 / 缺预算上限", priority: "高" },
+  { leadId: 2, title: "刘欣发送德国双元制材料", meta: "咨询中 / 关注带薪实习", priority: "中" },
+  { leadId: 3, title: "陈浩设置长期培育提醒", meta: "预算不足 / 3 个月后再触达", priority: "低" },
+];
+
 export const workflowCards = [
   {
     key: "crm",
