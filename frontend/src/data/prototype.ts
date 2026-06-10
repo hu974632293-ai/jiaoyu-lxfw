@@ -41,7 +41,7 @@ export const workflowCards = [
     key: "reports",
     title: "报告决策闭环",
     summary: "客户经营、员工日报、心理健康和投诉处理报告以页面和 JSON 快照演示。",
-    status: "客户经营真实 API",
+    status: "四类报告真实 API",
   },
 ];
 
@@ -135,10 +135,10 @@ export const psychAlerts = [
 ];
 
 export const reportTypes = [
-  { key: "customer", title: "客户经营分析", mode: "真实 API", summary: "新增、成交、流失、高潜客户和跟进建议" },
-  { key: "daily", title: "员工日报汇总", mode: "前端 mock", summary: "团队进展、产出、风险和待协调事项" },
-  { key: "psych", title: "学生心理健康周报", mode: "前端 mock", summary: "风险学生、情绪标签、趋势和跟进建议" },
-  { key: "feedback", title: "投诉处理周报", mode: "前端 mock", summary: "投诉数量、分类、处理时效和未决风险" },
+  { key: "customer_operation", title: "客户经营分析", mode: "真实 API", summary: "新增、成交、流失、高潜客户和跟进建议" },
+  { key: "daily_summary", title: "员工日报汇总", mode: "真实 API", summary: "团队进展、产出、风险和待协调事项" },
+  { key: "student_psych_weekly", title: "学生心理健康周报", mode: "真实 API", summary: "风险学生、情绪标签、趋势和跟进建议" },
+  { key: "feedback_weekly", title: "投诉处理周报", mode: "真实 API", summary: "投诉数量、分类、处理时效和未决风险" },
 ];
 
 export const mockReportSnapshots = [

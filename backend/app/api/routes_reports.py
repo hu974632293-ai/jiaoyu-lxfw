@@ -1,13 +1,16 @@
-import json
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.response import fail, ok
 from app.models.report import ReportSnapshot
-from app.schemas.report import CustomerOperationReportRequest
-from app.services.report_service import generate_customer_operation_report
+from app.schemas.report import CustomerOperationReportRequest, ReportGenerateRequest
+from app.services.report_service import (
+    generate_customer_operation_report,
+    generate_report_snapshot,
+    serialize_report_detail,
+    serialize_report_summary,
+)
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -18,10 +21,18 @@ def customer_operation(payload: CustomerOperationReportRequest, db: Session = De
     return ok({"id": report.id, "title": report.title, "generation_mode": report.generation_mode})
 
 
+@router.post("/generate")
+def generate(payload: ReportGenerateRequest, db: Session = Depends(get_db)):
+    try:
+        return ok(serialize_report_summary(generate_report_snapshot(db, payload)))
+    except ValueError as exc:
+        return fail(str(exc), 40001)
+
+
 @router.get("")
 def list_reports(db: Session = Depends(get_db)):
     reports = db.query(ReportSnapshot).order_by(ReportSnapshot.id.desc()).all()
-    return ok([{"id": item.id, "title": item.title, "report_type": item.report_type} for item in reports])
+    return ok([serialize_report_summary(item) for item in reports])
 
 
 @router.get("/{report_id}")
@@ -29,12 +40,4 @@ def detail(report_id: int, db: Session = Depends(get_db)):
     report = db.query(ReportSnapshot).filter(ReportSnapshot.id == report_id).first()
     if not report:
         return fail("报告不存在", 40403)
-    return ok(
-        {
-            "id": report.id,
-            "title": report.title,
-            "report_type": report.report_type,
-            "content": json.loads(report.content_json),
-            "generation_mode": report.generation_mode,
-        }
-    )
+    return ok(serialize_report_detail(report))

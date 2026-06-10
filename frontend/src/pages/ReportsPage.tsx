@@ -2,11 +2,22 @@ import { useEffect, useState } from "react";
 import { FileJson, Play, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import type { PageProps } from "../App";
-import { mockReportSnapshots, reportTypes } from "../data/prototype";
+import { reportTypes } from "../data/prototype";
 
-type ReportCreated = { id: number; title: string; generation_mode: string };
-type ReportDetail = { id: number; title: string; content: Record<string, unknown>; generation_mode: string };
-type ReportListItem = { id: number; title: string; report_type: string };
+type ReportCreated = {
+  id: number;
+  title: string;
+  report_type: string;
+  generation_mode: string;
+  period_start: string | null;
+  period_end: string | null;
+};
+type ReportDetail = ReportCreated & {
+  content: Record<string, unknown>;
+};
+type ReportListItem = ReportCreated & {
+  created_at: string | null;
+};
 
 export default function ReportsPage({ onNavigate }: PageProps) {
   const [activeType, setActiveType] = useState(reportTypes[0].key);
@@ -18,38 +29,29 @@ export default function ReportsPage({ onNavigate }: PageProps) {
   async function loadReports() {
     try {
       setReports(await apiRequest<ReportListItem[]>("/api/reports"));
-    } catch {
+      setMessage("报告列表已刷新");
+    } catch (error) {
       setReports([]);
+      setMessage(error instanceof Error ? `报告列表加载失败：${error.message}` : "报告列表加载失败");
     }
   }
 
   async function generate() {
-    if (activeType !== "customer") {
-      setCreated(null);
-      setDetail({
-        id: 0,
-        title: reportTypes.find((item) => item.key === activeType)?.title ?? "原型报告",
-        generation_mode: "frontend_mock",
-        content: {
-          period: "2026-W24",
-          conclusion: "本报告类型后端 API 后续阶段实现，当前展示页面报告和 JSON 快照结构。",
-          risk: mockReportSnapshots.find((item) => item.type === activeType)?.risk,
-          actions: ["补齐后端报告任务", "保留模板兜底", "接入审计日志"],
-        },
-      });
-      setMessage("已生成前端 mock 报告快照");
-      return;
-    }
-
-    setMessage("正在调用真实客户经营报告 API...");
+    setMessage("正在调用报告中心真实 API...");
     try {
-      const data = await apiRequest<ReportCreated>("/api/reports/customer-operation", {
+      const data = await apiRequest<ReportCreated>("/api/reports/generate", {
         method: "POST",
-        body: JSON.stringify({ generated_by: "demo", use_llm_polish: false }),
+        body: JSON.stringify({
+          report_type: activeType,
+          generated_by: "demo",
+          period_start: "2026-06-01",
+          period_end: "2026-06-10",
+          use_llm_polish: false,
+        }),
       });
       setCreated(data);
       setDetail(await apiRequest<ReportDetail>(`/api/reports/${data.id}`));
-      setMessage("客户经营报告已通过真实 API 生成");
+      setMessage("报告已通过真实 API 生成");
       await loadReports();
     } catch (error) {
       setMessage(error instanceof Error ? `报告生成失败：${error.message}` : "报告生成失败");
@@ -68,7 +70,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
         <div>
           <p className="eyebrow">报告中心</p>
           <h2>四类管理报告和 JSON 快照</h2>
-          <p>报告先做页面报告和结构化快照，不做 PDF/Word 导出。客户经营报告继续调用真实 API。</p>
+          <p>报告先做页面报告和结构化快照，不做 PDF/Word 导出；四类报告均调用真实 API 并保存快照。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={loadReports}>
@@ -115,14 +117,14 @@ export default function ReportsPage({ onNavigate }: PageProps) {
             </label>
             <label>
               <span>生成方式</span>
-              <input defaultValue={activeType === "customer" ? "template_rule" : "frontend_mock"} />
+              <input value="template_rule" readOnly />
             </label>
           </div>
 
           {created && (
             <div className="compact-card">
-              <strong>最近真实报告</strong>
-              <span>{created.title} / {created.generation_mode}</span>
+              <strong>最近生成报告</strong>
+              <span>{created.title} / {created.generation_mode} / #{created.id}</span>
             </div>
           )}
 
@@ -142,23 +144,17 @@ export default function ReportsPage({ onNavigate }: PageProps) {
         <aside className="panel-block">
           <div className="section-title">
             <h3>报告列表</h3>
-            <span>真实 + mock</span>
+            <span>{reports.length ? `${reports.length} 份` : "暂无真实快照"}</span>
           </div>
           <div className="log-list">
             {reports.map((item) => (
-              <article key={item.id}>
+              <article key={item.id} onClick={() => apiRequest<ReportDetail>(`/api/reports/${item.id}`).then(setDetail).catch(() => setMessage("报告详情加载失败"))}>
                 <strong>{item.title}</strong>
                 <span>{item.report_type}</span>
-                <em>#{item.id}</em>
+                <em>{item.created_at?.slice(0, 16).replace("T", " ") ?? `#${item.id}`}</em>
               </article>
             ))}
-            {mockReportSnapshots.map((item) => (
-              <article key={item.title}>
-                <strong>{item.title}</strong>
-                <span>{item.period}</span>
-                <em>mock</em>
-              </article>
-            ))}
+            {!reports.length && <div className="empty-state">暂无报告快照，点击生成报告后出现。</div>}
           </div>
           <button className="icon-button secondary full-width" onClick={() => onNavigate("crm")}>跳转相关客户</button>
         </aside>
