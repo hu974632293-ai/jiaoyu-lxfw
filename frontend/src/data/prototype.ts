@@ -35,7 +35,7 @@ export const workflowCards = [
     key: "student",
     title: "学生服务闭环",
     summary: "请假、反馈、申请进度、学业节点和心理风险辅助识别集中在统一工作台。",
-    status: "前端 mock",
+    status: "真实 API + fallback",
   },
   {
     key: "reports",

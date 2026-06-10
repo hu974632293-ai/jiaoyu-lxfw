@@ -15,6 +15,7 @@ from app.api import (
     routes_projects,
     routes_reports,
     routes_roles,
+    routes_student_assistant,
     routes_users,
 )
 from app.core.config import settings
@@ -47,6 +48,7 @@ app.include_router(routes_profile.router)
 app.include_router(routes_leads.router)
 app.include_router(routes_crm.router)
 app.include_router(routes_enterprise_assistant.router)
+app.include_router(routes_student_assistant.router)
 app.include_router(routes_projects.router)
 app.include_router(routes_events.router)
 app.include_router(routes_reports.router)
