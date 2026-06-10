@@ -1,15 +1,15 @@
 import { ShieldCheck } from "lucide-react";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
+import EmployeeWorkspacePage from "./EmployeeWorkspacePage";
 import GrowthOverviewPage from "./GrowthOverviewPage";
 import ManagementDashboardPage from "./ManagementDashboardPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
-import SystemDemoPage from "./SystemDemoPage";
-import EmployeeWorkspacePage from "./EmployeeWorkspacePage";
-import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import StudentServicePage from "./StudentServicePage";
+import SystemDemoPage from "./SystemDemoPage";
 import SystemGovernancePage from "./SystemGovernancePage";
+import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
@@ -56,6 +56,7 @@ export default function BackofficeShellPage({
     .map((pageKey) => backofficeNavItems.find((item) => item.key === pageKey))
     .filter((item): item is (typeof backofficeNavItems)[number] => Boolean(item));
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
+  const shellClass = role === "student" ? "workspace-shell student-shell" : "workspace-shell staff-shell";
 
   function renderCurrentPage() {
     if (activePage === "growthOverview") {
@@ -76,13 +77,13 @@ export default function BackofficeShellPage({
   }
 
   return (
-    <main className="workspace-shell">
+    <main className={shellClass}>
       <header className="topbar">
         <div className="brand">
           <ShieldCheck size={26} aria-hidden="true" />
           <div>
-            <h1>教育服务运营工作台</h1>
-            <p>按角色进入对应业务后台</p>
+            <h1>{role === "student" ? "学生服务台" : "教育服务运营后台"}</h1>
+            <p>{role === "student" ? "轻量自助服务入口" : "按角色进入对应业务后台"}</p>
           </div>
         </div>
         <div className="top-actions">
@@ -90,14 +91,12 @@ export default function BackofficeShellPage({
             <span>当前角色</span>
             <select value={role} onChange={(event) => onRoleChange(event.target.value as RoleKey)}>
               {roleOptions.map((option) => (
-                <option value={option.key} key={option.key}>
-                  {option.label}
-                </option>
+                <option value={option.key}>{option.label}</option>
               ))}
             </select>
           </label>
           <button className="ghost-button" onClick={onLogout}>
-            退出到官网
+            返回官网
           </button>
         </div>
       </header>
@@ -105,17 +104,16 @@ export default function BackofficeShellPage({
       <section className="status-strip" aria-label="系统状态">
         <span className="status-pill">角色重点：{currentRole.focus}</span>
         <span className="status-pill">当前模块：{current.label}</span>
-        <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span>
+        {role !== "student" ? <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span> : null}
       </section>
 
-      <div className="workspace-grid">
+      <div className={role === "student" ? "workspace-grid student-workspace-grid" : "workspace-grid"}>
         <aside className="sidebar" aria-label="后台一级导航">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 className={activePage === item.key ? "nav-item active" : "nav-item"}
-                key={item.key}
                 onClick={() => onNavigate(item.key)}
                 title={item.desc}
               >
@@ -129,9 +127,7 @@ export default function BackofficeShellPage({
           })}
         </aside>
 
-        <section className="content-frame">
-          {renderCurrentPage()}
-        </section>
+        <section className="content-frame">{renderCurrentPage()}</section>
       </div>
     </main>
   );

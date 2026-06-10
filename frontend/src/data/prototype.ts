@@ -1,12 +1,12 @@
 export type RoleKey = "admin" | "manager" | "consultant" | "employee" | "teacher" | "student";
 
 export const roleOptions: Array<{ key: RoleKey; label: string; focus: string }> = [
-  { key: "admin", label: "管理员", focus: "系统治理、权限、审计" },
-  { key: "manager", label: "管理者", focus: "经营报告、团队日报、风险" },
-  { key: "consultant", label: "顾问", focus: "CRM、跟进、活动报名" },
-  { key: "employee", label: "员工", focus: "企业助手、日报、新人指南" },
-  { key: "teacher", label: "老师", focus: "学生服务、审批、预警" },
-  { key: "student", label: "学生", focus: "请假、反馈、进度、生活支持" },
+  { key: "admin", label: "管理员", focus: "系统治理、权限、审计、知识来源" },
+  { key: "manager", label: "管理者", focus: "经营报告、团队日报、风险观察" },
+  { key: "consultant", label: "顾问", focus: "CRM、画像研判、项目推荐、客户跟进" },
+  { key: "employee", label: "员工", focus: "客户快捷操作、日报、组织查询" },
+  { key: "teacher", label: "老师", focus: "学生服务、审批、反馈和预警" },
+  { key: "student", label: "学生", focus: "请假、反馈、进度和生活支持" },
 ];
 
 export const dashboardMetrics = [
@@ -26,7 +26,7 @@ export const growthMetrics = [
 ];
 
 export const growthFocusItems = [
-  { leadId: 1, title: "王晨 17:30 回访家长", meta: "新加坡本科 / 高潜 / 缺预算上限", priority: "高" },
+  { leadId: 1, title: "王晴 17:30 回访家长", meta: "新加坡本科 / 高潜 / 缺预算上限", priority: "高" },
   { leadId: 2, title: "刘欣发送德国双元制材料", meta: "咨询中 / 关注带薪实习", priority: "中" },
   { leadId: 3, title: "陈浩设置长期培育提醒", meta: "预算不足 / 3 个月后再触达", priority: "低" },
 ];
@@ -40,9 +40,9 @@ export const pipelineStages = [
 ];
 
 export const customerAdviceItems = [
-  { title: "先确认预算上限", detail: "王晨家长关注费用，下一次回访需要补齐预算区间和可接受付款节奏。" },
-  { title: "匹配活动邀约", detail: "推荐优先邀约新加坡升学说明会，再根据反馈判断是否进入项目方案沟通。" },
-  { title: "补充风险说明", detail: "客户 360 中应保留 Dify fallback 与规则画像结论，避免把 AI 建议当作最终承诺。" },
+  { title: "先确认预算上限", detail: "王晴家长关注费用，下次回访需要补齐预算区间和可接受付款节奏。" },
+  { title: "匹配活动邀约", detail: "优先邀约新加坡升学说明会，再根据反馈判断是否进入项目方案沟通。" },
+  { title: "保留 AI 建议边界", detail: "客户 360 中保留 Dify fallback 与规则画像结论，避免把 AI 建议当作最终承诺。" },
 ];
 
 export const workflowCards = [
@@ -55,13 +55,13 @@ export const workflowCards = [
   {
     key: "enterprise",
     title: "企业助手闭环",
-    summary: "用自然语言录入客户、提交日报、查询组织架构和新人指南，写操作保留 service 校验边界。",
+    summary: "自然语言录入客户、提交日报、查询组织架构和新人指南，写操作保留 service 校验边界。",
     status: "前端 mock",
   },
   {
     key: "student",
     title: "学生服务闭环",
-    summary: "请假、反馈、申请进度、学业节点和心理风险辅助识别集中在统一工作台。",
+    summary: "请假、反馈、申请进度、学业节点和心理风险辅助识别集中在学生服务工作台。",
     status: "真实 API + fallback",
   },
   {
@@ -73,8 +73,8 @@ export const workflowCards = [
 ];
 
 export const todoItems = [
-  { title: "跟进高潜客户 王晨", meta: "CRM / 顾问 李敏 / 17:30 前", level: "高" },
-  { title: "审批陈雨 6 月请假", meta: "学生助手 / 老师 周老师", level: "中" },
+  { title: "跟进高潜客户王晴", meta: "CRM / 顾问 李敏 / 17:30 前", level: "高" },
+  { title: "审批陈雨 6 月请假", meta: "学生服务 / 老师 周老师", level: "中" },
   { title: "补充德国双元制活动名单", meta: "活动运营 / 运营 张岚", level: "中" },
   { title: "生成投诉处理周报", meta: "报告中心 / 管理者", level: "低" },
 ];
@@ -82,7 +82,7 @@ export const todoItems = [
 export const crmPrototypeRows = [
   {
     id: 1,
-    customer_name: "王晨",
+    customer_name: "王晴",
     contact: "138****4210",
     status: "high_potential",
     statusLabel: "高潜跟进",
@@ -116,7 +116,7 @@ export const crmPrototypeRows = [
 ];
 
 export const crmTimeline = [
-  { time: "09:10", title: "客户资料进入系统", detail: "来源：企业助手自然语言录入" },
+  { time: "09:10", title: "客户资料进入系统", detail: "来源：官网咨询表单" },
   { time: "09:14", title: "画像研判完成", detail: "命中新加坡低风险升学路径，缺少预算上限" },
   { time: "10:05", title: "知识库问答", detail: "Dify 未配置时使用 fallback，已展示原因" },
   { time: "11:30", title: "新增跟进", detail: "顾问确认家长希望参加周末讲座" },
@@ -160,7 +160,7 @@ export const publicFaqs = [
 ];
 
 export const enterpriseQuickCommands = [
-  "帮我录入一个客户：王晨，高三，想去新加坡读本科，家长关注费用",
+  "帮我录入一个客户：王晴，高三，想去新加坡读本科，家长关注费用",
   "提交今天日报：跟进 8 个客户，2 个高潜，风险是德国项目材料不齐",
   "查一下双元制事业部负责人和新人入职流程",
   "用受控查询看本周高潜线索数量",

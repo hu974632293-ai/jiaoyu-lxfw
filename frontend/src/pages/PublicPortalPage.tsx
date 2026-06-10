@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, CalendarDays, CheckCircle2, HelpCircle, Mail, Phone } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, CheckCircle2, HelpCircle, Mail, Phone, Sparkles } from "lucide-react";
 import { eventPrototypeRows, projectRows, publicFaqs, publicServices, publicTrustPoints } from "../data/prototype";
 import { publicNavItems } from "../navigation";
 import type { PublicPageKey } from "../navigation";
@@ -21,24 +21,24 @@ const pageTitle: Record<PublicPageKey, string> = {
 
 export default function PublicPortalPage({ activePage, onNavigate, onLogin }: PublicPortalPageProps) {
   return (
-    <main className="public-shell">
+    <main className="public-shell brand-portal">
       <header className="public-topbar">
         <button className="public-brand" onClick={() => onNavigate("home")}>
           <Building2 size={20} aria-hidden="true" />
-          教育服务
+          澜桥国际教育
         </button>
         <nav className="public-nav" aria-label="公开官网导航">
           {publicNavItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button className={activePage === item.key ? "active" : ""} key={item.key} onClick={() => onNavigate(item.key)}>
+              <button className={activePage === item.key ? "active" : ""} onClick={() => onNavigate(item.key)}>
                 <Icon size={16} aria-hidden="true" />
                 {item.label}
               </button>
             );
           })}
         </nav>
-        <button className="icon-button" onClick={onLogin}>
+        <button className="icon-button secondary" onClick={onLogin}>
           登录后台
         </button>
       </header>
@@ -57,46 +57,58 @@ export default function PublicPortalPage({ activePage, onNavigate, onLogin }: Pu
 function HomePage({ onNavigate, onLogin }: Pick<PublicPortalPageProps, "onNavigate" | "onLogin">) {
   return (
     <div className="public-page-stack">
-      <section className="public-hero">
+      <section className="public-hero premium-hero">
         <div className="public-hero-copy">
-          <p className="eyebrow">教育服务官网门户</p>
-          <h1>把升学规划、项目选择和后续服务做成可追踪的教育服务路径</h1>
+          <p className="eyebrow">教育咨询品牌门户</p>
+          <h1>把升学规划、项目选择和后续服务做成一条清晰路径</h1>
           <p>
-            面向学生、家长和合作方，提供留学规划、国际本科、德国双元制、语言培训、背景提升和学生服务支持。
-            官网用于了解企业、判断服务匹配并发起咨询；后台工作台仅供登录后的内部角色使用。
+            面向学生、家长和合作方，提供留学规划、国际本科、德国双元制、语言培训、背景提升和学生服务支持。公开官网用于建立信任、解释服务并发起咨询。
           </p>
           <div className="public-actions">
             <button className="icon-button" onClick={() => onNavigate("contact")}>
-              立即咨询
+              预约一对一咨询
               <ArrowRight size={16} aria-hidden="true" />
             </button>
             <button className="icon-button secondary" onClick={() => onNavigate("publicProjects")}>
-              查看项目
+              查看适合项目
             </button>
             <button className="ghost-button" onClick={onLogin}>
               登录后台
             </button>
           </div>
         </div>
-        <aside className="public-hero-panel">
-          <strong>服务路径</strong>
-          <ol>
-            <li>了解企业和服务范围</li>
-            <li>选择项目或活动方向</li>
-            <li>提交咨询或报名信息</li>
-            <li>由顾问进入后台跟进</li>
-          </ol>
-          <span>公开官网只展示服务路径和咨询入口；内部运营信息仅在登录后可见。</span>
+        <aside className="public-hero-visual">
+          <div className="hero-photo" />
+          <div className="agent-card">
+            <Sparkles size={18} aria-hidden="true" />
+            <strong>客服 Agent 在线</strong>
+            <span>回答业务、政策、项目、活动和 FAQ；未配置 Dify 时保留 fallback。</span>
+          </div>
         </aside>
       </section>
 
-      <SectionHeader eyebrow="核心服务" title="先解释服务，再引导咨询" actionLabel="全部服务" onAction={() => onNavigate("services")} />
+      <section className="public-conversion-strip" aria-label="咨询路径">
+        <article>
+          <strong>1. 说明服务</strong>
+          <span>先了解公司、业务、项目和活动。</span>
+        </article>
+        <article>
+          <strong>2. 提交咨询</strong>
+          <span>留下目标国家、预算、阶段和联系方式。</span>
+        </article>
+        <article>
+          <strong>3. 顾问承接</strong>
+          <span>进入客户增长后台完成研判和跟进。</span>
+        </article>
+      </section>
+
+      <SectionHeader eyebrow="核心服务" title="以家庭决策为中心组织服务入口" actionLabel="全部服务" onAction={() => onNavigate("services")} />
       <ServiceGrid />
 
       <SectionHeader eyebrow="信任建立" title="用清晰流程降低陌生访客决策成本" />
       <div className="public-trust-grid">
         {publicTrustPoints.map((item) => (
-          <article key={item.title}>
+          <article>
             <CheckCircle2 size={18} aria-hidden="true" />
             <strong>{item.title}</strong>
             <p>{item.desc}</p>
@@ -127,43 +139,79 @@ function HomePage({ onNavigate, onLogin }: Pick<PublicPortalPageProps, "onNaviga
 }
 
 function PublicSubPage({ activePage, onNavigate, onLogin }: PublicPortalPageProps) {
+  if (activePage === "about") {
+    return (
+      <div className="public-page-stack">
+        <section className="public-subpage-heading">
+          <p className="eyebrow">{pageTitle[activePage]}</p>
+          <h1>围绕国际教育、智慧教育和学生服务建立长期服务能力</h1>
+          <p>官网只展示公开业务信息和咨询入口；客户资料、跟进记录、权限审计等内部信息仅在登录后台可见。</p>
+        </section>
+        <div className="public-card-grid">
+          <article className="public-card"><strong>国际教育</strong><p>升学规划、国际本科、德国双元制和语言培训。</p></article>
+          <article className="public-card"><strong>智慧服务</strong><p>通过客服 Agent、知识库和规则研判提升咨询效率。</p></article>
+          <article className="public-card"><strong>学生支持</strong><p>申请进度、学业节点、反馈工单和生活支持。</p></article>
+        </div>
+      </div>
+    );
+  }
+
+  if (activePage === "services") {
+    return (
+      <div className="public-page-stack">
+        <section className="public-subpage-heading">
+          <p className="eyebrow">{pageTitle[activePage]}</p>
+          <h1>先解释服务，再引导到咨询、项目和活动</h1>
+        </section>
+        <ServiceGrid expanded />
+      </div>
+    );
+  }
+
+  if (activePage === "publicProjects") {
+    return (
+      <div className="public-page-stack">
+        <section className="public-subpage-heading">
+          <p className="eyebrow">{pageTitle[activePage]}</p>
+          <h1>按国家、目标和周期查看公开项目</h1>
+        </section>
+        <ProjectPreview expanded />
+      </div>
+    );
+  }
+
+  if (activePage === "publicEvents") {
+    return (
+      <div className="public-page-stack">
+        <section className="public-subpage-heading">
+          <p className="eyebrow">{pageTitle[activePage]}</p>
+          <h1>说明会和讲座直接承接报名需求</h1>
+        </section>
+        <EventPreview expanded />
+      </div>
+    );
+  }
+
+  if (activePage === "faq") {
+    return (
+      <div className="public-page-stack">
+        <section className="public-subpage-heading">
+          <p className="eyebrow">{pageTitle[activePage]}</p>
+          <h1>常见问题与客服 Agent</h1>
+          <p>客服 Agent 面向公开官网和潜在客户，不暴露内部 CRM、审计、权限或接口调试信息。</p>
+        </section>
+        <FaqPreview expanded />
+      </div>
+    );
+  }
+
   return (
     <div className="public-page-stack">
       <section className="public-subpage-heading">
         <p className="eyebrow">{pageTitle[activePage]}</p>
-        <h1>{subpageHeading(activePage)}</h1>
-        <p>{subpageSummary(activePage)}</p>
-        <div className="public-actions">
-          <button className="icon-button" onClick={() => onNavigate("contact")}>
-            咨询服务
-          </button>
-          <button className="ghost-button" onClick={onLogin}>
-            登录后台
-          </button>
-        </div>
+        <h1>提交咨询需求，进入顾问跟进流程</h1>
       </section>
-
-      {activePage === "about" && (
-        <section className="public-two-column">
-          <div className="public-info-block">
-            <h2>企业背景</h2>
-            <p>
-              我们面向升学家庭和在读学生，围绕规划评估、项目匹配、活动咨询和后续服务建立可追踪流程。
-              公开官网负责让访客理解服务价值，内部后台负责顾问跟进和运营管理。
-            </p>
-          </div>
-          <div className="public-info-block">
-            <h2>服务理念</h2>
-            <p>先判断路径是否适合，再推荐项目和活动。AI 能力只做辅助说明和效率增强，不替代顾问判断。</p>
-          </div>
-        </section>
-      )}
-
-      {activePage === "services" && <ServiceGrid />}
-      {activePage === "publicProjects" && <ProjectPreview expanded />}
-      {activePage === "publicEvents" && <EventPreview expanded />}
-      {activePage === "faq" && <FaqPreview expanded />}
-      {activePage === "contact" && <ContactCard onNavigate={onNavigate} expanded />}
+      <ContactCard onNavigate={onNavigate} onLogin={onLogin} />
     </div>
   );
 }
@@ -175,26 +223,28 @@ function SectionHeader({ eyebrow, title, actionLabel, onAction }: { eyebrow: str
         <p className="eyebrow">{eyebrow}</p>
         <h2>{title}</h2>
       </div>
-      {actionLabel && onAction && (
+      {actionLabel && onAction ? (
         <button className="ghost-button" onClick={onAction}>
           {actionLabel}
+          <ArrowRight size={13} aria-hidden="true" />
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
 
-function ServiceGrid() {
+function ServiceGrid({ expanded = false }: { expanded?: boolean }) {
+  const rows = expanded ? publicServices : publicServices.slice(0, 3);
   return (
-    <section className="public-card-grid">
-      {publicServices.map((item) => (
-        <article className="public-card" key={item.title}>
+    <div className="public-card-grid">
+      {rows.map((item) => (
+        <article className="public-card">
           <strong>{item.title}</strong>
           <p>{item.desc}</p>
           <span>{item.audience}</span>
         </article>
       ))}
-    </section>
+    </div>
   );
 }
 
@@ -203,13 +253,13 @@ function ProjectPreview({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-list">
       {rows.map((item) => (
-        <article key={item.name}>
+        <article>
           <div>
             <strong>{item.name}</strong>
-            <span>{item.country} / {item.category} / {item.cycle}</span>
+            <span>{item.country} / {item.category}</span>
           </div>
-          <em>{item.cost}</em>
-          <p>{item.tags.join("、")}</p>
+          <em>{item.status}</em>
+          <p>{item.cost} · {item.cycle} · {item.tags.join(" / ")}</p>
         </article>
       ))}
     </div>
@@ -221,13 +271,13 @@ function EventPreview({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-list">
       {rows.map((item) => (
-        <article key={item.name}>
+        <article>
           <div>
             <strong>{item.name}</strong>
-            <span>{item.type} / {item.time} / {item.target}</span>
+            <span>{item.type} / {item.target}</span>
           </div>
           <em>{item.status}</em>
-          <p>公开报名名额：{item.signed}/{item.capacity}</p>
+          <p>{item.time} · 已报名 {item.signed}/{item.capacity}</p>
         </article>
       ))}
     </div>
@@ -239,8 +289,8 @@ function FaqPreview({ expanded = false }: { expanded?: boolean }) {
   return (
     <div className="public-faq-list">
       {rows.map((item) => (
-        <article key={item.question}>
-          <HelpCircle size={18} aria-hidden="true" />
+        <article>
+          <HelpCircle size={17} aria-hidden="true" />
           <div>
             <strong>{item.question}</strong>
             <p>{item.answer}</p>
@@ -251,61 +301,31 @@ function FaqPreview({ expanded = false }: { expanded?: boolean }) {
   );
 }
 
-function ContactCard({ onNavigate, expanded = false }: { onNavigate: (page: PublicPageKey) => void; expanded?: boolean }) {
+function ContactCard({ onNavigate, onLogin }: { onNavigate: (page: PublicPageKey) => void; onLogin?: () => void }) {
   return (
     <section className="public-contact-card">
-      <p className="eyebrow">联系我们</p>
-      <h2>留下需求，由顾问承接后续服务</h2>
+      <p className="eyebrow">联系咨询</p>
+      <h2>把意向转成可跟进的客户线索</h2>
+      <p>留下目标国家、当前阶段、预算和联系方式，由顾问在后台继续研判和跟进。</p>
       <div className="public-contact-grid">
-        <span><Phone size={16} aria-hidden="true" /> 电话：400-000-2026</span>
-        <span><Mail size={16} aria-hidden="true" /> 咨询邮箱：service@example.com</span>
-        <span><CalendarDays size={16} aria-hidden="true" /> 工作时间：周一至周六 09:00-18:00</span>
+        <span><Phone size={16} aria-hidden="true" /> 400-100-2026</span>
+        <span><Mail size={16} aria-hidden="true" /> consult@example.com</span>
+        <span><CalendarDays size={16} aria-hidden="true" /> 工作日 09:30-18:30</span>
       </div>
-      {expanded && (
-        <div className="public-form-preview">
-          <label>
-            <span>姓名</span>
-            <input value="访客姓名" readOnly />
-          </label>
-          <label>
-            <span>关注方向</span>
-            <input value="留学规划 / 国际本科 / 活动报名" readOnly />
-          </label>
-          <label>
-            <span>咨询内容</span>
-            <textarea value="请描述学生背景、目标国家、预算和希望了解的问题。" readOnly />
-          </label>
-        </div>
-      )}
-      <button className="icon-button" onClick={() => onNavigate("contact")}>
-        提交咨询意向
-      </button>
+      <div className="public-form-preview">
+        <label>
+          <span>咨询方向</span>
+          <input value="新加坡本科 / 德国双元制 / 语言提升" readOnly />
+        </label>
+        <label>
+          <span>联系方式</span>
+          <input value="手机 / 微信 / 邮箱" readOnly />
+        </label>
+      </div>
+      <div className="public-actions">
+        <button className="icon-button" onClick={() => onNavigate("contact")}>提交咨询</button>
+        {onLogin ? <button className="ghost-button" onClick={onLogin}>登录后台</button> : null}
+      </div>
     </section>
   );
-}
-
-function subpageHeading(page: PublicPageKey) {
-  const map: Record<PublicPageKey, string> = {
-    home: "教育服务官网门户",
-    about: "先理解企业，再判断服务是否匹配",
-    services: "围绕升学、语言、就业和学生服务的公开业务说明",
-    publicProjects: "公开展示项目路径和适合人群",
-    publicEvents: "通过讲座和说明会承接咨询与报名",
-    faq: "用高频问题降低初次咨询门槛",
-    contact: "把咨询意向沉淀为可跟进线索",
-  };
-  return map[page];
-}
-
-function subpageSummary(page: PublicPageKey) {
-  const map: Record<PublicPageKey, string> = {
-    home: "官网首页负责建立信任、解释服务和引导下一步动作。",
-    about: "这里展示企业背景、服务理念和流程，不展示内部运营数据。",
-    services: "服务介绍以访客视角表达，不暴露后台字段、评分或客户列表。",
-    publicProjects: "项目页只展示公开摘要、适合人群、费用区间和咨询入口。",
-    publicEvents: "活动页展示公开讲座信息和报名入口，内部名单管理在后台完成。",
-    faq: "FAQ 可使用 Dify 或 fallback 答案，但不暴露内部调试信息。",
-    contact: "联系页承接咨询、项目意向和活动报名，不直接开放 CRM 工作台。",
-  };
-  return map[page];
 }

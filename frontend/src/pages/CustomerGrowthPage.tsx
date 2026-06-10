@@ -35,7 +35,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [message, setMessage] = useState("正在加载客户增长队列...");
   const [customerName, setCustomerName] = useState("");
   const [contactInfo, setContactInfo] = useState("");
-  const [sourceText, setSourceText] = useState("19岁 高中毕业 希望新加坡升学，家长关注预算和就业前景。");
+  const [sourceText, setSourceText] = useState("19 岁，高中毕业，希望新加坡升学，家长关注预算和就业前景。");
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
 
@@ -52,7 +52,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   async function createLead() {
@@ -86,7 +86,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
       setMessage("请先粘贴资料");
       return;
     }
-    setMessage("正在触发研判...");
+    setMessage("正在触发画像研判...");
     try {
       const data = await apiRequest<AssessmentResult>("/api/profile/assess", {
         method: "POST",
@@ -97,9 +97,9 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         }),
       });
       setAssessment(data);
-      setMessage(`触发研判完成，推荐：${data.matched_project || "待补充资料"}`);
+      setMessage(`画像研判完成，推荐：${data.matched_project || "待补充资料"}`);
     } catch (error) {
-      setMessage(error instanceof Error ? `触发研判失败：${error.message}` : "触发研判失败");
+      setMessage(error instanceof Error ? `画像研判失败：${error.message}` : "画像研判失败");
     }
   }
 
@@ -124,44 +124,48 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   }, [keyword, leads, statusFilter]);
 
   return (
-    <div className="page-stack">
-      <section className="page-heading">
+    <div className="page-stack advisor-page">
+      <section className="page-heading advisor-heading">
         <div>
           <p className="eyebrow">客户增长</p>
-          <h2>从新线索到成交/流失的增长队列</h2>
+          <h2>用一张工作台推进线索、研判、推荐和客户 360</h2>
+          <p>顾问后台采用高效 SaaS 结构，优先支持频繁录入、筛选、跟进和客户详情跳转。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={load}>
             <RefreshCw size={16} aria-hidden="true" />
             刷新队列
           </button>
+          <button className="icon-button" onClick={createLead}>
+            <UserPlus size={16} aria-hidden="true" />
+            新建线索
+          </button>
         </div>
       </section>
 
-      <section className="split-layout secondary">
-        <div className="panel-block">
+      <section className="advisor-command-grid">
+        <div className="panel-block advisor-create-panel">
           <div className="section-title">
-            <h3>新建线索</h3>
+            <h3>快速录入</h3>
             <UserPlus size={18} aria-hidden="true" />
           </div>
           <div className="form-grid compact">
             <label className="stacked-input">
               <span>客户姓名</span>
-              <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="例如：王晨" />
+              <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="例如：王晴" />
             </label>
             <label className="stacked-input">
               <span>联系方式</span>
-              <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机号 / 微信 / 邮箱" />
+              <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机 / 微信 / 邮箱" />
             </label>
           </div>
           <label className="stacked-input">
-            <span>粘贴资料</span>
+            <span>客户背景资料</span>
             <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={4} />
           </label>
           <div className="inline-actions">
             <button className="icon-button" onClick={createLead}>
-              <UserPlus size={16} aria-hidden="true" />
-              新建线索
+              保存线索
             </button>
             <button className="icon-button secondary" onClick={assessLead}>
               <Sparkles size={16} aria-hidden="true" />
@@ -175,7 +179,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           </div>
         </div>
 
-        <div className="panel-block">
+        <div className="panel-block advisor-insight-panel">
           <div className="section-title">
             <h3>研判结果</h3>
             <ClipboardList size={18} aria-hidden="true" />
@@ -196,14 +200,15 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
               </div>
             </dl>
           ) : (
-            <div className="empty-state">新建或粘贴资料后可触发研判。</div>
+            <div className="empty-state">录入客户资料后，可触发画像研判并生成推荐方向。</div>
           )}
+          <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
         </div>
       </section>
 
-      <section className="pipeline-stage-grid" aria-label="客户增长阶段漏斗">
+      <section className="pipeline-stage-grid advisor-pipeline" aria-label="客户增长阶段漏斗">
         {pipelineStages.map((stage, index) => (
-          <article className="pipeline-stage-card" key={stage.label}>
+          <article className="pipeline-stage-card">
             <span>0{index + 1}</span>
             <strong>{stage.count}</strong>
             <em>{stage.label}</em>
@@ -211,7 +216,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         ))}
       </section>
 
-      <section className="toolbar">
+      <section className="toolbar advisor-toolbar">
         <Filter size={16} aria-hidden="true" />
         <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索客户、负责人或推荐项目" />
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="状态筛选">
@@ -222,10 +227,9 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           <option value="converted">已成交</option>
           <option value="lost">暂缓/流失</option>
         </select>
-        <span className="status-pill">{message}</span>
       </section>
 
-      <section className="panel-block table-panel">
+      <section className="panel-block table-panel advisor-table">
         <div className="section-title">
           <h3>客户队列</h3>
           <span>{rows.length} 位客户</span>
@@ -243,7 +247,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           </thead>
           <tbody>
             {rows.map((lead) => (
-              <tr key={lead.id} onClick={() => onNavigate("customer360", lead.id)}>
+              <tr onClick={() => onNavigate("customer360", lead.id)}>
                 <td>
                   <strong>{lead.customer_name}</strong>
                   <span>{lead.contact}</span>

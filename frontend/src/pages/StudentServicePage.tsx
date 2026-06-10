@@ -137,51 +137,57 @@ export default function StudentServicePage() {
   }
 
   return (
-    <div className="page-stack">
-      <section className="page-heading">
+    <div className="page-stack student-service-page">
+      <section className="student-hero">
         <div>
           <p className="eyebrow">学生服务台</p>
-          <h2>请假申请、投诉建议、进度和生活支持</h2>
+          <h2>请假、反馈、进度和生活支持，一页完成</h2>
+          <p>学生端保持轻量、亲和和少表格，重点帮助学生快速提交事项、查看进度和获得生活支持。</p>
+        </div>
+        <div className="student-hero-card">
+          <strong>{selected.name}</strong>
+          <span>{selected.project}</span>
+          <em>{selected.status}</em>
         </div>
       </section>
 
-      <section className="toolbar">
+      <section className="student-status-strip">
         <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
-        <span className="status-pill danger">心理支持不替代专业诊断</span>
+        <span className="status-pill danger">心理支持仅作辅助识别，不替代专业诊断</span>
       </section>
 
-      <section className="role-action-grid" aria-label="学生服务入口">
-        <button className="role-action-card" onClick={() => sendChat("请假申请：我需要请假两天，原因是家庭事务。")}>
-          <CalendarDays size={20} aria-hidden="true" />
+      <section className="student-action-grid" aria-label="学生服务入口">
+        <button className="student-action-card leave" onClick={() => sendChat("请假申请：我需要请假两天，原因是家庭事务。")}>
+          <CalendarDays size={22} aria-hidden="true" />
           <strong>请假申请</strong>
-          <span>提交给老师</span>
+          <span>提交给老师审批</span>
         </button>
-        <button className="role-action-card" onClick={submitFeedback}>
-          <MessageSquareWarning size={20} aria-hidden="true" />
+        <button className="student-action-card feedback" onClick={submitFeedback}>
+          <MessageSquareWarning size={22} aria-hidden="true" />
           <strong>投诉建议</strong>
-          <span>生成工单</span>
+          <span>生成服务工单</span>
         </button>
-        <button className="role-action-card" onClick={() => void loadStudentDetails(selected.id)}>
-          <ShieldAlert size={20} aria-hidden="true" />
+        <button className="student-action-card progress" onClick={() => void loadStudentDetails(selected.id)}>
+          <ShieldAlert size={22} aria-hidden="true" />
           <strong>申请进度</strong>
-          <span>查看阶段</span>
+          <span>查看阶段和材料</span>
         </button>
-        <button className="role-action-card" onClick={() => sendChat("我需要生活支持，想咨询住宿和行前准备。")}>
-          <HeartHandshake size={20} aria-hidden="true" />
+        <button className="student-action-card support" onClick={() => sendChat("我需要生活支持，想咨询住宿和行前准备。")}>
+          <HeartHandshake size={22} aria-hidden="true" />
           <strong>生活支持</strong>
           <span>咨询服务台</span>
         </button>
       </section>
 
-      <section className="student-layout">
-        <aside className="panel-block">
+      <section className="student-layout student-soft-layout">
+        <aside className="panel-block student-selector">
           <div className="section-title">
-            <h3>学生</h3>
+            <h3>我的身份</h3>
             <span>{displayStudents.length} 人</span>
           </div>
           <div className="select-list">
             {displayStudents.map((item) => (
-              <button className={item.id === selected.id ? "active" : ""} key={item.id} onClick={() => setSelectedId(item.id)}>
+              <button className={item.id === selected.id ? "active" : ""} onClick={() => setSelectedId(item.id)}>
                 <strong>{item.name}</strong>
                 <span>{item.project}</span>
                 <em>{item.status}</em>
@@ -190,14 +196,14 @@ export default function StudentServicePage() {
           </div>
         </aside>
 
-        <div className="panel-block chat-panel">
+        <div className="panel-block chat-panel student-chat-panel">
           <div className="section-title">
-            <h3>{selected.name} 服务对话</h3>
+            <h3>{selected.name} 的服务对话</h3>
             <span className="status-pill">{selected.risk}</span>
           </div>
           <div className="message-list">
             {messages.map((item, index) => (
-              <article className={item.from === "学生" ? "message user" : `message ${item.status ?? ""}`} key={`${item.from}-${index}`}>
+              <article className={item.from === "学生" ? "message user" : `message ${item.status ?? ""}`}>
                 <div>
                   <strong>{item.from}</strong>
                   {item.status ? <span className={`status-pill ${item.status}`}>{item.status}</span> : null}
@@ -216,14 +222,14 @@ export default function StudentServicePage() {
         </div>
 
         <aside className="side-stack">
-          <section className="panel-block">
+          <section className="panel-block student-progress-panel">
             <div className="section-title">
               <h3>申请进度</h3>
               <span>{progressItems.length} 项</span>
             </div>
             <div className="guide-list">
               {(progressItems.length ? progressItems : [{ id: 0, stage: "材料补充", status: "进行中", description: "推荐信待上传" }]).map((item) => (
-                <article key={item.id}>
+                <article>
                   <strong>{item.stage}</strong>
                   <span>{item.status} / {item.description}</span>
                 </article>
@@ -231,14 +237,14 @@ export default function StudentServicePage() {
             </div>
           </section>
 
-          <section className="panel-block">
+          <section className="panel-block student-progress-panel">
             <div className="section-title">
               <h3>考务节点</h3>
               <span>{academicEvents.length} 项</span>
             </div>
             <div className="service-grid">
               {(academicEvents.length ? academicEvents : [{ id: 0, event_name: "语言测试模拟考", event_type: "考务", due_time: "2026-06-16T09:00:00", status: "待提醒" }]).map((item) => (
-                <article key={item.id}>
+                <article>
                   <strong>{item.event_name}</strong>
                   <span>{item.status}</span>
                   <p>{item.event_type} / {formatDate(item.due_time)}</p>
