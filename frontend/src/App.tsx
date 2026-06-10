@@ -1,31 +1,21 @@
 import { useMemo, useState } from "react";
-import {
-  Activity,
-  BarChart3,
-  BookOpen,
-  Bot,
-  Database,
-  FileText,
-  GraduationCap,
-  LayoutDashboard,
-  RefreshCw,
-  Settings,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { FileText, RefreshCw, ShieldCheck } from "lucide-react";
 import { apiRequest } from "./api/client";
 import DashboardPage from "./pages/DashboardPage";
 import EnterpriseAssistantPage from "./pages/EnterpriseAssistantPage";
-import EventsPage from "./pages/EventsPage";
-import KnowledgePage from "./pages/KnowledgePage";
 import LeadsPage from "./pages/LeadsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ReportsPage from "./pages/ReportsPage";
-import StudentAssistantPage from "./pages/StudentAssistantPage";
 import SystemAdminPage from "./pages/SystemAdminPage";
-import { auditRows, notifications, roleOptions } from "./data/prototype";
+import { roleOptions } from "./data/prototype";
 import type { RoleKey } from "./data/prototype";
+import {
+  backofficeNavItems,
+  publicNavItems,
+  roleDefaultPage,
+  roleVisiblePages,
+} from "./navigation";
+import type { AppMode, BackofficePageKey, PublicPageKey } from "./navigation";
 
 export type PageKey =
   | "dashboard"
@@ -45,51 +35,67 @@ export type PageProps = {
   seedStatus: string;
 };
 
-type NavItem = {
-  key: PageKey;
-  label: string;
-  desc: string;
-  icon: LucideIcon;
-  component: (props: PageProps) => JSX.Element;
+type BackofficeComponent = (props: PageProps) => JSX.Element;
+
+const backofficeComponents: Record<BackofficePageKey, BackofficeComponent> = {
+  growthOverview: DashboardPage,
+  customerGrowth: LeadsPage,
+  customer360: LeadsPage,
+  operations: ProjectsPage,
+  reports: ReportsPage,
+  assistants: EnterpriseAssistantPage,
+  systemDemo: SystemAdminPage,
 };
 
-const navItems: NavItem[] = [
-  { key: "dashboard", label: "总览", desc: "四条主线和运营状态", icon: LayoutDashboard, component: DashboardPage },
-  { key: "crm", label: "CRM", desc: "线索、跟进和阶段流转", icon: Users, component: LeadsPage },
-  { key: "projects", label: "项目/课程", desc: "项目标签和推荐说明", icon: GraduationCap, component: ProjectsPage },
-  { key: "events", label: "活动运营", desc: "报名、名单和签到", icon: Activity, component: EventsPage },
-  { key: "enterprise", label: "企业助手", desc: "员工自然语言入口", icon: Bot, component: EnterpriseAssistantPage },
-  { key: "student", label: "学生助手", desc: "学生服务和老师处理", icon: BookOpen, component: StudentAssistantPage },
-  { key: "knowledge", label: "知识库", desc: "Dify 问答和 fallback", icon: Database, component: KnowledgePage },
-  { key: "reports", label: "报告中心", desc: "报告生成和 JSON 快照", icon: BarChart3, component: ReportsPage },
-  { key: "admin", label: "系统管理", desc: "角色、权限、审计", icon: Settings, component: SystemAdminPage },
-];
-
-const roleVisiblePages: Record<RoleKey, PageKey[]> = {
-  admin: ["dashboard", "crm", "projects", "events", "enterprise", "student", "knowledge", "reports", "admin"],
-  manager: ["dashboard", "crm", "events", "enterprise", "student", "knowledge", "reports", "admin"],
-  consultant: ["dashboard", "crm", "projects", "events", "knowledge", "reports"],
-  employee: ["dashboard", "crm", "enterprise", "knowledge", "reports"],
-  teacher: ["dashboard", "student", "knowledge", "reports"],
-  student: ["dashboard", "student", "knowledge"],
+const legacyPageMap: Record<PageKey, BackofficePageKey> = {
+  dashboard: "growthOverview",
+  crm: "customerGrowth",
+  projects: "operations",
+  events: "operations",
+  enterprise: "assistants",
+  student: "assistants",
+  knowledge: "operations",
+  reports: "reports",
+  admin: "systemDemo",
 };
 
 export default function App() {
-  const [active, setActive] = useState<PageKey>("dashboard");
+  const [mode, setMode] = useState<AppMode>("public");
+  const [publicPage, setPublicPage] = useState<PublicPageKey>("home");
+  const [backofficePage, setBackofficePage] = useState<BackofficePageKey>("growthOverview");
   const [role, setRole] = useState<RoleKey>("admin");
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(1);
   const [seedStatus, setSeedStatus] = useState("演示数据未初始化");
 
   const currentRole = roleOptions.find((item) => item.key === role) ?? roleOptions[0];
   const visiblePages = useMemo(() => roleVisiblePages[role], [role]);
-  const current = navItems.find((page) => page.key === active) ?? navItems[0];
-  const CurrentPage = current.component;
+  const current = backofficeNavItems.find((page) => page.key === backofficePage) ?? backofficeNavItems[0];
+  const CurrentPage = backofficeComponents[backofficePage];
 
-  function changeRole(nextRole: RoleKey) {
+  function openLogin() {
+    setMode("login");
+  }
+
+  function enterBackoffice(nextRole: RoleKey) {
     setRole(nextRole);
-    const allowed = roleVisiblePages[nextRole];
-    if (!allowed.includes(active)) {
-      setActive(allowed[0]);
+    setBackofficePage(roleDefaultPage[nextRole]);
+    setMode("backoffice");
+  }
+
+  function logoutToPortal() {
+    setMode("public");
+    setPublicPage("home");
+  }
+
+  function navigateBackoffice(page: BackofficePageKey, leadId?: number) {
+    if (typeof leadId === "number") {
+      setSelectedLeadId(leadId);
     }
+    setBackofficePage(page);
+  }
+
+  function navigateLegacy(page: PageKey) {
+    navigateBackoffice(legacyPageMap[page]);
   }
 
   async function seedDemo() {
@@ -102,6 +108,85 @@ export default function App() {
     }
   }
 
+  if (mode === "public") {
+    return (
+      <main className="public-shell">
+        <header className="public-topbar">
+          <button className="public-brand" onClick={() => setPublicPage("home")}>
+            教育服务官网
+          </button>
+          <nav className="public-nav" aria-label="公开官网导航">
+            {publicNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  className={publicPage === item.key ? "active" : ""}
+                  key={item.key}
+                  onClick={() => setPublicPage(item.key)}
+                >
+                  <Icon size={16} aria-hidden="true" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+          <button className="icon-button" onClick={openLogin}>
+            登录后台
+          </button>
+        </header>
+
+        <section className="public-content">
+          <div className="public-placeholder">
+            <p className="eyebrow">公开官网门户占位</p>
+            <h1>面向学生、家长和合作方的教育服务入口</h1>
+            <p>
+              Task 1 先建立应用层级。完整官网内容会在 Task 2 实现；当前未登录用户不会直接进入 CRM、客户 360、系统治理或演示控制台。
+            </p>
+            <div className="public-actions">
+              <button className="icon-button secondary" onClick={() => setPublicPage("publicProjects")}>
+                查看项目
+              </button>
+              <button className="icon-button secondary" onClick={() => setPublicPage("contact")}>
+                咨询服务
+              </button>
+              <button className="icon-button" onClick={openLogin}>
+                登录后台
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (mode === "login") {
+    return (
+      <main className="login-shell">
+        <section>
+          <p className="eyebrow">登录入口占位</p>
+          <h1>演示角色进入后台生产力工具</h1>
+          <p>Task 1 先建立登录层。真实账号、Token、会话管理和后端权限校验属于后续 V2/V3 增强。</p>
+          <button className="ghost-button" onClick={logoutToPortal}>
+            返回官网
+          </button>
+        </section>
+        <section className="login-panel">
+          <h2>选择演示角色</h2>
+          <div className="role-login-grid">
+            {roleOptions.map((option) => (
+              <button className="nav-item" key={option.key} onClick={() => enterBackoffice(option.key)}>
+                <span>
+                  <strong>{option.label}</strong>
+                  <small>{option.focus}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="workspace-shell">
       <header className="topbar">
@@ -109,13 +194,13 @@ export default function App() {
           <ShieldCheck size={26} aria-hidden="true" />
           <div>
             <h1>教育服务运营工作台</h1>
-            <p>二期 V1 中保真原型：真实 API 与前端 mock 混合演示</p>
+            <p>登录后后台：客户增长流水线与角色生产力工具</p>
           </div>
         </div>
         <div className="top-actions">
           <label className="role-switcher">
             <span>当前角色</span>
-            <select value={role} onChange={(event) => changeRole(event.target.value as RoleKey)}>
+            <select value={role} onChange={(event) => enterBackoffice(event.target.value as RoleKey)}>
               {roleOptions.map((option) => (
                 <option value={option.key} key={option.key}>
                   {option.label}
@@ -123,6 +208,9 @@ export default function App() {
               ))}
             </select>
           </label>
+          <button className="ghost-button" onClick={logoutToPortal}>
+            退出到官网
+          </button>
           <a className="icon-button secondary" href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer" title="打开 OpenAPI">
             <FileText size={16} aria-hidden="true" />
             OpenAPI
@@ -137,22 +225,23 @@ export default function App() {
       <section className="status-strip" aria-label="系统状态">
         <span className="status-pill success">Dify 状态：fallback 可用</span>
         <span className="status-pill">角色重点：{currentRole.focus}</span>
+        <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span>
         <span className={seedStatus.includes("成功") ? "status-pill success" : seedStatus.includes("失败") || seedStatus.includes("请求") ? "status-pill danger" : "status-pill"}>
           {seedStatus}
         </span>
       </section>
 
       <div className="workspace-grid">
-        <aside className="sidebar" aria-label="一级导航">
-          {navItems.map((item) => {
+        <aside className="sidebar" aria-label="后台一级导航">
+          {backofficeNavItems.map((item) => {
             const Icon = item.icon;
             const disabled = !visiblePages.includes(item.key);
             return (
               <button
-                className={active === item.key ? "nav-item active" : "nav-item"}
+                className={backofficePage === item.key ? "nav-item active" : "nav-item"}
                 disabled={disabled}
                 key={item.key}
-                onClick={() => setActive(item.key)}
+                onClick={() => navigateBackoffice(item.key)}
                 title={disabled ? `${currentRole.label}角色暂不展示该入口` : item.desc}
               >
                 <Icon size={18} aria-hidden="true" />
@@ -166,40 +255,19 @@ export default function App() {
         </aside>
 
         <section className="content-frame">
-          <CurrentPage role={role} onNavigate={setActive} onSeedDemo={seedDemo} seedStatus={seedStatus} />
+          <CurrentPage role={role} onNavigate={navigateLegacy} onSeedDemo={seedDemo} seedStatus={seedStatus} />
         </section>
 
-        <aside className="context-panel" aria-label="右侧上下文">
+        <aside className="context-panel" aria-label="后台上下文">
           <div className="context-block">
             <h2>当前上下文</h2>
             <p className="muted">角色：{currentRole.label}</p>
             <p className="muted">模块：{current.label}</p>
+            <p className="muted">客户 ID：{selectedLeadId ?? "未选择"}</p>
             <div className="compact-card">
-              <strong>当前客户</strong>
-              <span>王晨 / 新加坡国际本科 / 高潜跟进</span>
+              <strong>Task 1 说明</strong>
+              <span>旧后台页面暂时复用；客户 360 和后台壳层会在后续 Task 拆分。</span>
             </div>
-            <div className="compact-card">
-              <strong>当前学生</strong>
-              <span>陈雨 / 申请材料补充中 / 低风险</span>
-            </div>
-          </div>
-          <div className="context-block">
-            <h2>待办提醒</h2>
-            {notifications.map((item) => (
-              <div className="mini-row" key={item.title}>
-                <span>{item.title}</span>
-                <em>{item.status}</em>
-              </div>
-            ))}
-          </div>
-          <div className="context-block">
-            <h2>最近操作</h2>
-            {auditRows.slice(0, 3).map((item) => (
-              <div className="mini-row" key={`${item.operator}-${item.time}`}>
-                <span>{item.action}</span>
-                <em>{item.time}</em>
-              </div>
-            ))}
           </div>
         </aside>
       </div>

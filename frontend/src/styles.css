@@ -45,6 +45,109 @@ button:disabled {
   padding: 18px;
 }
 
+.public-shell {
+  min-height: 100vh;
+  background: #f6f8fb;
+}
+
+.public-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 28px;
+  background: white;
+  border-bottom: 1px solid var(--line);
+}
+
+.public-brand,
+.public-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.public-brand {
+  font-weight: 700;
+}
+
+.public-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.public-nav button.active {
+  background: #edf6ff;
+  color: var(--blue);
+}
+
+.public-content {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+}
+
+.public-placeholder {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+  min-height: 420px;
+  align-content: center;
+}
+
+.public-placeholder h1,
+.login-shell h1 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0;
+}
+
+.public-placeholder p,
+.login-shell p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.public-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 24px;
+  align-items: center;
+  padding: 40px;
+  background: #f6f8fb;
+}
+
+.login-panel {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.login-panel h2 {
+  margin-top: 0;
+}
+
+.role-login-grid {
+  display: grid;
+  gap: 10px;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -795,8 +898,15 @@ textarea {
 
 @media (max-width: 980px) {
   .topbar,
-  .page-heading {
+  .page-heading,
+  .public-topbar,
+  .login-shell {
     display: grid;
+  }
+
+  .login-shell {
+    grid-template-columns: 1fr;
+    padding: 24px;
   }
 
   .workspace-grid,
