@@ -5,6 +5,7 @@ import os
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def is_mysql_database_url(database_url: str) -> bool:
@@ -16,34 +17,38 @@ def check_mysql_connection(database_url: str, init_tables: bool = False) -> int:
         print("DATABASE_URL must use mysql or mysql+pymysql.")
         return 2
 
-    engine = create_engine(database_url)
-    with engine.begin() as connection:
-        result = connection.execute(text("SELECT DATABASE(), @@character_set_database, @@collation_database"))
-        database_name, charset, collation = result.one()
-        print(f"database={database_name}")
-        print(f"charset={charset}")
-        print(f"collation={collation}")
+    try:
+        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            result = connection.execute(text("SELECT DATABASE(), @@character_set_database, @@collation_database"))
+            database_name, charset, collation = result.one()
+            print(f"database={database_name}")
+            print(f"charset={charset}")
+            print(f"collation={collation}")
 
-    if init_tables:
-        from app.core.database import Base
-        from app.models import (  # noqa: F401
-            assistant,
-            crm,
-            enterprise,
-            event,
-            knowledge,
-            lead,
-            operation,
-            permission,
-            project,
-            report,
-            student,
-            user,
-        )
+        if init_tables:
+            from app.core.database import Base
+            from app.models import (  # noqa: F401
+                assistant,
+                crm,
+                enterprise,
+                event,
+                knowledge,
+                lead,
+                operation,
+                permission,
+                project,
+                report,
+                student,
+                user,
+            )
 
-        Base.metadata.create_all(bind=engine)
-        table_names = inspect(engine).get_table_names()
-        print(f"table_count={len(table_names)}")
+            Base.metadata.create_all(bind=engine)
+            table_names = inspect(engine).get_table_names()
+            print(f"table_count={len(table_names)}")
+    except SQLAlchemyError as exc:
+        print(f"MySQL connection failed: {exc}")
+        return 1
 
     return 0
 
