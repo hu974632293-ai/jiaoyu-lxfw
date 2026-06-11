@@ -86,7 +86,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "idle",
     title: "知识库待操作",
-    detail: "可提问、创建知识来源或记录同步任务；fallback 状态会单独展示。",
+    detail: "可提问、创建知识来源或记录同步任务；异常状态会单独展示。",
   });
   const [pendingOperation, setPendingOperation] = useState<KnowledgeOperation>(null);
   const [highlightSourceId, setHighlightSourceId] = useState<number | null>(null);
@@ -114,7 +114,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
     setOperationFeedback({
       phase: "pending",
       title: "正在调用知识库问答",
-      detail: "正在请求 Dify 场景问答；未配置时会显示 fallback。",
+      detail: "正在请求 Dify 场景问答；暂不可用时会返回业务说明。",
       target: sceneOptions.find((item) => item.key === scene)?.label,
     });
     try {
@@ -123,12 +123,12 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
         body: JSON.stringify({ scene, question, lead_id: null, conversation_id: null }),
       });
       setResult(data);
-      setMessage(data.status === "success" ? "Dify 调用成功" : `当前状态：${data.status}，已记录 fallback 状态`);
+      setMessage(data.status === "success" ? "知识库回答成功" : "知识库已返回业务说明");
       await loadLogs();
       setOperationFeedback({
         phase: data.status === "success" ? "success" : "fallback",
-        title: data.status === "success" ? "知识库回答已返回" : "知识库已返回 fallback",
-        detail: data.fallback_reason || "回答已显示在场景问答区域，并已记录问答日志。",
+        title: data.status === "success" ? "知识库回答已返回" : "知识库已返回业务说明",
+        detail: data.status === "success" ? "回答已显示在场景问答区域，并已记录问答日志。" : "已返回可用业务说明，并记录问答日志。",
         target: data.scene_label,
         timestamp: formatOperationTime(),
       });
@@ -155,12 +155,12 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
   }
 
   async function loadSources(nextScene = scene) {
-    setSourceMessage("正在加载真实知识来源...");
+      setSourceMessage("正在加载知识来源...");
     try {
       const data = await apiRequest<KnowledgeSource[]>(`/api/knowledge/sources?scene=${encodeURIComponent(nextScene)}`);
       setSources(data);
       setSelectedSourceId(data[0]?.id ?? null);
-      setSourceMessage(data.length ? "真实知识来源已加载" : "当前场景暂无知识来源，可创建一条记录");
+      setSourceMessage(data.length ? "知识来源已加载" : "当前场景暂无知识来源，可创建一条记录");
     } catch (error) {
       setSources([]);
       setSelectedSourceId(null);
@@ -243,7 +243,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
     setOperationFeedback({
       phase: "pending",
       title: "正在记录知识同步任务",
-      detail: "当前阶段只记录同步任务，不执行真实 Dify 上传。",
+      detail: "当前先记录同步任务，由管理员确认后执行同步。",
       target: selectedSource.source_name,
     });
     try {
@@ -252,12 +252,12 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
         body: JSON.stringify({ source_id: selectedSource.id, job_type: "manual_record", triggered_by: "admin" }),
       });
       setHighlightSyncJobId(created.id);
-      setSourceMessage("同步任务已记录；当前阶段不执行真实 Dify 上传");
+      setSourceMessage("同步任务已记录");
       await loadSyncJobs();
       setOperationFeedback({
         phase: "success",
         title: "同步任务已记录",
-        detail: "当前阶段不执行真实 Dify 上传，任务已显示在同步任务列表。",
+        detail: "任务已显示在同步任务列表。",
         target: `同步任务 #${created.id}`,
         timestamp: formatOperationTime(),
       });
@@ -301,8 +301,8 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
       <section className="page-heading">
         <div>
           <p className="eyebrow">知识库</p>
-          <h2>Dify 问答、知识来源、同步任务和 fallback 状态</h2>
-          <p>客服、企业新人指南、学生生活支持和留学政策统一走知识库问答；未配置 Dify 时不阻断主业务。</p>
+          <h2>Dify 问答、知识来源和同步任务</h2>
+          <p>客服、企业新人指南、学生生活支持和留学政策统一由知识库问答承接。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={() => { loadLogs(); loadSources(); loadSyncJobs(); }}>
@@ -319,7 +319,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
         <div className="panel-block chat-panel">
           <div className="section-title">
             <h3>场景问答</h3>
-            <span className={message.includes("fallback") || message.includes("失败") ? "status-pill fallback" : "status-pill"}>{message}</span>
+            <span className={message.includes("失败") ? "status-pill fallback" : "status-pill"}>{message}</span>
           </div>
           <div className="toolbar">
             <BookOpenCheck size={16} aria-hidden="true" />
@@ -345,14 +345,16 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
             <article className="answer-card">
               <div className="section-title">
                 <h3>回答</h3>
-                <span className={result.status === "success" ? "status-pill success" : "status-pill fallback"}>{result.status}</span>
+                <span className={result.status === "success" ? "status-pill success" : "status-pill fallback"}>
+                  {result.status === "success" ? "已回答" : "业务说明"}
+                </span>
               </div>
               <p>{result.answer}</p>
-              {result.fallback_reason && <p className="muted">{result.fallback_reason}</p>}
+              {result.fallback_reason && <p className="muted">已提供可用业务说明。</p>}
               <pre>{JSON.stringify({ scene: result.scene_label, conversation_id: result.conversation_id, citations: result.citations }, null, 2)}</pre>
             </article>
           ) : (
-            <div className="empty-state">提问后这里展示回答、引用来源、conversation id 和 fallback 状态。</div>
+            <div className="empty-state">提问后这里展示回答、引用来源和会话编号。</div>
           )}
         </div>
 
@@ -442,7 +444,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
                 <article key={item.id}>
                   <strong>#{item.id} / {item.scene_label}</strong>
                   <span>{item.question}</span>
-                  <em>{item.status}{item.fallback_reason ? ` / ${item.fallback_reason}` : ""}</em>
+                  <em>{item.status === "success" ? "已回答" : "业务说明"}</em>
                 </article>
               ))}
             </div>

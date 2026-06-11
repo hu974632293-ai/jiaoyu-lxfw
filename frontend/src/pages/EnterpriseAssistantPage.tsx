@@ -55,7 +55,7 @@ type Nl2SqlResult = {
 const initialMessages: AssistantMessage[] = [
   {
     role: "企业助手",
-    text: "我可以调用真实 API 完成客户录入、客户查询、状态更新、日报、组织架构、新人指南和受控 NL2SQL。",
+    text: "我可以协助完成客户录入、客户查询、状态更新、日报、组织架构、新人指南和受控查询。",
     intent: "能力说明",
     status: "success",
   },
@@ -69,7 +69,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([]);
   const [nl2sqlResult, setNl2sqlResult] = useState<Nl2SqlResult | null>(null);
   const [dailyContent, setDailyContent] = useState("今天跟进 8 个客户，2 个高潜进入活动邀约，风险是德国项目材料不齐，明天补齐材料清单。");
-  const [message, setMessage] = useState("企业助手真实 API 待调用");
+  const [message, setMessage] = useState("企业助手待调用");
   const [dailyMessage, setDailyMessage] = useState("正在加载日报和组织架构...");
 
   async function handleSend(command = input) {
@@ -78,7 +78,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
       return;
     }
     setMessages((items) => [...items, { role: "员工", text: normalized }]);
-    setMessage("正在调用企业助手真实 API...");
+    setMessage("正在处理企业助手指令...");
     try {
       const data = await apiRequest<ChatResponse>("/api/enterprise-assistant/chat", {
         method: "POST",
@@ -93,7 +93,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
           status: data.status,
         },
       ]);
-      setMessage(data.status === "fallback" ? "已使用企业指南 fallback" : "企业助手 API 调用成功");
+      setMessage(data.status === "fallback" ? "已返回企业指南" : "企业助手处理成功");
       if (data.intent === "create_lead" || data.intent === "update_lead_status") {
         onNavigate("customerGrowth");
       }
@@ -116,7 +116,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
       setDailyMessage("请先填写日报内容");
       return;
     }
-    setDailyMessage("正在提交真实日报...");
+    setDailyMessage("正在提交日报...");
     try {
       await apiRequest<DailyReport>("/api/enterprise-assistant/daily-reports", {
         method: "POST",
@@ -137,7 +137,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
       ]);
       setDailyReports(reports);
       setDailySummary(summary);
-      setDailyMessage(reports.length ? "真实日报数据已加载" : "暂无日报，可提交右侧内容");
+      setDailyMessage(reports.length ? "日报数据已加载" : "暂无日报，可提交右侧内容");
     } catch (error) {
       setDailyReports([]);
       setDailySummary(null);
@@ -180,7 +180,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
         <div>
           <p className="eyebrow">企业助手</p>
           <h2>员工自然语言录入、日报、组织架构和受控查询</h2>
-          <p>企业助手已接入真实 API；写操作经过 service 层，NL2SQL 只走白名单只读模板。</p>
+          <p>企业助手支持客户录入、日报提交、组织查询和白名单只读统计。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={() => { loadDailyData(); loadOrgUnits(); }}>
@@ -194,14 +194,14 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
 
       <section className="toolbar">
         <span className={message.includes("失败") || message.includes("阻断") ? "status-pill warning" : "status-pill success"}>{message}</span>
-        <span className="status-pill success">真实 API + service 校验</span>
+        <span className="status-pill success">业务校验</span>
       </section>
 
       <section className="assistant-layout">
         <div className="panel-block chat-panel">
           <div className="section-title">
             <h3>对话区</h3>
-            <span className="status-pill">真实 API</span>
+            <span className="status-pill">业务处理</span>
           </div>
           <div className="quick-command-grid">
             {enterpriseQuickCommands.map((item) => (
@@ -284,7 +284,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
 
           <section className="panel-block">
             <div className="section-title">
-              <h3>受控 NL2SQL</h3>
+              <h3>受控查询</h3>
               <Database size={18} aria-hidden="true" />
             </div>
             <div className="inline-actions">
@@ -294,11 +294,11 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
             {nl2sqlResult ? (
               <pre>{JSON.stringify(nl2sqlResult, null, 2)}</pre>
             ) : (
-              <p className="muted">白名单只读：leads、events。写 SQL 会被阻断。</p>
+              <p className="muted">只允许查询客户和活动统计，写入类请求会被阻断。</p>
             )}
             <div className="risk-box">
               <ShieldAlert size={18} aria-hidden="true" />
-              <span>禁止任意写 SQL；查询只能通过白名单模板返回统计。</span>
+              <span>禁止任意写入；查询只能返回白名单统计。</span>
             </div>
           </section>
         </aside>
@@ -325,7 +325,7 @@ export default function EnterpriseAssistantPage({ onNavigate }: PageProps) {
             </div>
             <div>
               <span>来源</span>
-              <strong>真实 API</strong>
+              <strong>业务数据</strong>
             </div>
           </div>
         ) : (

@@ -105,6 +105,28 @@ def list_users(db: Session) -> list[dict[str, Any]]:
     ]
 
 
+def user_has_permission(db: Session, username: str, permission_code: str) -> bool:
+    user = db.query(SysUser).filter_by(username=username).first()
+    if not user:
+        return False
+    if user.role == "admin":
+        return True
+
+    role_ids = [binding.role_id for binding in db.query(SysUserRole).filter_by(user_id=user.id).all()]
+    role_codes = [user.role] if user.role else []
+    permission_query = (
+        db.query(SysPermission)
+        .join(SysRolePermission, SysRolePermission.permission_id == SysPermission.id)
+        .join(SysRole, SysRole.id == SysRolePermission.role_id)
+        .filter(SysPermission.permission_code == permission_code)
+    )
+    if role_ids:
+        permission_query = permission_query.filter((SysRole.id.in_(role_ids)) | (SysRole.role_code.in_(role_codes)))
+    else:
+        permission_query = permission_query.filter(SysRole.role_code.in_(role_codes))
+    return permission_query.first() is not None
+
+
 def list_permissions(db: Session) -> list[dict[str, Any]]:
     return [
         {

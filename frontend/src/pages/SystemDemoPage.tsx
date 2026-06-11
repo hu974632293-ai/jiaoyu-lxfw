@@ -59,7 +59,7 @@ export default function SystemDemoPage(props: PageProps) {
           <span className={seedStatus.includes("成功") ? "status-pill success" : seedStatus.includes("失败") || seedStatus.includes("请求") ? "status-pill danger" : "status-pill"}>
             {seedStatus}
           </span>
-          <p className="muted">调用 `POST /api/demo/seed` 初始化演示数据。生产级数据初始化和权限校验属于后续 V2/V3。</p>
+          <p className="muted">调用 `POST /api/demo/seed` 初始化演示数据，系统治理操作由管理员执行。</p>
         </article>
 
         <article className="panel-block">

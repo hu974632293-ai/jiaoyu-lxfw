@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import (
     routes_audit,
@@ -20,7 +21,8 @@ from app.api import (
 )
 from app.core.config import settings
 from app.core.database import init_db
-from app.core.response import ok
+from app.core.permissions import PermissionDeniedError
+from app.core.response import fail, ok
 
 app = FastAPI(title=settings.app_name)
 
@@ -41,6 +43,11 @@ def on_startup():
 @app.get("/health")
 def health_check():
     return ok({"status": "ok"})
+
+
+@app.exception_handler(PermissionDeniedError)
+async def permission_denied_handler(_request, exc: PermissionDeniedError):
+    return JSONResponse(status_code=403, content=fail(f"缺少权限：{exc.permission_code}", 40300))
 
 
 app.include_router(routes_demo.router)

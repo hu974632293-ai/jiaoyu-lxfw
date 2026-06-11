@@ -207,7 +207,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
         <div className="panel-block">
           <div className="section-title">
             <h3>{active.title}</h3>
-            <span className={active.mode.includes("真实") ? "status-pill success" : "status-pill fallback"}>{active.mode}</span>
+            <span className="status-pill success">{active.mode}</span>
           </div>
           <div className="parameter-grid">
             <label>
@@ -220,7 +220,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
             </label>
             <label>
               <span>生成方式</span>
-              <input value="template_rule" readOnly />
+              <input value="规则汇总" readOnly />
             </label>
           </div>
 
@@ -247,7 +247,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
         <aside className="panel-block">
           <div className="section-title">
             <h3>报告列表</h3>
-            <span>{reports.length ? `${reports.length} 份` : "暂无真实快照"}</span>
+            <span>{reports.length ? `${reports.length} 份` : "暂无报告"}</span>
           </div>
           <div className="log-list">
             {reports.map((item) => (

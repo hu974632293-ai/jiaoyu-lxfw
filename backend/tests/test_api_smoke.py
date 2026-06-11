@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
-from app.core.database import Base, init_db
+from app.core.database import Base, SessionLocal, init_db
 from app.main import app
+from app.models.user import SysUser
 
 
 init_db()
@@ -95,6 +96,46 @@ def test_permission_role_audit_and_notification_api():
     notifications_payload = notifications_response.json()
     assert notifications_payload["code"] == 0
     assert any(item["title"] == "高潜客户需要今日回访" for item in notifications_payload["data"])
+
+
+def test_permission_dependencies_reject_user_without_required_permission():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+    assert seed_response.json()["code"] == 0
+
+    with SessionLocal() as db:
+        student = db.query(SysUser).filter_by(username="stage7_student").first()
+        if not student:
+            student = SysUser(
+                username="stage7_student",
+                password_hash="demo",
+                real_name="阶段七学生",
+                user_type="STUDENT",
+                role="student",
+            )
+            db.add(student)
+        else:
+            student.role = "student"
+            student.user_type = "STUDENT"
+        db.commit()
+
+    denied_users_response = client.get("/api/users", headers={"X-Actor-Username": "stage7_student"})
+    assert denied_users_response.status_code == 403
+    denied_users_payload = denied_users_response.json()
+    assert denied_users_payload["code"] == 40300
+    assert "权限" in denied_users_payload["msg"]
+
+    denied_daily_response = client.post(
+        "/api/enterprise-assistant/daily-reports",
+        headers={"X-Actor-Username": "stage7_student"},
+        json={"content": "尝试提交无权限日报", "actor_username": "stage7_student"},
+    )
+    assert denied_daily_response.status_code == 403
+    assert denied_daily_response.json()["code"] == 40300
+
+    admin_response = client.get("/api/users", headers={"X-Actor-Username": "admin"})
+    assert admin_response.status_code == 200
+    assert admin_response.json()["code"] == 0
 
 
 def test_final_business_table_metadata_is_registered():

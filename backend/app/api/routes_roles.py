@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import require_permission
 from app.core.response import ok
 from app.models.permission import SysRole
 from app.schemas.admin import AuditLogCreate, RoleCreate, RolePermissionUpdate
@@ -19,13 +20,13 @@ router = APIRouter(prefix="/api/roles", tags=["roles"])
 
 
 @router.get("")
-def list_all(db: Session = Depends(get_db)):
+def list_all(_permission: None = Depends(require_permission("system:role:manage")), db: Session = Depends(get_db)):
     ensure_default_admin_data(db)
     return ok(list_roles(db))
 
 
 @router.post("")
-def create(payload: RoleCreate, db: Session = Depends(get_db)):
+def create(payload: RoleCreate, _permission: None = Depends(require_permission("system:role:manage")), db: Session = Depends(get_db)):
     ensure_default_admin_data(db)
     role = create_role(db, payload)
     create_audit_log(
@@ -42,13 +43,18 @@ def create(payload: RoleCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/permissions")
-def permissions(db: Session = Depends(get_db)):
+def permissions(_permission: None = Depends(require_permission("system:role:manage")), db: Session = Depends(get_db)):
     ensure_default_admin_data(db)
     return ok(list_permissions(db))
 
 
 @router.post("/{role_id}/permissions")
-def update_permissions(role_id: int, payload: RolePermissionUpdate, db: Session = Depends(get_db)):
+def update_permissions(
+    role_id: int,
+    payload: RolePermissionUpdate,
+    _permission: None = Depends(require_permission("system:role:manage")),
+    db: Session = Depends(get_db),
+):
     ensure_default_admin_data(db)
     role = db.query(SysRole).filter(SysRole.id == role_id).first()
     if not role:

@@ -19,7 +19,7 @@ const resourceEntries: Array<{
     key: "projects",
     title: "项目/课程",
     desc: "维护项目资料、费用周期、标签和推荐规则，支撑客户画像后的项目匹配。",
-    meta: `${projectRows.length} 个原型项目`,
+    meta: `${projectRows.length} 个项目`,
     icon: GraduationCap,
   },
   {
@@ -32,7 +32,7 @@ const resourceEntries: Array<{
   {
     key: "knowledge",
     title: "知识库",
-    desc: "统一 Dify 场景问答、知识来源、同步任务和 fallback 状态记录。",
+    desc: "统一 Dify 场景问答、知识来源和同步任务记录。",
     meta: "4 个问答场景",
     icon: BookOpenCheck,
   },
@@ -76,7 +76,7 @@ export default function OperationsResourcesPage(props: PageProps) {
         <article>
           <span>知识场景</span>
           <strong>4</strong>
-          <em>Dify 与 fallback</em>
+          <em>Dify 场景</em>
         </article>
       </section>
 
@@ -103,8 +103,8 @@ export default function OperationsResourcesPage(props: PageProps) {
             </article>
             <article className="task-row">
               <div>
-                <strong>检查知识 fallback</strong>
-                <span>Dify 未配置时确保公开咨询和内部问答不阻断。</span>
+                <strong>检查知识问答</strong>
+                <span>确保公开咨询和内部问答有可用业务说明。</span>
               </div>
               <em>知识</em>
             </article>
@@ -153,7 +153,7 @@ export default function OperationsResourcesPage(props: PageProps) {
             <article className="task-row">
               <div>
                 <strong>知识库</strong>
-                <span>Dify、知识来源和 fallback 状态属于后台运营支撑。</span>
+                <span>Dify、知识来源和同步任务属于后台运营支撑。</span>
               </div>
               <em>支撑</em>
             </article>

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import require_permission
 from app.core.response import ok
 from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest
 from app.services.enterprise_service import (
@@ -22,12 +23,16 @@ router = APIRouter(prefix="/api/enterprise-assistant", tags=["enterprise-assista
 
 
 @router.post("/chat")
-def chat(payload: EnterpriseChatRequest, db: Session = Depends(get_db)):
+def chat(payload: EnterpriseChatRequest, _permission: None = Depends(require_permission("assistant:enterprise:use")), db: Session = Depends(get_db)):
     return ok(handle_enterprise_chat(db, payload))
 
 
 @router.post("/daily-reports")
-def create_report(payload: DailyReportCreate, db: Session = Depends(get_db)):
+def create_report(
+    payload: DailyReportCreate,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    db: Session = Depends(get_db),
+):
     return ok(create_daily_report(db, payload))
 
 
@@ -37,6 +42,7 @@ def reports(
     end_date: date | None = None,
     employee: str | None = None,
     department: str | None = None,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(list_daily_reports(db, start_date, end_date, employee, department))
@@ -48,31 +54,53 @@ def report_summary(
     date: date | None = None,
     week_start: date | None = None,
     department: str | None = None,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(daily_report_summary(db, summary_type, date, week_start, department))
 
 
 @router.get("/daily-reports/{report_id}")
-def report_detail(report_id: int, db: Session = Depends(get_db)):
+def report_detail(
+    report_id: int,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    db: Session = Depends(get_db),
+):
     return ok(get_daily_report(db, report_id))
 
 
 @router.get("/org-units")
-def org_units(keyword: str | None = None, db: Session = Depends(get_db)):
+def org_units(
+    keyword: str | None = None,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    db: Session = Depends(get_db),
+):
     return ok(list_org_units(db, keyword))
 
 
 @router.get("/directory")
-def directory(keyword: str | None = None, department: str | None = None, db: Session = Depends(get_db)):
+def directory(
+    keyword: str | None = None,
+    department: str | None = None,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    db: Session = Depends(get_db),
+):
     return ok(list_directory_contacts(db, keyword, department))
 
 
 @router.get("/directory/{contact_id}")
-def directory_detail(contact_id: int, db: Session = Depends(get_db)):
+def directory_detail(
+    contact_id: int,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    db: Session = Depends(get_db),
+):
     return ok(get_directory_contact(db, contact_id))
 
 
 @router.post("/nl2sql/query")
-def nl2sql_query(payload: Nl2SqlQueryRequest, db: Session = Depends(get_db)):
+def nl2sql_query(
+    payload: Nl2SqlQueryRequest,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    db: Session = Depends(get_db),
+):
     return ok(run_controlled_nl2sql(db, payload))

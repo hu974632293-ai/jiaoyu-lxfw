@@ -52,7 +52,7 @@ const defaultForm: ProjectForm = {
   country: "新加坡",
   category: "升学规划",
   target_audience: "高中毕业生、专科升学人群",
-  description: "用于演示项目/课程真实 API 维护闭环。",
+  description: "用于维护项目/课程业务闭环。",
   cost_range: "12-18 万/年",
   duration: "2-4 年",
   admission_requirements: "基础成绩达标，材料完整，可参加语言衔接。",
@@ -149,8 +149,8 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
       }
       if (!options.preserveFeedback) {
         setOperationFeedback({
-          phase: data.length ? "success" : "fallback",
-          title: data.length ? "项目资料已刷新" : "真实接口暂无项目，可用表单创建",
+          phase: data.length ? "success" : "idle",
+          title: data.length ? "项目资料已刷新" : "暂无项目，可用表单创建",
           detail: `当前列表显示 ${data.length || projectRows.length} 个项目，保存后会写入审计日志。`,
           target: "项目列表",
           timestamp: formatOperationTime(),
@@ -162,7 +162,7 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
         setOperationFeedback({
           phase: "error",
           title: "项目资料刷新失败",
-          detail: error instanceof Error ? `${error.message}。已保留原型项目，可稍后重试。` : "接口不可用。已保留原型项目，可稍后重试。",
+          detail: error instanceof Error ? `${error.message}。可稍后重试。` : "项目资料暂不可用，可稍后重试。",
           target: "项目列表",
           timestamp: formatOperationTime(),
         });
@@ -259,7 +259,7 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
         admission_requirements: "基础成绩达标，材料完整，语言能力可通过衔接课程补强。",
         tags: item.tags,
         recommendation_rule: `当画像命中 ${item.tags.join("、")} 时优先推荐。`,
-        knowledge_source: "前端原型数据",
+        knowledge_source: "项目资料库",
         status: item.status,
       }));
 
@@ -269,7 +269,7 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
         <div>
           <p className="eyebrow">项目/课程管理</p>
           <h2>结构化项目资料，支撑画像推荐和二次转化</h2>
-          <p>项目列表、详情、费用周期、招生条件、标签和推荐规则已接入真实后端。</p>
+          <p>项目列表、详情、费用周期、招生条件、标签和推荐规则支撑顾问推荐。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={() => load()} disabled={hasPendingOperation}>

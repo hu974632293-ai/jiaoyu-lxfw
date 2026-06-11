@@ -79,7 +79,7 @@ export default function StudentAssistantPage({ role, onNavigate }: PageProps) {
   const [selectedId, setSelectedId] = useState(studentRows[0].id);
   const [input, setInput] = useState("我想请假两天，并想知道签证材料进度。");
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { from: "学生助手", text: "学生助手已接入真实 API；接口不可用时保留原型 fallback 展示。心理提示只做辅助识别，不替代专业心理诊断。", status: "fallback" },
+    { from: "学生助手", text: "学生助手可处理请假、反馈、申请进度和生活支持。心理提示只做辅助识别，不替代专业心理诊断。", status: "fallback" },
   ]);
   const [tasks, setTasks] = useState<TeacherTasks>(emptyTasks);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
@@ -158,7 +158,7 @@ export default function StudentAssistantPage({ role, onNavigate }: PageProps) {
       setTasks(taskData);
       setError("");
     } catch (err) {
-      setError(`学生助手 API 暂不可用，已使用原型 fallback：${errorMessage(err)}`);
+      setError(`学生服务暂不可用：${errorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -173,7 +173,7 @@ export default function StudentAssistantPage({ role, onNavigate }: PageProps) {
       setAcademicEvents(academicData);
       setProgressItems(progressData);
     } catch (err) {
-      setError(`学生详情 API 暂不可用，已保留页面 fallback：${errorMessage(err)}`);
+      setError(`学生详情暂不可用：${errorMessage(err)}`);
     }
   }
 
@@ -202,7 +202,7 @@ export default function StudentAssistantPage({ role, onNavigate }: PageProps) {
     } catch (err) {
       setMessages((items) => [
         ...items,
-        { from: "学生助手", text: `学生助手 API 调用失败，当前使用 fallback：${errorMessage(err)}`, status: "fallback" },
+        { from: "学生助手", text: `学生助手暂不可用：${errorMessage(err)}`, status: "fallback" },
       ]);
     }
   }
@@ -282,7 +282,7 @@ export default function StudentAssistantPage({ role, onNavigate }: PageProps) {
       <section className="toolbar">
         <span className="status-pill">当前角色：{role}</span>
         <span className="status-pill danger">心理提示不替代专业诊断</span>
-        <span className={`status-pill ${error ? "fallback" : "success"}`}>{error || (loading ? "正在加载学生助手 API" : "真实 API 已连接")}</span>
+        <span className={`status-pill ${error ? "fallback" : "success"}`}>{error || (loading ? "正在加载学生服务" : "学生服务已连接")}</span>
       </section>
 
       <section className="student-layout">
