@@ -50,3 +50,20 @@ class LeaveUpdate(BaseModel):
     start_time: datetime
     end_time: datetime
     actor_username: str | None = None
+
+
+class StudentGradeCreate(BaseModel):
+    student_id: int
+    course_name: str
+    score: float | None = None
+    exam_time: datetime | None = None
+    teacher_feedback: str = ""
+    actor_username: str | None = None
+
+
+class StudentGradeUpdate(BaseModel):
+    course_name: str | None = None
+    score: float | None = None
+    exam_time: datetime | None = None
+    teacher_feedback: str | None = None
+    actor_username: str | None = None

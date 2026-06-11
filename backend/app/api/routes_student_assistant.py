@@ -10,6 +10,8 @@ from app.schemas.student_assistant import (
     LeaveApprovalRequest,
     LeaveCreate,
     LeaveUpdate,
+    StudentGradeCreate,
+    StudentGradeUpdate,
     StudentServiceActionRequest,
     StudentChatRequest,
 )
@@ -20,6 +22,7 @@ from app.services.student_assistant_service import (
     cancel_leave_request,
     close_feedback_ticket,
     create_feedback_ticket,
+    create_student_grade,
     create_leave_request,
     get_feedback_ticket_detail,
     get_leave_detail,
@@ -28,12 +31,15 @@ from app.services.student_assistant_service import (
     list_feedback_tickets,
     list_academic_events,
     list_application_progress,
+    list_student_grades,
     list_leave_requests,
     list_students,
     reply_feedback_ticket,
     serialize_feedback_ticket,
+    serialize_grade,
     serialize_leave,
     teacher_tasks,
+    update_student_grade,
     update_leave_request,
 )
 
@@ -170,6 +176,35 @@ def academic_events(student_id: int, db: Session = Depends(get_db)):
 @router.get("/students/{student_id}/application-progress")
 def application_progress(student_id: int, db: Session = Depends(get_db)):
     return ok(list_application_progress(db, student_id))
+
+
+@router.get("/students/{student_id}/grades")
+def student_grades(student_id: int, db: Session = Depends(get_db)):
+    return ok(list_student_grades(db, student_id))
+
+
+@router.get("/grades")
+def grades(student_id: int | None = None, db: Session = Depends(get_db)):
+    return ok(list_student_grades(db, student_id))
+
+
+@router.post("/grades")
+def create_grade(payload: StudentGradeCreate, db: Session = Depends(get_db)):
+    try:
+        return ok(serialize_grade(create_student_grade(db, payload)))
+    except ValueError as exc:
+        return fail(str(exc), 40002)
+
+
+@router.patch("/grades/{grade_id}")
+def update_grade(grade_id: int, payload: StudentGradeUpdate, db: Session = Depends(get_db)):
+    try:
+        grade = update_student_grade(db, grade_id, payload)
+    except ValueError as exc:
+        return fail(str(exc), 40002)
+    if not grade:
+        return fail("成绩记录不存在", 40402)
+    return ok(serialize_grade(grade))
 
 
 @router.get("/teacher-tasks")

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, HeartHandshake, MessageSquareWarning, Send, ShieldAlert } from "lucide-react";
+import { CalendarDays, ClipboardCheck, HeartHandshake, MessageSquareWarning, Send, ShieldAlert } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { studentRows } from "../data/prototype";
@@ -59,12 +59,22 @@ type ApplicationProgress = {
   description: string;
 };
 
+type StudentGrade = {
+  id: number;
+  student_id: number;
+  course_name: string;
+  score: number | null;
+  exam_time: string | null;
+  teacher_feedback: string;
+  updated_at: string | null;
+};
+
 type Message = {
   from: "学生" | "服务台";
   text: string;
   status?: "success" | "fallback";
 };
-type StudentOperation = "load" | "chat" | "leave" | "feedback" | "progress" | "cancelLeave" | "replyFeedback" | null;
+type StudentOperation = "load" | "chat" | "leave" | "feedback" | "progress" | "grades" | "cancelLeave" | "replyFeedback" | null;
 
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -86,6 +96,7 @@ export default function StudentServicePage() {
   const [messages, setMessages] = useState<Message[]>([{ from: "服务台", text: "请选择事项并提交。", status: "success" }]);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [progressItems, setProgressItems] = useState<ApplicationProgress[]>([]);
+  const [grades, setGrades] = useState<StudentGrade[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [selectedTimeline, setSelectedTimeline] = useState<TimelineItem[]>([]);
@@ -152,19 +163,22 @@ export default function StudentServicePage() {
 
   async function loadStudentDetails(studentId: number) {
     try {
-      const [academicData, progressData, leaveData, ticketData] = await Promise.all([
+      const [academicData, progressData, gradeData, leaveData, ticketData] = await Promise.all([
         apiRequest<AcademicEvent[]>(`/api/student-assistant/students/${studentId}/academic-events`),
         apiRequest<ApplicationProgress[]>(`/api/student-assistant/students/${studentId}/application-progress`),
+        apiRequest<StudentGrade[]>(`/api/student-assistant/students/${studentId}/grades`),
         apiRequest<LeaveRequest[]>(`/api/student-assistant/leaves?student_id=${studentId}`),
         apiRequest<FeedbackTicket[]>(`/api/student-assistant/feedback-tickets?student_id=${studentId}`),
       ]);
       setAcademicEvents(academicData);
       setProgressItems(progressData);
+      setGrades(gradeData);
       setLeaveRequests(leaveData);
       setFeedbackTickets(ticketData);
     } catch {
       setAcademicEvents([]);
       setProgressItems([]);
+      setGrades([]);
       setLeaveRequests([]);
       setFeedbackTickets([]);
     }
@@ -414,11 +428,43 @@ export default function StudentServicePage() {
     setPendingOperation(null);
   }
 
+  async function refreshGrades() {
+    setPendingOperation("grades");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在查询成绩",
+      detail: "读取当前学生的课程成绩和老师反馈。",
+      target: selected.name,
+    });
+    try {
+      const data = await apiRequest<StudentGrade[]>(`/api/student-assistant/students/${selected.id}/grades`);
+      setGrades(data);
+      setOperationFeedback({
+        phase: "success",
+        title: "成绩已刷新",
+        detail: `已查到 ${data.length} 条成绩记录，可查看老师反馈。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "成绩查询失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "服务暂不可用，可稍后重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
   const hasPendingOperation = pendingOperation !== null;
   const isSending = pendingOperation === "chat";
   const isSubmittingLeave = pendingOperation === "leave";
   const isSubmittingFeedback = pendingOperation === "feedback";
   const isRefreshingProgress = pendingOperation === "progress";
+  const isRefreshingGrades = pendingOperation === "grades";
   const latestLeave = leaveRequests[0];
   const latestTicket = feedbackTickets[0];
 
@@ -456,6 +502,11 @@ export default function StudentServicePage() {
           <ShieldAlert size={22} aria-hidden="true" />
           <strong>申请进度</strong>
           <span>{isRefreshingProgress ? "正在查询" : "查看阶段和材料"}</span>
+        </button>
+        <button className="student-action-card progress" onClick={() => void refreshGrades()} disabled={hasPendingOperation}>
+          <ClipboardCheck size={22} aria-hidden="true" />
+          <strong>成绩查询</strong>
+          <span>{isRefreshingGrades ? "正在查询" : "查看成绩和反馈"}</span>
         </button>
         <button className="student-action-card support" onClick={() => sendChat("我需要生活支持，想咨询住宿和行前准备。")} disabled={hasPendingOperation}>
           <HeartHandshake size={22} aria-hidden="true" />
@@ -540,6 +591,23 @@ export default function StudentServicePage() {
                   <p>{item.event_type} / {formatDate(item.due_time)}</p>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section className="panel-block student-progress-panel">
+            <div className="section-title">
+              <h3>成绩与老师反馈</h3>
+              <span>{grades.length} 条</span>
+            </div>
+            <div className="service-grid">
+              {grades.map((item) => (
+                <article>
+                  <strong>{item.course_name}</strong>
+                  <span>{item.score ?? "待登记"} 分</span>
+                  <p>{item.teacher_feedback || "暂无老师反馈"} / {formatDate(item.updated_at ?? item.exam_time)}</p>
+                </article>
+              ))}
+              {!grades.length ? <div className="empty-state">暂无成绩记录，老师录入后可在此查看。</div> : null}
             </div>
           </section>
 

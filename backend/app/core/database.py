@@ -103,6 +103,14 @@ def _ensure_sqlite_compatible_columns():
                 "description": "TEXT DEFAULT ''",
             },
         )
+    if "student_grade" in table_names:
+        _add_missing_columns(
+            "student_grade",
+            {column["name"] for column in inspector.get_columns("student_grade")},
+            {
+                "updated_at": "DATETIME",
+            },
+        )
 
 
 def _add_missing_columns(table_name: str, existing_columns: set[str], required_columns: dict[str, str]) -> None:

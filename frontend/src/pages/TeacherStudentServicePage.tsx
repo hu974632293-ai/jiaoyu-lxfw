@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, GraduationCap, MessageSquare, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, GraduationCap, MessageSquare, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { psychAlerts, studentRows } from "../data/prototype";
@@ -54,10 +54,21 @@ type ApplicationProgress = {
   description: string;
 };
 
+type StudentGrade = {
+  id: number;
+  student_id: number;
+  course_name: string;
+  score: number | null;
+  exam_time: string | null;
+  teacher_feedback: string;
+  updated_at: string | null;
+};
+
 type TeacherTasks = {
   leaves: LeaveTask[];
   feedback_tickets: FeedbackTicket[];
   psych_alerts: PsychAlert[];
+  grades: StudentGrade[];
 };
 type TimelineItem = {
   id: number;
@@ -65,10 +76,10 @@ type TimelineItem = {
   created_at: string | null;
   detail: Record<string, unknown>;
 };
-type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "closeFeedback" | "archiveFeedback" | "psych" | "academic" | null;
-type TeacherActionKey = "leave" | "feedback" | "psych" | "academic" | null;
+type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "closeFeedback" | "archiveFeedback" | "psych" | "academic" | "grade" | null;
+type TeacherActionKey = "leave" | "feedback" | "psych" | "academic" | "grade" | null;
 
-const emptyTasks: TeacherTasks = { leaves: [], feedback_tickets: [], psych_alerts: [] };
+const emptyTasks: TeacherTasks = { leaves: [], feedback_tickets: [], psych_alerts: [], grades: [] };
 
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -84,6 +95,13 @@ export default function TeacherStudentServicePage() {
   const [tasks, setTasks] = useState<TeacherTasks>(emptyTasks);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [progressItems, setProgressItems] = useState<ApplicationProgress[]>([]);
+  const [grades, setGrades] = useState<StudentGrade[]>([]);
+  const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
+  const [gradeForm, setGradeForm] = useState({
+    course_name: "德语 A2 阶段测评",
+    score: "86",
+    teacher_feedback: "词汇掌握稳定，口语表达需要继续练习。",
+  });
   const [selectedLeaveId, setSelectedLeaveId] = useState<number | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [selectedTimeline, setSelectedTimeline] = useState<TimelineItem[]>([]);
@@ -107,6 +125,7 @@ export default function TeacherStudentServicePage() {
   const selected = displayStudents.find((item) => item.id === selectedId) ?? displayStudents[0];
   const selectedLeave = tasks.leaves.find((item) => item.id === selectedLeaveId) ?? tasks.leaves[0];
   const selectedTicket = tasks.feedback_tickets.find((item) => item.id === selectedTicketId) ?? tasks.feedback_tickets[0];
+  const selectedGrade = selectedGradeId ? grades.find((item) => item.id === selectedGradeId) : undefined;
 
   useEffect(() => {
     void loadAll();
@@ -170,15 +189,27 @@ export default function TeacherStudentServicePage() {
 
   async function loadStudentDetails(studentId: number) {
     try {
-      const [academicData, progressData] = await Promise.all([
+      const [academicData, progressData, gradeData] = await Promise.all([
         apiRequest<AcademicEvent[]>(`/api/student-assistant/students/${studentId}/academic-events`),
         apiRequest<ApplicationProgress[]>(`/api/student-assistant/students/${studentId}/application-progress`),
+        apiRequest<StudentGrade[]>(`/api/student-assistant/students/${studentId}/grades`),
       ]);
       setAcademicEvents(academicData);
       setProgressItems(progressData);
+      setGrades(gradeData);
+      setSelectedGradeId(gradeData[0]?.id ?? null);
+      if (gradeData[0]) {
+        setGradeForm({
+          course_name: gradeData[0].course_name,
+          score: gradeData[0].score == null ? "" : String(gradeData[0].score),
+          teacher_feedback: gradeData[0].teacher_feedback,
+        });
+      }
     } catch {
       setAcademicEvents([]);
       setProgressItems([]);
+      setGrades([]);
+      setSelectedGradeId(null);
     }
   }
 
@@ -187,6 +218,62 @@ export default function TeacherStudentServicePage() {
     setTasks(data);
     setSelectedLeaveId((current) => current ?? data.leaves[0]?.id ?? null);
     setSelectedTicketId((current) => current ?? data.feedback_tickets[0]?.id ?? null);
+  }
+
+  async function saveGrade() {
+    const score = Number(gradeForm.score);
+    if (!gradeForm.course_name.trim() || Number.isNaN(score)) {
+      setOperationFeedback({
+        phase: "error",
+        title: "成绩未保存",
+        detail: "请填写课程名称和有效分数。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+      return;
+    }
+    setPendingOperation("grade");
+    setOperationFeedback({
+      phase: "pending",
+      title: selectedGrade ? "正在修改成绩" : "正在录入成绩",
+      detail: "保存后学生服务台可同步查看成绩和老师反馈。",
+      target: selected.name,
+    });
+    try {
+      const body = JSON.stringify({
+        student_id: selected.id,
+        course_name: gradeForm.course_name,
+        score,
+        exam_time: "2026-06-18T10:00:00",
+        teacher_feedback: gradeForm.teacher_feedback,
+        actor_username: "admin",
+      });
+      const result = await apiRequest<StudentGrade>(selectedGrade ? `/api/student-assistant/grades/${selectedGrade.id}` : "/api/student-assistant/grades", {
+        method: selectedGrade ? "PATCH" : "POST",
+        body,
+      });
+      await loadStudentDetails(selected.id);
+      await reloadTasks();
+      setSelectedGradeId(result.id);
+      setHighlightAction("grade");
+      setOperationFeedback({
+        phase: "success",
+        title: selectedGrade ? "成绩已修改" : "成绩已录入",
+        detail: `${result.course_name}：${result.score ?? "待登记"} 分，学生端可查看老师反馈。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "成绩保存失败",
+        detail: error instanceof Error ? `${error.message}。成绩未改动，可重试。` : "服务暂不可用。成绩未改动，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
   }
 
   async function approveLeave() {
@@ -426,6 +513,7 @@ export default function TeacherStudentServicePage() {
   const isClosingFeedback = pendingOperation === "closeFeedback";
   const isArchivingFeedback = pendingOperation === "archiveFeedback";
   const isRefreshingAcademic = pendingOperation === "academic";
+  const isSavingGrade = pendingOperation === "grade";
 
   return (
     <div className="page-stack">
@@ -463,6 +551,11 @@ export default function TeacherStudentServicePage() {
           <strong>{tasks.psych_alerts.length || psychAlerts.length}</strong>
           <em>只做辅助识别</em>
         </article>
+        <article>
+          <span>成绩记录</span>
+          <strong>{grades.length || tasks.grades.length}</strong>
+          <em>录入与反馈</em>
+        </article>
       </section>
 
       <section className="role-action-grid" aria-label="老师待办入口">
@@ -485,6 +578,11 @@ export default function TeacherStudentServicePage() {
           <GraduationCap size={20} aria-hidden="true" />
           <strong>学业/进度</strong>
           <span>{isRefreshingAcademic ? "正在查询" : "节点查询"}</span>
+        </button>
+        <button className={`role-action-card ${highlightAction === "grade" ? "is-highlighted" : ""}`} onClick={() => void saveGrade()} disabled={hasPendingOperation}>
+          <ClipboardCheck size={20} aria-hidden="true" />
+          <strong>成绩录入</strong>
+          <span>{isSavingGrade ? "正在保存" : selectedGrade ? `修改 #${selectedGrade.id}` : "新成绩"}</span>
         </button>
       </section>
 
@@ -593,6 +691,70 @@ export default function TeacherStudentServicePage() {
                 <p>{item.status} / {formatDate(item.due_time)}</p>
               </article>
             ))}
+          </div>
+
+          <div className="panel-block">
+            <div className="section-title">
+              <h3>成绩录入</h3>
+              <span>{selectedGrade ? `正在修改 #${selectedGrade.id}` : "新增成绩"}</span>
+            </div>
+            <div className="compact-form-grid">
+              <label>
+                <span>课程</span>
+                <input value={gradeForm.course_name} onChange={(event) => setGradeForm((current) => ({ ...current, course_name: event.target.value }))} />
+              </label>
+              <label>
+                <span>分数</span>
+                <input value={gradeForm.score} onChange={(event) => setGradeForm((current) => ({ ...current, score: event.target.value }))} />
+              </label>
+              <label>
+                <span>老师反馈</span>
+                <textarea value={gradeForm.teacher_feedback} onChange={(event) => setGradeForm((current) => ({ ...current, teacher_feedback: event.target.value }))} rows={3} />
+              </label>
+            </div>
+            <div className="inline-actions">
+              <button onClick={() => void saveGrade()} disabled={hasPendingOperation}>
+                {isSavingGrade ? "正在保存" : selectedGrade ? "保存修改" : "录入成绩"}
+              </button>
+              <button
+                className="ghost-button"
+                onClick={() => {
+                  setSelectedGradeId(null);
+                  setGradeForm({ course_name: "德语 A2 阶段测评", score: "86", teacher_feedback: "词汇掌握稳定，口语表达需要继续练习。" });
+                }}
+                disabled={hasPendingOperation}
+              >
+                新增一条
+              </button>
+            </div>
+          </div>
+
+          <div className="panel-block">
+            <div className="section-title">
+              <h3>成绩记录</h3>
+              <span>{grades.length} 条</span>
+            </div>
+            <div className="select-list">
+              {grades.map((item) => (
+                <button
+                  className={item.id === selectedGrade?.id ? "active" : ""}
+                  key="grade-record"
+                  onClick={() => {
+                    setSelectedGradeId(item.id);
+                    setGradeForm({
+                      course_name: item.course_name,
+                      score: item.score == null ? "" : String(item.score),
+                      teacher_feedback: item.teacher_feedback,
+                    });
+                  }}
+                >
+                  <strong>{item.course_name}</strong>
+                  <span>{item.score ?? "待登记"} 分</span>
+                  <em>{item.teacher_feedback || "暂无老师反馈"}</em>
+                </button>
+              ))}
+              {!grades.length ? <div className="empty-state">暂无成绩记录，可从上方录入。</div> : null}
+            </div>
           </div>
         </div>
 

@@ -11,6 +11,7 @@ from app.models.student import (
     StudentAcademicEvent,
     StudentApplicationProgress,
     StudentFeedbackTicket,
+    StudentGrade,
     StudentLeaveApproval,
     StudentLeaveRequest,
     StudentProfile,
@@ -25,6 +26,8 @@ from app.schemas.student_assistant import (
     LeaveApprovalRequest,
     LeaveCreate,
     LeaveUpdate,
+    StudentGradeCreate,
+    StudentGradeUpdate,
     StudentServiceActionRequest,
     StudentChatRequest,
 )
@@ -393,15 +396,93 @@ def list_application_progress(db: Session, student_id: int) -> list[dict[str, An
     return [serialize_application_progress(item) for item in records]
 
 
+def list_student_grades(db: Session, student_id: int | None = None) -> list[dict[str, Any]]:
+    ensure_default_student_data(db)
+    query = db.query(StudentGrade)
+    if student_id is not None:
+        if not _get_student(db, student_id):
+            return []
+        query = query.filter_by(student_id=student_id)
+    records = query.order_by(StudentGrade.id.desc()).all()
+    return [serialize_grade(item) for item in records]
+
+
+def create_student_grade(db: Session, payload: StudentGradeCreate) -> StudentGrade:
+    ensure_default_student_data(db)
+    student = _get_student(db, payload.student_id)
+    if not student:
+        raise ValueError("学生不存在")
+    _validate_grade(payload.course_name, payload.score)
+    grade = StudentGrade(
+        student_id=payload.student_id,
+        course_name=payload.course_name.strip(),
+        score=payload.score,
+        exam_time=payload.exam_time,
+        remark=payload.teacher_feedback,
+    )
+    db.add(grade)
+    db.flush()
+    _create_audit_log(
+        db,
+        payload.actor_username,
+        "老师录入成绩",
+        "student_grade",
+        str(grade.id),
+        {
+            "student_id": payload.student_id,
+            "student_name": student.student_name,
+            "course_name": grade.course_name,
+            "score": grade.score,
+        },
+    )
+    _create_notification(db, None, "成绩已更新", f"{student.student_name} 的 {grade.course_name} 成绩已更新。", "student_grade", grade.id)
+    db.commit()
+    db.refresh(grade)
+    return grade
+
+
+def update_student_grade(db: Session, grade_id: int, payload: StudentGradeUpdate) -> StudentGrade | None:
+    grade = db.query(StudentGrade).filter_by(id=grade_id).first()
+    if not grade:
+        return None
+    next_course_name = payload.course_name if payload.course_name is not None else grade.course_name
+    next_score = payload.score if payload.score is not None else grade.score
+    _validate_grade(next_course_name, next_score)
+    if payload.course_name is not None:
+        grade.course_name = payload.course_name.strip()
+    if payload.score is not None:
+        grade.score = payload.score
+    if payload.exam_time is not None:
+        grade.exam_time = payload.exam_time
+    if payload.teacher_feedback is not None:
+        grade.remark = payload.teacher_feedback
+    grade.updated_at = datetime.utcnow()
+    db.flush()
+    _create_audit_log(
+        db,
+        payload.actor_username,
+        "老师修改成绩",
+        "student_grade",
+        str(grade.id),
+        {"course_name": grade.course_name, "score": grade.score, "teacher_feedback": grade.remark},
+    )
+    _create_notification(db, None, "成绩反馈已更新", f"{grade.course_name} 的成绩反馈已更新。", "student_grade", grade.id)
+    db.commit()
+    db.refresh(grade)
+    return grade
+
+
 def teacher_tasks(db: Session) -> dict[str, list[dict[str, Any]]]:
     ensure_default_student_data(db)
     leaves = db.query(StudentLeaveRequest).order_by(StudentLeaveRequest.id.desc()).limit(20).all()
     tickets = db.query(StudentFeedbackTicket).order_by(StudentFeedbackTicket.id.desc()).limit(20).all()
     alerts = db.query(StudentPsychAlert).order_by(StudentPsychAlert.id.desc()).limit(20).all()
+    grades = db.query(StudentGrade).order_by(StudentGrade.id.desc()).limit(20).all()
     return {
         "leaves": [serialize_leave(item) for item in leaves],
         "feedback_tickets": [serialize_feedback_ticket(item) for item in tickets],
         "psych_alerts": [serialize_psych_alert(item) for item in alerts],
+        "grades": [serialize_grade(item) for item in grades],
     }
 
 
@@ -500,6 +581,19 @@ def serialize_application_progress(item: StudentApplicationProgress) -> dict[str
         "description": item.description,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+def serialize_grade(item: StudentGrade) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "student_id": item.student_id,
+        "course_name": item.course_name,
+        "score": item.score,
+        "exam_time": item.exam_time.isoformat() if item.exam_time else None,
+        "teacher_feedback": item.remark,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
     }
 
 
@@ -608,6 +702,13 @@ def _extract_leave_time(message: str) -> tuple[datetime, datetime]:
 
 def _summarize_feedback(content: str) -> str:
     return content[:40] + ("..." if len(content) > 40 else "")
+
+
+def _validate_grade(course_name: str | None, score: float | None) -> None:
+    if not course_name or not course_name.strip():
+        raise ValueError("课程名称不能为空")
+    if score is not None and not 0 <= score <= 100:
+        raise ValueError("成绩必须在 0 到 100 之间")
 
 
 def _record_conversation(

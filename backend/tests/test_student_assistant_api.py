@@ -252,3 +252,65 @@ def test_student_feedback_ticket_supports_reply_close_archive_and_history():
     assert "学生补充反馈" in timeline_actions
     assert "老师处理反馈" in timeline_actions
     assert "反馈工单关闭" in timeline_actions
+
+
+def test_student_grade_supports_teacher_entry_update_and_student_readonly_query():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+    student_id = client.get("/api/student-assistant/students").json()["data"][0]["id"]
+
+    create_response = client.post(
+        "/api/student-assistant/grades",
+        json={
+            "student_id": student_id,
+            "course_name": "德语 A2 阶段测评",
+            "score": 86.5,
+            "exam_time": "2026-06-18T10:00:00",
+            "teacher_feedback": "词汇掌握稳定，口语表达需要继续练习。",
+            "actor_username": "admin",
+        },
+    )
+    assert create_response.status_code == 200
+    create_payload = create_response.json()
+    assert create_payload["code"] == 0
+    assert create_payload["data"]["course_name"] == "德语 A2 阶段测评"
+    assert create_payload["data"]["score"] == 86.5
+    assert create_payload["data"]["teacher_feedback"] == "词汇掌握稳定，口语表达需要继续练习。"
+    grade_id = create_payload["data"]["id"]
+
+    update_response = client.patch(
+        f"/api/student-assistant/grades/{grade_id}",
+        json={
+            "score": 90,
+            "teacher_feedback": "补测表现提升，建议保持听说训练节奏。",
+            "actor_username": "admin",
+        },
+    )
+    assert update_response.status_code == 200
+    update_payload = update_response.json()
+    assert update_payload["code"] == 0
+    assert update_payload["data"]["score"] == 90
+    assert update_payload["data"]["teacher_feedback"] == "补测表现提升，建议保持听说训练节奏。"
+
+    student_grades_response = client.get(f"/api/student-assistant/students/{student_id}/grades")
+    assert student_grades_response.status_code == 200
+    student_grades_payload = student_grades_response.json()
+    assert student_grades_payload["code"] == 0
+    assert any(
+        item["id"] == grade_id
+        and item["course_name"] == "德语 A2 阶段测评"
+        and item["teacher_feedback"] == "补测表现提升，建议保持听说训练节奏。"
+        for item in student_grades_payload["data"]
+    )
+
+    teacher_tasks_response = client.get("/api/student-assistant/teacher-tasks")
+    assert teacher_tasks_response.status_code == 200
+    teacher_tasks_payload = teacher_tasks_response.json()
+    assert teacher_tasks_payload["code"] == 0
+    assert any(item["id"] == grade_id for item in teacher_tasks_payload["data"]["grades"])
+
+    audit_response = client.get("/api/audit/logs")
+    assert audit_response.status_code == 200
+    audit_actions = [item["action"] for item in audit_response.json()["data"]]
+    assert "老师录入成绩" in audit_actions
+    assert "老师修改成绩" in audit_actions

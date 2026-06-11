@@ -69,6 +69,7 @@ class StudentGrade(Base):
     exam_time: Mapped[datetime | None] = mapped_column(DateTime)
     remark: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class StudentAcademicEvent(Base):
