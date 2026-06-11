@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, RefreshCw, Save, Tags } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import type { PageProps } from "../App";
 import { projectRows } from "../data/prototype";
 
@@ -44,6 +45,7 @@ type ProjectForm = {
   knowledge_source: string;
   status: string;
 };
+type ProjectOperation = "load" | "save" | null;
 
 const defaultForm: ProjectForm = {
   project_name: "阶段四项目管理测试计划",
@@ -105,14 +107,38 @@ function projectPayload(form: ProjectForm) {
   };
 }
 
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
+
 export default function ProjectsPage({ onNavigate }: PageProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState<ProjectForm>(defaultForm);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [message, setMessage] = useState("正在加载真实项目接口...");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "pending",
+    title: "正在加载项目资料",
+    detail: "读取项目列表、推荐规则和标签匹配结果。",
+    target: "项目管理",
+  });
+  const [pendingOperation, setPendingOperation] = useState<ProjectOperation>("load");
+  const [highlightProjectId, setHighlightProjectId] = useState<number | null>(null);
 
-  async function load(nextSelectedId = selectedId) {
+  async function load(nextSelectedId = selectedId, options: { preserveFeedback?: boolean } = {}) {
+    if (!options.preserveFeedback) {
+      setPendingOperation("load");
+      setOperationFeedback({
+        phase: "pending",
+        title: "正在刷新项目资料",
+        detail: "读取 /api/projects 并更新列表选择。",
+        target: "项目列表",
+      });
+    }
     try {
       const data = await apiRequest<Project[]>("/api/projects");
       setProjects(data);
@@ -121,10 +147,30 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
         setSelectedId(nextSelected.id);
         setForm(formFromProject(nextSelected));
       }
-      setMessage(data.length ? "真实项目接口已加载" : "真实接口暂无项目，可用右侧表单创建");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: data.length ? "success" : "fallback",
+          title: data.length ? "项目资料已刷新" : "真实接口暂无项目，可用表单创建",
+          detail: `当前列表显示 ${data.length || projectRows.length} 个项目，保存后会写入审计日志。`,
+          target: "项目列表",
+          timestamp: formatOperationTime(),
+        });
+      }
     } catch (error) {
       setProjects([]);
-      setMessage(error instanceof Error ? `真实项目接口失败：${error.message}` : "真实项目接口失败");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: "error",
+          title: "项目资料刷新失败",
+          detail: error instanceof Error ? `${error.message}。已保留原型项目，可稍后重试。` : "接口不可用。已保留原型项目，可稍后重试。",
+          target: "项目列表",
+          timestamp: formatOperationTime(),
+        });
+      }
+    } finally {
+      if (!options.preserveFeedback) {
+        setPendingOperation(null);
+      }
     }
   }
 
@@ -140,21 +186,49 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
 
   async function saveProject() {
     if (!form.project_name.trim()) {
-      setMessage("请先填写项目名称");
+      setOperationFeedback({
+        phase: "error",
+        title: "项目未保存",
+        detail: "请先填写项目名称。表单内容已保留，可补充后重试。",
+        target: "项目维护表单",
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage(selectedId ? "正在更新真实项目..." : "正在创建真实项目...");
+    const isUpdate = Boolean(selectedId && projects.some((item) => item.id === selectedId));
+    setPendingOperation("save");
+    setOperationFeedback({
+      phase: "pending",
+      title: isUpdate ? "正在更新项目" : "正在创建项目",
+      detail: `项目名称：${form.project_name.trim()}。保存后会刷新推荐匹配。`,
+      target: form.project_name.trim(),
+    });
     try {
       const payload = projectPayload(form);
-      const saved = selectedId
+      const saved = isUpdate
         ? await apiRequest<Project>(`/api/projects/${selectedId}`, { method: "PATCH", body: JSON.stringify(payload) })
         : await apiRequest<Project>("/api/projects", { method: "POST", body: JSON.stringify(payload) });
       setSelectedId(saved.id);
-      setMessage(selectedId ? "项目已更新，并写入审计日志" : "项目已创建，并写入审计日志");
-      await load(saved.id);
+      setHighlightProjectId(saved.id);
+      await load(saved.id, { preserveFeedback: true });
       await loadRecommendations(form.tagsText);
+      setOperationFeedback({
+        phase: "success",
+        title: isUpdate ? "项目已更新" : "项目已创建",
+        detail: "已写入审计日志，并在项目列表中选中高亮。",
+        target: `${saved.project_name} / #${saved.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `项目保存失败：${error.message}` : "项目保存失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "项目保存失败",
+        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "接口不可用。表单内容已保留，可重试。",
+        target: form.project_name.trim(),
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -167,6 +241,9 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
   }, [form.tagsText]);
 
   const selected = useMemo(() => projects.find((item) => item.id === selectedId) ?? projects[0], [projects, selectedId]);
+  const hasPendingOperation = pendingOperation !== null;
+  const isLoading = pendingOperation === "load";
+  const isSaving = pendingOperation === "save";
   const rows = projects.length
     ? projects
     : projectRows.map((item, index) => ({
@@ -195,9 +272,9 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
           <p>项目列表、详情、费用周期、招生条件、标签和推荐规则已接入真实后端。</p>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={() => load()}>
-            <RefreshCw size={16} aria-hidden="true" />
-            刷新项目
+          <button className="icon-button secondary" onClick={() => load()} disabled={hasPendingOperation}>
+            <RefreshCw className={isLoading ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isLoading ? "正在刷新" : "刷新项目资料"}
           </button>
           <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>
             <ArrowRight size={16} aria-hidden="true" />
@@ -208,7 +285,7 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
 
       <section className="toolbar">
         <Tags size={16} aria-hidden="true" />
-        <span className="status-pill">{message}</span>
+        <OperationFeedback feedback={operationFeedback} />
         <span className="status-pill success">画像推荐可引用标签</span>
       </section>
 
@@ -228,7 +305,7 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
             <tbody>
               {rows.map((item) => (
                 <tr
-                  className={item.id === selected?.id ? "selected-row" : ""}
+                  className={`${item.id === selected?.id ? "selected-row" : ""} ${highlightProjectId === item.id ? "is-highlighted" : ""}`}
                   key={item.id}
                   onClick={() => {
                     setSelectedId(item.id);
@@ -325,9 +402,9 @@ export default function ProjectsPage({ onNavigate }: PageProps) {
             <span>推荐规则</span>
             <textarea value={form.recommendation_rule} onChange={(event) => setForm({ ...form, recommendation_rule: event.target.value })} rows={2} />
           </label>
-          <button className="icon-button" onClick={saveProject}>
+          <button className="icon-button" onClick={saveProject} disabled={hasPendingOperation}>
             <Save size={16} aria-hidden="true" />
-            保存项目
+            {isSaving ? "正在保存项目" : "保存项目并刷新推荐"}
           </button>
         </div>
 

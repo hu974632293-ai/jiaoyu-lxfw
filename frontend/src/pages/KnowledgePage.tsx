@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, DatabaseZap, RefreshCw, Send } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import type { PageProps } from "../App";
 
 type SceneKey = "customer_service" | "enterprise_guide" | "student_life" | "policy";
@@ -46,6 +47,7 @@ type SyncJob = {
   message: string;
   created_at: string | null;
 };
+type KnowledgeOperation = "ask" | "source" | "sync" | null;
 
 const sceneOptions: Array<{ key: SceneKey; label: string; sample: string }> = [
   { key: "customer_service", label: "客服咨询", sample: "新加坡国际本硕升学计划适合什么学生？" },
@@ -62,6 +64,14 @@ const defaultSourceForm = {
   status: "启用",
 };
 
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
+
 export default function KnowledgePage({ onNavigate }: PageProps) {
   const [question, setQuestion] = useState(sceneOptions[0].sample);
   const [scene, setScene] = useState<SceneKey>("customer_service");
@@ -73,6 +83,14 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
   const [sourceForm, setSourceForm] = useState(defaultSourceForm);
   const [message, setMessage] = useState("等待提问");
   const [sourceMessage, setSourceMessage] = useState("正在加载知识来源...");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "idle",
+    title: "知识库待操作",
+    detail: "可提问、创建知识来源或记录同步任务；fallback 状态会单独展示。",
+  });
+  const [pendingOperation, setPendingOperation] = useState<KnowledgeOperation>(null);
+  const [highlightSourceId, setHighlightSourceId] = useState<number | null>(null);
+  const [highlightSyncJobId, setHighlightSyncJobId] = useState<number | null>(null);
 
   const selectedSource = useMemo(
     () => sources.find((item) => item.id === selectedSourceId) ?? sources.find((item) => item.scene === scene) ?? sources[0],
@@ -82,9 +100,23 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
   async function ask() {
     if (!question.trim()) {
       setMessage("请先填写问题");
+      setOperationFeedback({
+        phase: "error",
+        title: "知识库未提问",
+        detail: "请先填写问题。当前场景和输入内容已保留。",
+        target: sceneOptions.find((item) => item.key === scene)?.label,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
     setMessage("正在调用知识库...");
+    setPendingOperation("ask");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在调用知识库问答",
+      detail: "正在请求 Dify 场景问答；未配置时会显示 fallback。",
+      target: sceneOptions.find((item) => item.key === scene)?.label,
+    });
     try {
       const data = await apiRequest<ChatResult>("/api/knowledge/chat", {
         method: "POST",
@@ -93,8 +125,24 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
       setResult(data);
       setMessage(data.status === "success" ? "Dify 调用成功" : `当前状态：${data.status}，已记录 fallback 状态`);
       await loadLogs();
+      setOperationFeedback({
+        phase: data.status === "success" ? "success" : "fallback",
+        title: data.status === "success" ? "知识库回答已返回" : "知识库已返回 fallback",
+        detail: data.fallback_reason || "回答已显示在场景问答区域，并已记录问答日志。",
+        target: data.scene_label,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setMessage(error instanceof Error ? `知识库调用失败：${error.message}` : "知识库调用失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "知识库调用失败",
+        detail: error instanceof Error ? `${error.message}。问题内容已保留，可重试。` : "接口不可用。问题内容已保留，可重试。",
+        target: sceneOptions.find((item) => item.key === scene)?.label,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -131,37 +179,99 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
   async function createSource() {
     if (!sourceForm.source_name.trim()) {
       setSourceMessage("请先填写知识来源名称");
+      setOperationFeedback({
+        phase: "error",
+        title: "知识来源未创建",
+        detail: "请先填写知识来源名称。表单内容已保留。",
+        target: sceneOptions.find((item) => item.key === scene)?.label,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
     setSourceMessage("正在创建知识来源...");
+    setPendingOperation("source");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在创建知识来源",
+      detail: `来源名称：${sourceForm.source_name.trim()}。`,
+      target: sceneOptions.find((item) => item.key === scene)?.label,
+    });
     try {
       const created = await apiRequest<KnowledgeSource>("/api/knowledge/sources", {
         method: "POST",
         body: JSON.stringify({ ...sourceForm, scene, operator_username: "admin" }),
       });
       setSelectedSourceId(created.id);
+      setHighlightSourceId(created.id);
       setSourceMessage("知识来源已创建，并写入审计日志");
       await loadSources(scene);
+      setOperationFeedback({
+        phase: "success",
+        title: "知识来源已创建",
+        detail: "已写入审计日志，并在知识来源列表中选中高亮。",
+        target: `${created.source_name} / #${created.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setSourceMessage(error instanceof Error ? `知识来源创建失败：${error.message}` : "知识来源创建失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "知识来源创建失败",
+        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "接口不可用。表单内容已保留，可重试。",
+        target: sourceForm.source_name.trim(),
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function createSyncJob() {
     if (!selectedSource) {
       setSourceMessage("请先选择或创建知识来源");
+      setOperationFeedback({
+        phase: "error",
+        title: "同步任务未记录",
+        detail: "请先选择或创建知识来源。",
+        target: sceneOptions.find((item) => item.key === scene)?.label,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
     setSourceMessage("正在记录知识同步任务...");
+    setPendingOperation("sync");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在记录知识同步任务",
+      detail: "当前阶段只记录同步任务，不执行真实 Dify 上传。",
+      target: selectedSource.source_name,
+    });
     try {
-      await apiRequest<SyncJob>("/api/knowledge/sync-jobs", {
+      const created = await apiRequest<SyncJob>("/api/knowledge/sync-jobs", {
         method: "POST",
         body: JSON.stringify({ source_id: selectedSource.id, job_type: "manual_record", triggered_by: "admin" }),
       });
+      setHighlightSyncJobId(created.id);
       setSourceMessage("同步任务已记录；当前阶段不执行真实 Dify 上传");
       await loadSyncJobs();
+      setOperationFeedback({
+        phase: "success",
+        title: "同步任务已记录",
+        detail: "当前阶段不执行真实 Dify 上传，任务已显示在同步任务列表。",
+        target: `同步任务 #${created.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setSourceMessage(error instanceof Error ? `同步任务记录失败：${error.message}` : "同步任务记录失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "同步任务记录失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "接口不可用。可稍后重试。",
+        target: selectedSource.source_name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -181,6 +291,11 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
     loadSyncJobs();
   }, []);
 
+  const hasPendingOperation = pendingOperation !== null;
+  const isAsking = pendingOperation === "ask";
+  const isCreatingSource = pendingOperation === "source";
+  const isCreatingSync = pendingOperation === "sync";
+
   return (
     <div className="page-stack">
       <section className="page-heading">
@@ -198,6 +313,8 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
         </div>
       </section>
 
+      <OperationFeedback feedback={operationFeedback} />
+
       <section className="knowledge-layout">
         <div className="panel-block chat-panel">
           <div className="section-title">
@@ -214,9 +331,9 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
           </div>
           <textarea value={question} onChange={(event) => setQuestion(event.target.value)} rows={4} />
           <div className="inline-actions">
-            <button className="icon-button" onClick={ask}>
+            <button className="icon-button" onClick={ask} disabled={hasPendingOperation}>
               <Send size={16} aria-hidden="true" />
-              提问
+              {isAsking ? "正在提问" : "提交知识库提问"}
             </button>
             {sceneOptions.map((item) => (
               <button className="ghost-button" key={item.key} onClick={() => changeScene(item.key)}>
@@ -249,7 +366,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
               {sources.map((item) => (
                 <article
                   key={item.id}
-                  className={item.id === selectedSource?.id ? "selected-row" : ""}
+                  className={`${item.id === selectedSource?.id ? "selected-row" : ""} ${highlightSourceId === item.id ? "is-highlighted" : ""}`}
                   onClick={() => setSelectedSourceId(item.id)}
                 >
                   <strong>{item.source_name}</strong>
@@ -264,14 +381,14 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
           <section className="panel-block">
             <div className="section-title">
               <h3>同步任务</h3>
-              <button className="tiny-button" onClick={createSyncJob}>
+              <button className="tiny-button" onClick={createSyncJob} disabled={hasPendingOperation}>
                 <DatabaseZap size={14} aria-hidden="true" />
-                记录同步
+                {isCreatingSync ? "记录中" : "记录同步任务"}
               </button>
             </div>
             <div className="log-list">
               {syncJobs.slice(0, 4).map((item) => (
-                <article key={item.id}>
+                <article className={highlightSyncJobId === item.id ? "is-highlighted" : ""} key={item.id}>
                   <strong>#{item.id} / {item.status}</strong>
                   <span>来源 #{item.source_id ?? "-"} / {item.job_type}</span>
                   <em>{item.message}</em>
@@ -311,7 +428,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
             <span>说明</span>
             <textarea value={sourceForm.description} onChange={(event) => setSourceForm({ ...sourceForm, description: event.target.value })} rows={2} />
           </label>
-          <button className="icon-button" onClick={createSource}>创建来源</button>
+          <button className="icon-button" onClick={createSource} disabled={hasPendingOperation}>{isCreatingSource ? "正在创建来源" : "创建知识来源"}</button>
         </div>
 
         <div className="panel-block">

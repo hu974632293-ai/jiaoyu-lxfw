@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { CheckSquare, Plus, RefreshCw, Save, UserPlus } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import type { PageProps } from "../App";
 import { eventPrototypeRows } from "../data/prototype";
 
@@ -53,6 +54,7 @@ type RegistrationForm = {
   contact_info: string;
   source_channel: string;
 };
+type EventOperation = "load" | "save" | "register" | "checkIn" | "roster" | null;
 
 const defaultEventForm: EventForm = {
   event_name: "阶段五活动运营测试说明会",
@@ -112,6 +114,14 @@ function formFromEvent(event: EventItem): EventForm {
   };
 }
 
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
+
 export default function EventsPage({ onNavigate }: PageProps) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -119,11 +129,27 @@ export default function EventsPage({ onNavigate }: PageProps) {
   const [eventForm, setEventForm] = useState<EventForm>(defaultEventForm);
   const [registrationForm, setRegistrationForm] = useState<RegistrationForm>(defaultRegistrationForm);
   const [message, setMessage] = useState("正在加载真实活动...");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "pending",
+    title: "正在加载活动",
+    detail: "读取活动列表、报名名单和签到状态。",
+    target: "活动运营",
+  });
+  const [pendingOperation, setPendingOperation] = useState<EventOperation>("load");
+  const [highlightEventId, setHighlightEventId] = useState<number | null>(null);
+  const [highlightRegistrationId, setHighlightRegistrationId] = useState<number | null>(null);
   const [isFallback, setIsFallback] = useState(false);
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
 
   async function load(nextSelectedId = selectedId) {
     setMessage("正在刷新真实活动...");
+    setPendingOperation("load");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在刷新活动列表",
+      detail: "读取活动列表，并刷新选中活动的报名名单。",
+      target: "活动列表",
+    });
     try {
       const data = await apiRequest<EventItem[]>("/api/events");
       setEvents(data);
@@ -138,12 +164,28 @@ export default function EventsPage({ onNavigate }: PageProps) {
         setRegistrations([]);
       }
       setMessage(data.length ? "真实活动接口已加载" : "真实接口暂无活动，可用表单创建");
+      setOperationFeedback({
+        phase: data.length ? "success" : "fallback",
+        title: data.length ? "活动列表已刷新" : "真实接口暂无活动，可用表单创建",
+        detail: `当前列表显示 ${data.length || eventPrototypeRows.length} 个活动。`,
+        target: "活动列表",
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setEvents([]);
       setRegistrations([]);
       setSelectedId(null);
       setIsFallback(true);
       setMessage(error instanceof Error ? `真实活动接口失败：${error.message}` : "真实活动接口失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "活动列表刷新失败",
+        detail: error instanceof Error ? `${error.message}。已保留原型活动，可稍后重试。` : "接口不可用。已保留原型活动，可稍后重试。",
+        target: "活动列表",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -152,55 +194,146 @@ export default function EventsPage({ onNavigate }: PageProps) {
       setRegistrations([]);
       return;
     }
+    setPendingOperation("roster");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在刷新报名名单",
+      detail: `读取活动 #${eventId} 的报名和签到状态。`,
+      target: `活动 #${eventId}`,
+    });
     setIsLoadingRoster(true);
     try {
       const data = await apiRequest<Registration[]>(`/api/events/${eventId}/registrations`);
       setRegistrations(data);
+      setOperationFeedback({
+        phase: "success",
+        title: "报名名单已刷新",
+        detail: `当前活动共有 ${data.length} 条报名记录。`,
+        target: `活动 #${eventId}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setRegistrations([]);
       setMessage(error instanceof Error ? `报名名单加载失败：${error.message}` : "报名名单加载失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "报名名单加载失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "接口不可用。可稍后重试。",
+        target: `活动 #${eventId}`,
+        timestamp: formatOperationTime(),
+      });
     } finally {
       setIsLoadingRoster(false);
+      setPendingOperation(null);
     }
   }
 
   async function saveEvent() {
     if (!eventForm.event_name.trim()) {
       setMessage("请先填写活动名称");
+      setOperationFeedback({
+        phase: "error",
+        title: "活动未保存",
+        detail: "请先填写活动名称。表单内容已保留，可补充后重试。",
+        target: "活动维护表单",
+        timestamp: formatOperationTime(),
+      });
       return;
     }
     setMessage(selectedId && events.some((item) => item.id === selectedId) ? "正在更新真实活动..." : "正在创建真实活动...");
+    setPendingOperation("save");
+    setOperationFeedback({
+      phase: "pending",
+      title: selectedId && events.some((item) => item.id === selectedId) ? "正在更新活动" : "正在创建活动",
+      detail: `活动名称：${eventForm.event_name.trim()}。`,
+      target: eventForm.event_name.trim(),
+    });
     try {
       const saved = selectedId && events.some((item) => item.id === selectedId)
         ? await apiRequest<EventItem>(`/api/events/${selectedId}`, { method: "PATCH", body: JSON.stringify(eventPayload(eventForm)) })
         : await apiRequest<EventItem>("/api/events", { method: "POST", body: JSON.stringify(eventPayload(eventForm)) });
       setSelectedId(saved.id);
+      setHighlightEventId(saved.id);
       setMessage("活动已保存，并写入审计日志");
       await load(saved.id);
+      setOperationFeedback({
+        phase: "success",
+        title: "活动已保存",
+        detail: "已写入审计日志，并在活动列表中选中高亮。",
+        target: `${saved.event_name} / #${saved.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setMessage(error instanceof Error ? `活动保存失败：${error.message}` : "活动保存失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "活动保存失败",
+        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "接口不可用。表单内容已保留，可重试。",
+        target: eventForm.event_name.trim(),
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function register() {
     if (!selectedId) {
       setMessage("请先选择或创建活动");
+      setOperationFeedback({
+        phase: "error",
+        title: "报名未提交",
+        detail: "请先选择或创建活动。报名表单内容已保留。",
+        target: registrationForm.subject_name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
     if (!registrationForm.subject_name.trim()) {
       setMessage("请先填写报名人姓名");
+      setOperationFeedback({
+        phase: "error",
+        title: "报名未提交",
+        detail: "请先填写报名人姓名。报名表单内容已保留。",
+        target: `活动 #${selectedId}`,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
     setMessage("正在提交真实活动报名...");
+    setPendingOperation("register");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在提交活动报名",
+      detail: `报名人：${registrationForm.subject_name.trim()}。成功后会刷新名单。`,
+      target: `活动 #${selectedId}`,
+    });
     try {
-      await apiRequest<Registration>(`/api/events/${selectedId}/registrations`, {
+      const created = await apiRequest<Registration>(`/api/events/${selectedId}/registrations`, {
         method: "POST",
         body: JSON.stringify(registrationPayload(registrationForm)),
       });
+      setHighlightRegistrationId(created.id);
       setMessage(`${registrationForm.subject_name} 已报名，并写入审计日志`);
       await load(selectedId);
+      setOperationFeedback({
+        phase: "success",
+        title: "活动报名已提交",
+        detail: "报名记录已写入审计日志，并在名单中高亮。",
+        target: `${registrationForm.subject_name} / #${created.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setMessage(error instanceof Error ? `报名失败：${error.message}` : "报名失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "活动报名失败",
+        detail: error instanceof Error ? `${error.message}。报名表单内容已保留，可重试。` : "接口不可用。报名表单内容已保留，可重试。",
+        target: registrationForm.subject_name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -209,15 +342,39 @@ export default function EventsPage({ onNavigate }: PageProps) {
       return;
     }
     setMessage("正在提交真实签到...");
+    setPendingOperation("checkIn");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在提交活动签到",
+      detail: `正在更新报名记录 #${registrationId}。`,
+      target: `报名 #${registrationId}`,
+    });
     try {
       await apiRequest<Registration>(`/api/events/${selectedId}/check-ins`, {
         method: "POST",
         body: JSON.stringify({ registration_id: registrationId, operator_username: "admin" }),
       });
+      setHighlightRegistrationId(registrationId);
       setMessage("签到完成，并写入审计日志");
       await load(selectedId);
+      setOperationFeedback({
+        phase: "success",
+        title: "签到完成",
+        detail: "签到记录已写入审计日志，并在名单中高亮。",
+        target: `报名 #${registrationId}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
       setMessage(error instanceof Error ? `签到失败：${error.message}` : "签到失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "签到失败",
+        detail: error instanceof Error ? `${error.message}。报名状态未改动，可重试。` : "接口不可用。报名状态未改动，可重试。",
+        target: `报名 #${registrationId}`,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -226,6 +383,11 @@ export default function EventsPage({ onNavigate }: PageProps) {
   }, []);
 
   const selected = useMemo(() => events.find((item) => item.id === selectedId) ?? events[0], [events, selectedId]);
+  const hasPendingOperation = pendingOperation !== null;
+  const isLoading = pendingOperation === "load";
+  const isSaving = pendingOperation === "save";
+  const isRegistering = pendingOperation === "register";
+  const isCheckingIn = pendingOperation === "checkIn";
   const rows = events.length
     ? events.map((item) => ({
         id: item.id,
@@ -250,9 +412,9 @@ export default function EventsPage({ onNavigate }: PageProps) {
           <p>活动 CRUD、线索/学生报名、名单查询和签到已接入真实 API，接口失败时保留原型兜底。</p>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={() => load()}>
-            <RefreshCw size={16} aria-hidden="true" />
-            刷新活动
+          <button className="icon-button secondary" onClick={() => load()} disabled={hasPendingOperation}>
+            <RefreshCw className={isLoading ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isLoading ? "正在刷新" : "刷新活动列表"}
           </button>
           <button className="icon-button" onClick={() => onNavigate("reports")}>
             生成活动报告
@@ -261,7 +423,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       </section>
 
       <section className="toolbar">
-        <span className={`status-pill ${isFallback ? "fallback" : "success"}`}>{message}</span>
+        <OperationFeedback feedback={operationFeedback} />
         <span className="status-pill success">支持线索和学生两类主体</span>
         {!events.length && !isFallback && <span className="status-pill warning">当前真实接口暂无活动</span>}
       </section>
@@ -282,7 +444,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
             <tbody>
               {rows.map((item) => (
                 <tr
-                  className={item.id === selected?.id ? "selected-row" : ""}
+                  className={`${item.id === selected?.id ? "selected-row" : ""} ${highlightEventId === item.id ? "is-highlighted" : ""}`}
                   key={item.id}
                   onClick={() => {
                     setSelectedId(item.id);
@@ -320,13 +482,13 @@ export default function EventsPage({ onNavigate }: PageProps) {
             <span className="status-pill success">名单与签到</span>
           </div>
           <div className="inline-actions">
-            <button onClick={register}>
+            <button onClick={register} disabled={hasPendingOperation}>
               <UserPlus size={15} aria-hidden="true" />
-              提交报名
+              {isRegistering ? "正在报名" : "提交活动报名"}
             </button>
-            <button className="ghost-button" onClick={() => loadRegistrations()}>
-              <RefreshCw size={15} aria-hidden="true" />
-              刷新名单
+            <button className="ghost-button" onClick={() => loadRegistrations()} disabled={hasPendingOperation}>
+              <RefreshCw className={pendingOperation === "roster" ? "spin-icon" : ""} size={15} aria-hidden="true" />
+              {pendingOperation === "roster" ? "刷新中" : "刷新报名名单"}
             </button>
           </div>
           <label className="stacked-input">
@@ -369,16 +531,16 @@ export default function EventsPage({ onNavigate }: PageProps) {
           <div className="roster-list">
             {isLoadingRoster && <div className="empty-state">正在加载报名名单...</div>}
             {!isLoadingRoster && registrations.map((item) => (
-              <article key={item.id}>
+              <article className={highlightRegistrationId === item.id ? "is-highlighted" : ""} key={item.id}>
                 <div>
                   <strong>{item.subject_name || `${item.subject_type} #${item.subject_id}`}</strong>
                   <span>
                     {item.subject_type === "lead" ? "线索" : "学生"} / {item.source_channel || "未标注来源"} / {item.status}
                   </span>
                 </div>
-                <button className="tiny-button" disabled={item.status === "已签到"} onClick={() => checkIn(item.id)}>
+                <button className="tiny-button" disabled={hasPendingOperation || item.status === "已签到"} onClick={() => checkIn(item.id)}>
                   <CheckSquare size={14} aria-hidden="true" />
-                  {item.status === "已签到" ? "已签到" : "签到"}
+                  {isCheckingIn ? "签到中" : item.status === "已签到" ? "已签到" : "签到"}
                 </button>
               </article>
             ))}
@@ -437,9 +599,9 @@ export default function EventsPage({ onNavigate }: PageProps) {
             <span>活动说明</span>
             <textarea value={eventForm.description} onChange={(event) => setEventForm({ ...eventForm, description: event.target.value })} rows={2} />
           </label>
-          <button className="icon-button" onClick={saveEvent}>
+          <button className="icon-button" onClick={saveEvent} disabled={hasPendingOperation}>
             <Save size={16} aria-hidden="true" />
-            保存活动
+            {isSaving ? "正在保存活动" : "保存活动并刷新名单"}
           </button>
         </div>
 
