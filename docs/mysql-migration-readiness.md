@@ -45,6 +45,8 @@ DATABASE_URL=mysql+pymysql://用户名:密码@127.0.0.1:3306/jiaoyu_lxfw?charset
 
 - `backend/requirements.txt` 必须包含 `pymysql`。
 - 切换环境前先执行 `python -m pip install -r backend\requirements.txt`。
+- 可用 `python scripts\mysql_readiness_check.py --database-url "mysql+pymysql://用户名:密码@127.0.0.1:3306/jiaoyu_lxfw?charset=utf8mb4"` 先检查连接、字符集和排序规则。
+- 空库建表验证可追加 `--init-tables`，该命令只用于 MySQL 空库验证，不用于迁移 SQLite 历史数据。
 
 ## 4. MySQL 兼容风险清单
 
@@ -64,18 +66,23 @@ DATABASE_URL=mysql+pymysql://用户名:密码@127.0.0.1:3306/jiaoyu_lxfw?charset
 2. 在 `backend\.env` 配置 `DATABASE_URL`。
 3. 安装依赖：`python -m pip install -r backend\requirements.txt`。
 4. 启动后端或运行测试，让 `init_db()` 创建表。
-5. 执行 seed：`POST /api/demo/seed`。
-6. 重跑后端测试：
+5. 或执行空库建表检查：
+   ```powershell
+   cd D:\00_Project\jiaoyu_lxfw\backend
+   python scripts\mysql_readiness_check.py --database-url "mysql+pymysql://用户名:密码@127.0.0.1:3306/jiaoyu_lxfw?charset=utf8mb4" --init-tables
+   ```
+6. 执行 seed：`POST /api/demo/seed`。
+7. 重跑后端测试：
    ```powershell
    cd D:\00_Project\jiaoyu_lxfw\backend
    python -m pytest -v
    ```
-7. 重跑前端构建：
+8. 重跑前端构建：
    ```powershell
    cd D:\00_Project\jiaoyu_lxfw\frontend
    npm.cmd run build
    ```
-8. 复测关键链路：
+9. 复测关键链路：
    - 官网客服 Agent 咨询
    - 活动报名
    - 顾问手动录入客户线索
