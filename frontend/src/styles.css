@@ -38,6 +38,7 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .workspace-shell {
@@ -565,6 +566,124 @@ button:disabled {
   border-color: #d5cab7;
   background: #f8f4ed;
   color: #7a5a28;
+}
+
+.spin-icon {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.operation-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #d8e4ef;
+  border-left: 4px solid #1268c4;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px 14px;
+  box-shadow: 0 12px 28px rgba(30, 60, 90, 0.06);
+}
+
+.operation-feedback.compact {
+  align-items: flex-start;
+  padding: 10px 11px;
+  box-shadow: none;
+}
+
+.operation-feedback.pending {
+  border-left-color: var(--blue);
+  background: #f5fbff;
+}
+
+.operation-feedback.success {
+  border-left-color: var(--green);
+  background: #f4fbf8;
+}
+
+.operation-feedback.error {
+  border-left-color: var(--red);
+  background: #fff7f7;
+}
+
+.operation-feedback.fallback {
+  border-left-color: #8f6a2f;
+  background: #fbf7ef;
+}
+
+.operation-feedback-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.operation-feedback-label {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #eaf5ff;
+  color: #1268c4;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.operation-feedback.success .operation-feedback-label {
+  background: #e6f6ef;
+  color: var(--green);
+}
+
+.operation-feedback.error .operation-feedback-label {
+  background: #ffecec;
+  color: var(--red);
+}
+
+.operation-feedback.fallback .operation-feedback-label {
+  background: #f2eadb;
+  color: #7a5a28;
+}
+
+.operation-feedback strong,
+.operation-feedback p,
+.operation-feedback small {
+  display: block;
+}
+
+.operation-feedback strong {
+  color: var(--ink);
+}
+
+.operation-feedback p,
+.operation-feedback small {
+  margin: 3px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.operation-feedback small {
+  font-size: 12px;
+}
+
+.operation-feedback-action {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .operation-feedback {
+    display: grid;
+  }
+
+  .operation-feedback-action {
+    justify-content: flex-start;
+  }
 }
 
 .workspace-grid {
@@ -3205,6 +3324,12 @@ textarea {
 .advisor-lead-card:hover {
   border-color: #b8d9f4;
   background: #f3f9ff;
+}
+
+.advisor-lead-card.is-highlighted {
+  border-color: #76b99f;
+  background: #f2fbf7;
+  box-shadow: 0 0 0 2px rgba(34, 128, 95, 0.14);
 }
 
 .advisor-lead-rank {

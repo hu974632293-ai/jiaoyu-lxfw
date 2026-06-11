@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { crmPrototypeRows, pipelineStages } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
 
@@ -33,6 +34,7 @@ type CustomerGrowthPageProps = {
 };
 
 type AdvisorPanel = "create" | "insight" | "today" | "tasks" | null;
+type OperationKey = "load" | "createLead" | "assessLead" | null;
 
 const statusMap: Record<string, string> = {
   new: "新线索",
@@ -44,27 +46,69 @@ const statusMap: Record<string, string> = {
   新增意向: "新增意向",
 };
 
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
+
 export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPageProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [message, setMessage] = useState("正在加载客户增长队列...");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "pending",
+    title: "正在加载客户增长队列",
+    detail: "读取线索列表并准备今日工作流。",
+  });
+  const [pendingOperation, setPendingOperation] = useState<OperationKey>("load");
   const [customerName, setCustomerName] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [sourceText, setSourceText] = useState("19 岁，高中毕业，希望新加坡升学，家长关注预算和就业前景。");
   const [createdId, setCreatedId] = useState<number | null>(null);
+  const [highlightLeadId, setHighlightLeadId] = useState<number | null>(null);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
   const [activePanel, setActivePanel] = useState<AdvisorPanel>(null);
 
-  async function load() {
-    setMessage("正在刷新真实客户队列...");
+  async function load(options: { preserveFeedback?: boolean } = {}) {
+    if (!options.preserveFeedback) {
+      setPendingOperation("load");
+      setOperationFeedback({
+        phase: "pending",
+        title: "正在刷新客户队列",
+        detail: "正在读取 /api/leads，刷新后会更新线索工作流。",
+        target: "线索工作流",
+      });
+    }
     try {
       const data = await apiRequest<Lead[]>("/api/leads");
       setLeads(data);
-      setMessage(data.length ? "真实客户队列已加载" : "真实接口返回空列表，展示原型样例");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: data.length ? "success" : "fallback",
+          title: data.length ? "客户队列已刷新" : "真实接口暂无客户，已展示样例队列",
+          detail: `当前工作流显示 ${data.length || crmPrototypeRows.length} 条线索，可继续筛选或进入客户 360。`,
+          target: "线索工作流",
+          timestamp: formatOperationTime(),
+        });
+      }
     } catch (error) {
       setLeads([]);
-      setMessage(error instanceof Error ? `真实客户接口失败：${error.message}` : "真实客户接口失败");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: "error",
+          title: "客户队列刷新失败",
+          detail: error instanceof Error ? `${error.message}。已保留样例队列，可稍后重试。` : "接口不可用。已保留样例队列，可稍后重试。",
+          target: "线索工作流",
+          timestamp: formatOperationTime(),
+        });
+      }
+    } finally {
+      if (!options.preserveFeedback) {
+        setPendingOperation(null);
+      }
     }
   }
 
@@ -75,10 +119,23 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   async function createLead() {
     const name = customerName.trim();
     if (!name) {
-      setMessage("请先填写客户姓名");
+      setActivePanel("create");
+      setOperationFeedback({
+        phase: "error",
+        title: "线索创建失败",
+        detail: "请先填写客户姓名。表单内容已保留，可补充后重试。",
+        target: "快速录入表单",
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在新建线索...");
+    setPendingOperation("createLead");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在创建客户线索",
+      detail: `正在保存 ${name} 的联系方式和背景资料。`,
+      target: name,
+    });
     try {
       const data = await apiRequest<LeadCreated>("/api/leads", {
         method: "POST",
@@ -90,21 +147,49 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         }),
       });
       setCreatedId(data.id);
-      setMessage("新建线索成功，可继续触发研判或进入客户 360");
+      setHighlightLeadId(data.id);
       setActivePanel("insight");
-      await load();
+      await load({ preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: `线索已创建：${name}`,
+        detail: "已在队列中高亮新线索，可继续画像研判或进入客户 360。",
+        target: `线索 #${data.id}`,
+        targetId: data.id,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `新建线索失败：${error.message}` : "新建线索失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "线索创建失败",
+        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "接口不可用。表单内容已保留，可重试。",
+        target: name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function assessLead() {
     const rawInput = sourceText.trim();
     if (!rawInput) {
-      setMessage("请先粘贴资料");
+      setOperationFeedback({
+        phase: "error",
+        title: "画像研判未触发",
+        detail: "请先粘贴客户背景资料。当前输入已保留，可补充后重试。",
+        target: "客户背景资料",
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在触发画像研判...");
+    setPendingOperation("assessLead");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在触发画像研判",
+      detail: createdId ? `正在基于线索 #${createdId} 生成推荐结果。` : "未绑定线索，将按当前资料生成临时推荐结果。",
+      target: createdId ? `线索 #${createdId}` : "当前资料",
+    });
     try {
       const data = await apiRequest<AssessmentResult>("/api/profile/assess", {
         method: "POST",
@@ -115,10 +200,25 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         }),
       });
       setAssessment(data);
-      setMessage(`画像研判完成，推荐：${data.matched_project || "待补充资料"}`);
       setActivePanel("insight");
+      setOperationFeedback({
+        phase: "success",
+        title: "画像研判已完成",
+        detail: `推荐项目：${data.matched_project || "待补充资料"}。结果已展示在研判与推荐面板。`,
+        target: createdId ? `线索 #${createdId}` : "当前资料",
+        targetId: createdId ?? undefined,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `画像研判失败：${error.message}` : "画像研判失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "画像研判失败",
+        detail: error instanceof Error ? `${error.message}。客户资料已保留，可重试。` : "接口不可用。客户资料已保留，可重试。",
+        target: createdId ? `线索 #${createdId}` : "当前资料",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -148,18 +248,28 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const commandMetrics = useMemo(() => {
     const highPotentialCount = queueRows.filter((item) => item.status === "high_potential").length;
     const activeCount = queueRows.filter((item) => !["converted", "lost"].includes(item.status)).length;
-    const apiState = leads.length ? "真实 API" : message.includes("失败") ? "接口异常" : "样例队列";
+    const apiState = leads.length ? "真实 API" : operationFeedback.phase === "error" ? "接口异常" : "样例队列";
     return [
       { label: "高潜客户", value: String(highPotentialCount), note: "优先回访", tone: "warning" },
       { label: "待推进", value: String(activeCount), note: "未成交/未流失", tone: "danger" },
       { label: "活动转化", value: "42%", note: "本周讲座", tone: "success" },
-      { label: "接口状态", value: apiState, note: leads.length ? "/api/leads" : "可继续操作", tone: message.includes("失败") ? "danger" : "success" },
+      { label: "接口状态", value: apiState, note: leads.length ? "/api/leads" : "可继续操作", tone: operationFeedback.phase === "error" ? "danger" : "success" },
     ];
-  }, [leads.length, message, queueRows]);
+  }, [leads.length, operationFeedback.phase, queueRows]);
 
   const spotlightLead = rows[0] ?? queueRows[0];
   const recommendationName = assessment?.matched_project || spotlightLead?.project || "待补充资料";
   const todayActions = (rows.length ? rows : queueRows).slice(0, 3);
+  const isRefreshing = pendingOperation === "load";
+  const isCreating = pendingOperation === "createLead";
+  const isAssessing = pendingOperation === "assessLead";
+  const hasPendingOperation = pendingOperation !== null;
+  const feedbackTargetId = operationFeedback.targetId;
+  const feedbackAction = typeof feedbackTargetId === "number" ? (
+    <button className="tiny-button" onClick={() => onNavigate("customer360", feedbackTargetId)}>
+      打开客户 360 <ArrowRight size={13} aria-hidden="true" />
+    </button>
+  ) : null;
 
   return (
     <div className="page-stack advisor-page">
@@ -170,13 +280,13 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           <p>围绕线索录入、画像研判、客户队列、下一步任务和客户 360，保留真实 API 闭环。</p>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={load}>
-            <RefreshCw size={16} aria-hidden="true" />
-            刷新队列
+          <button className="icon-button secondary" onClick={() => load()} disabled={hasPendingOperation}>
+            <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isRefreshing ? "正在刷新" : "刷新客户队列"}
           </button>
           <button className="icon-button" onClick={() => setActivePanel("create")}>
             <UserPlus size={16} aria-hidden="true" />
-            新建线索
+            打开新建线索
           </button>
         </div>
       </section>
@@ -191,6 +301,8 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         ))}
       </section>
 
+      <OperationFeedback feedback={operationFeedback} action={feedbackAction} />
+
       <section className={`advisor-workbench-grid ${activePanel ? "has-open-panel" : ""}`}>
         <aside className="advisor-action-rail advisor-left-rail" aria-label="顾问快捷操作">
           <button className={activePanel === "create" ? "active" : ""} onClick={() => setActivePanel("create")} title="快速录入">
@@ -201,9 +313,9 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
             <Sparkles size={19} aria-hidden="true" />
             <span>研判</span>
           </button>
-          <button onClick={load} title="刷新队列">
-            <RefreshCw size={19} aria-hidden="true" />
-            <span>刷新</span>
+          <button onClick={() => load()} title="刷新客户队列" disabled={hasPendingOperation}>
+            <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={19} aria-hidden="true" />
+            <span>{isRefreshing ? "刷新中" : "刷新"}</span>
           </button>
           <button onClick={() => setStatusFilter("high_potential")} title="只看高潜">
             <Filter size={19} aria-hidden="true" />
@@ -217,9 +329,9 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
               <h3>线索工作流</h3>
               <span>{rows.length} 位客户匹配当前筛选</span>
             </div>
-            <button className="tiny-button" onClick={load}>
-              <RefreshCw size={14} aria-hidden="true" />
-              同步
+            <button className="tiny-button" onClick={() => load()} disabled={hasPendingOperation}>
+              <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={14} aria-hidden="true" />
+              {isRefreshing ? "刷新中" : "刷新队列"}
             </button>
           </div>
           <div className="toolbar advisor-toolbar">
@@ -246,7 +358,11 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           </div>
           <div className="advisor-lead-list">
             {rows.map((lead) => (
-              <button className="advisor-lead-card" key={lead.id} onClick={() => onNavigate("customer360", lead.id)}>
+              <button
+                className={`advisor-lead-card ${highlightLeadId === lead.id ? "is-highlighted" : ""}`}
+                key={lead.id}
+                onClick={() => onNavigate("customer360", lead.id)}
+              >
                 <span className="advisor-lead-rank">#{lead.id}</span>
                 <div className="advisor-lead-main">
                   <strong>{lead.customer_name}</strong>
@@ -314,12 +430,12 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
               <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={4} />
             </label>
             <div className="inline-actions">
-              <button className="icon-button" onClick={createLead}>
-                保存线索
+              <button className="icon-button" onClick={createLead} disabled={hasPendingOperation}>
+                {isCreating ? "正在保存线索" : "保存线索并进入研判"}
               </button>
-              <button className="icon-button secondary" onClick={assessLead}>
-                <Sparkles size={16} aria-hidden="true" />
-                触发研判
+              <button className="icon-button secondary" onClick={assessLead} disabled={hasPendingOperation}>
+                <Sparkles className={isAssessing ? "spin-icon" : ""} size={16} aria-hidden="true" />
+                {isAssessing ? "正在研判" : "触发画像研判"}
               </button>
               {createdId ? (
                 <button className="ghost-button" onClick={() => onNavigate("customer360", createdId)}>
@@ -327,7 +443,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
                 </button>
               ) : null}
             </div>
-            <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
+            <OperationFeedback feedback={operationFeedback} action={feedbackAction} compact />
           </aside>
         ) : null}
 
