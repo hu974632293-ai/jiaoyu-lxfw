@@ -88,7 +88,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
       if (!options.preserveFeedback) {
         setOperationFeedback({
           phase: data.length ? "success" : "fallback",
-          title: data.length ? "客户队列已刷新" : "真实接口暂无客户，已展示样例队列",
+          title: data.length ? "客户队列已刷新" : "当前暂无客户，已展示待跟进样例",
           detail: `当前工作流显示 ${data.length || crmPrototypeRows.length} 条线索，可继续筛选或进入客户 360。`,
           target: "线索工作流",
           timestamp: formatOperationTime(),
@@ -248,12 +248,12 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const commandMetrics = useMemo(() => {
     const highPotentialCount = queueRows.filter((item) => item.status === "high_potential").length;
     const activeCount = queueRows.filter((item) => !["converted", "lost"].includes(item.status)).length;
-    const apiState = leads.length ? "真实 API" : operationFeedback.phase === "error" ? "接口异常" : "样例队列";
+    const queueState = leads.length ? "已同步" : operationFeedback.phase === "error" ? "暂不可用" : "待跟进样例";
     return [
       { label: "高潜客户", value: String(highPotentialCount), note: "优先回访", tone: "warning" },
       { label: "待推进", value: String(activeCount), note: "未成交/未流失", tone: "danger" },
       { label: "活动转化", value: "42%", note: "本周讲座", tone: "success" },
-      { label: "接口状态", value: apiState, note: leads.length ? "/api/leads" : "可继续操作", tone: operationFeedback.phase === "error" ? "danger" : "success" },
+      { label: "队列状态", value: queueState, note: "可继续操作", tone: operationFeedback.phase === "error" ? "danger" : "success" },
     ];
   }, [leads.length, operationFeedback.phase, queueRows]);
 
@@ -277,7 +277,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         <div>
           <p className="eyebrow">顾问作战台</p>
           <h2>今天先处理高潜、待跟进和活动转化</h2>
-          <p>围绕线索录入、画像研判、客户队列、下一步任务和客户 360，保留真实 API 闭环。</p>
+          <p>围绕线索录入、画像研判、客户队列、下一步任务和客户 360 推进增长闭环。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={() => load()} disabled={hasPendingOperation}>

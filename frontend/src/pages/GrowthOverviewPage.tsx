@@ -16,7 +16,7 @@ export default function GrowthOverviewPage({ onNavigate }: GrowthOverviewPagePro
         <div>
           <p className="eyebrow">增长总览</p>
           <h2>今天先推进高潜客户、跟进任务和活动转化</h2>
-          <p>后台首页聚焦客户增长状态、今日推进和最近客户，不展示 OpenAPI、seed、fallback JSON 等系统演示信息。</p>
+          <p>后台首页聚焦客户增长状态、今日推进和最近客户，只保留顾问处理所需的信息。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>

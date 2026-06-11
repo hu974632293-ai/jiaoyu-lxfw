@@ -129,7 +129,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       setOperationFeedback({
         phase: "pending",
         title: "正在刷新客户 360",
-        detail: "正在读取客户详情和真实时间线。",
+        detail: "正在读取客户详情和最新时间线。",
         target: `客户 #${nextLeadId}`,
       });
     }
@@ -138,7 +138,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       setOperationFeedback({
         phase: "success",
         title: "客户 360 已刷新",
-        detail: "客户详情、时间线和任务状态已同步；后端不可用时会展示原型兜底。",
+        detail: "客户详情、时间线和任务状态已同步；数据暂不可用时会保留可操作提示。",
         target: `客户 #${nextLeadId}`,
         timestamp: formatOperationTime(),
       });
@@ -331,8 +331,8 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       return (
         <div className="detail-list">
           <div>
-            <dt>真实接口详情</dt>
-            <dd>{detail ? `${detail.contact_info || "无联系方式"} / ${detail.background_info || "暂无背景"}` : "后端未返回详情，展示原型画像"}</dd>
+            <dt>客户资料详情</dt>
+            <dd>{detail ? `${detail.contact_info || "无联系方式"} / ${detail.background_info || "暂无背景"}` : "暂未返回详情，展示当前画像摘要"}</dd>
           </div>
           <div>
             <dt>画像判断</dt>
@@ -384,7 +384,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
               <article className={`task-row ${highlightArea === "tasks" && index === 0 ? "is-highlighted" : ""}`} key={task.taskId}>
                 <div>
                   <strong>{task.detail}</strong>
-                  <span>待办任务 / 来源真实 CRM API</span>
+                  <span>待办任务 / 来源客户跟进记录</span>
                 </div>
                 <button className="ghost-button" onClick={() => completeTask(task.taskId!)} disabled={hasPendingOperation}>
                   {isCompletingTask ? "正在完成" : "完成任务"}
@@ -392,7 +392,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
               </article>
             ))
           ) : (
-            <div className="empty-state">当前客户暂无未完成真实任务，可在右侧录入下一步。</div>
+            <div className="empty-state">当前客户暂无未完成任务，可在右侧录入下一步。</div>
           )}
         </div>
       );
@@ -486,7 +486,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
           <div className="panel-block">
             <div className="section-title">
               <h3>阶段流转与跟进</h3>
-              <span>真实接口优先，失败时保留提示</span>
+              <span>记录客户阶段变化和跟进动作</span>
             </div>
             <div className="inline-actions">
               <button onClick={() => updateStatus("high_potential")} disabled={hasPendingOperation}>

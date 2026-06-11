@@ -42,7 +42,7 @@ export const pipelineStages = [
 export const customerAdviceItems = [
   { title: "先确认预算上限", detail: "王晴家长关注费用，下次回访需要补齐预算区间和可接受付款节奏。" },
   { title: "匹配活动邀约", detail: "优先邀约新加坡升学说明会，再根据反馈判断是否进入项目方案沟通。" },
-  { title: "保留 AI 建议边界", detail: "客户 360 中保留 Dify fallback 与规则画像结论，避免把 AI 建议当作最终承诺。" },
+  { title: "保留 AI 建议边界", detail: "客户 360 中保留规则画像结论，避免把 AI 建议当作最终承诺。" },
 ];
 
 export const workflowCards = [
@@ -50,25 +50,25 @@ export const workflowCards = [
     key: "crm",
     title: "客户增长闭环",
     summary: "画像研判、CRM 跟进、项目推荐、活动报名和客户经营报告保持可演示。",
-    status: "真实 API + 原型详情",
+    status: "客户数据已承接",
   },
   {
     key: "enterprise",
     title: "企业助手闭环",
     summary: "自然语言录入客户、提交日报、查询组织架构和新人指南，写操作保留 service 校验边界。",
-    status: "前端 mock",
+    status: "工作流待完善",
   },
   {
     key: "student",
     title: "学生服务闭环",
     summary: "请假、反馈、申请进度、学业节点和心理风险辅助识别集中在学生服务工作台。",
-    status: "真实 API + fallback",
+    status: "学生事项已承接",
   },
   {
     key: "reports",
     title: "报告决策闭环",
     summary: "客户经营、员工日报、心理健康和投诉处理报告以页面和 JSON 快照演示。",
-    status: "四类报告真实 API",
+    status: "四类报告已承接",
   },
 ];
 
@@ -118,7 +118,7 @@ export const crmPrototypeRows = [
 export const crmTimeline = [
   { time: "09:10", title: "客户资料进入系统", detail: "来源：官网咨询表单" },
   { time: "09:14", title: "画像研判完成", detail: "命中新加坡低风险升学路径，缺少预算上限" },
-  { time: "10:05", title: "知识库问答", detail: "Dify 未配置时使用 fallback，已展示原因" },
+  { time: "10:05", title: "知识库问答", detail: "知识库暂未联通时使用业务模板回答" },
   { time: "11:30", title: "新增跟进", detail: "顾问确认家长希望参加周末讲座" },
   { time: "14:20", title: "活动报名", detail: "报名“新加坡升学说明会”，待签到" },
 ];
@@ -154,7 +154,7 @@ export const publicTrustPoints = [
 
 export const publicFaqs = [
   { question: "公司主要提供哪些服务？", answer: "提供留学规划、国际本科、德国双元制、语言培训、背景提升和学生服务支持。" },
-  { question: "没有配置 Dify 时 FAQ 是否可用？", answer: "可用。系统会展示 fallback 答案和原因，不阻断公开咨询。" },
+  { question: "FAQ 是否会影响公开咨询？", answer: "不会。常见问题可直接回答，复杂问题会引导继续咨询。" },
   { question: "如何预约项目咨询？", answer: "可通过官网联系表单、活动报名或电话微信咨询入口提交需求。" },
   { question: "官网咨询会直接看到内部 CRM 吗？", answer: "不会。官网只承接公开咨询和报名，内部客户跟进在登录后的后台完成。" },
 ];
@@ -185,10 +185,10 @@ export const psychAlerts = [
 ];
 
 export const reportTypes = [
-  { key: "customer_operation", title: "客户经营分析", mode: "真实 API", summary: "新增、成交、流失、高潜客户和跟进建议" },
-  { key: "daily_summary", title: "员工日报汇总", mode: "真实 API", summary: "团队进展、产出、风险和待协调事项" },
-  { key: "student_psych_weekly", title: "学生心理健康周报", mode: "真实 API", summary: "风险学生、情绪标签、趋势和跟进建议" },
-  { key: "feedback_weekly", title: "投诉处理周报", mode: "真实 API", summary: "投诉数量、分类、处理时效和未决风险" },
+  { key: "customer_operation", title: "客户经营分析", mode: "经营快照", summary: "新增、成交、流失、高潜客户和跟进建议" },
+  { key: "daily_summary", title: "员工日报汇总", mode: "日报快照", summary: "团队进展、产出、风险和待协调事项" },
+  { key: "student_psych_weekly", title: "学生心理健康周报", mode: "风险快照", summary: "风险学生、情绪标签、趋势和跟进建议" },
+  { key: "feedback_weekly", title: "投诉处理周报", mode: "反馈快照", summary: "投诉数量、分类、处理时效和未决风险" },
 ];
 
 export const mockReportSnapshots = [
@@ -214,7 +214,7 @@ export const permissions = [
 export const auditRows = [
   { operator: "李敏", action: "新增跟进", resource: "CRM 线索 #1", time: "10:32", detail: "记录家长回访结论" },
   { operator: "周老师", action: "审批请假", resource: "请假 #L-102", time: "11:08", detail: "同意，已通知学生" },
-  { operator: "系统", action: "Dify fallback", resource: "知识问答 #K-56", time: "11:45", detail: "未配置 Dify，使用模板答案" },
+  { operator: "系统", action: "知识问答", resource: "知识问答 #K-56", time: "11:45", detail: "使用业务模板答案" },
   { operator: "管理者", action: "生成报告", resource: "客户经营报告", time: "14:16", detail: "保存 JSON 快照" },
 ];
 

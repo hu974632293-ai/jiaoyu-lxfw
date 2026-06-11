@@ -17,7 +17,7 @@ export type PageProps = {
 export default function App() {
   const [mode, setMode] = useState<AppMode>("public");
   const [publicPage, setPublicPage] = useState<PublicPageKey>("home");
-  const [backofficePage, setBackofficePage] = useState<BackofficePageKey>("growthOverview");
+  const [backofficePage, setBackofficePage] = useState<BackofficePageKey>("roleOverview");
   const [role, setRole] = useState<RoleKey>("admin");
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(1);
   const [seedStatus, setSeedStatus] = useState("演示数据未初始化");

@@ -7,6 +7,7 @@ import GrowthOverviewPage from "./GrowthOverviewPage";
 import ManagementDashboardPage from "./ManagementDashboardPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
+import RoleWorkspacePage from "./RoleWorkspacePage";
 import StudentServicePage from "./StudentServicePage";
 import SystemDemoPage from "./SystemDemoPage";
 import SystemGovernancePage from "./SystemGovernancePage";
@@ -29,7 +30,6 @@ type BackofficeShellPageProps = {
 };
 
 type BackofficeComponent = (props: PageProps) => JSX.Element;
-type LegacyBackofficePageKey = Exclude<BackofficePageKey, "growthOverview" | "customerGrowth" | "customer360" | "managementDashboard">;
 
 const roleShellSummaries: Record<RoleKey, { title: string; items: string[]; footnote: string }> = {
   admin: {
@@ -64,7 +64,7 @@ const roleShellSummaries: Record<RoleKey, { title: string; items: string[]; foot
   },
 };
 
-const backofficeComponents: Record<LegacyBackofficePageKey, BackofficeComponent> = {
+const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
   employeeWorkspace: EmployeeWorkspacePage,
   teacherStudentService: TeacherStudentServicePage,
   studentService: StudentServicePage,
@@ -123,7 +123,11 @@ export default function BackofficeShellPage({
     }
 
     const CurrentPage = backofficeComponents[activePage];
-    return <CurrentPage role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    if (CurrentPage) {
+      return <CurrentPage role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+
+    return <RoleWorkspacePage role={role} activePage={activePage} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
   }
 
   return (
