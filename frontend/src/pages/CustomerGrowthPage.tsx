@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import {
   ArrowRight,
   CalendarClock,
@@ -19,7 +19,13 @@ import { OperationFeedback, type OperationFeedbackState } from "../components/Op
 import { crmPrototypeRows, pipelineStages } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
 
-type Lead = { id: number; customer_name: string; status: string };
+type Lead = {
+  id: number;
+  customer_name: string;
+  status: string;
+  owner_id?: number | null;
+  source_channel?: string;
+};
 type LeadCreated = { id: number };
 type AssessmentResult = {
   assessment_id: number;
@@ -46,6 +52,14 @@ const statusMap: Record<string, string> = {
   新增意向: "新增意向",
 };
 
+const funnelStatusMap: Record<string, string> = {
+  新线索: "new",
+  已画像: "high_potential",
+  咨询中: "consulting",
+  活动邀约: "contacted",
+  "成交/流失": "converted",
+};
+
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
@@ -58,6 +72,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [leads, setLeads] = useState<Lead[]>([]);
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "pending",
     title: "正在加载客户增长队列",
@@ -72,24 +87,56 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
   const [activePanel, setActivePanel] = useState<AdvisorPanel>(null);
 
-  async function load(options: { preserveFeedback?: boolean } = {}) {
+  const leadFilters = useMemo(
+    () => ({
+      keyword: keyword.trim(),
+      status: statusFilter === "all" ? "" : statusFilter,
+      source_channel: sourceFilter === "all" ? "" : sourceFilter,
+    }),
+    [keyword, sourceFilter, statusFilter],
+  );
+
+  function buildLeadQuery(filters: typeof leadFilters) {
+    const params = new URLSearchParams();
+    if (filters.keyword) {
+      params.set("keyword", filters.keyword);
+    }
+    if (filters.status) {
+      params.set("status", filters.status);
+    }
+    if (filters.source_channel) {
+      params.set("source_channel", filters.source_channel);
+    }
+    const query = params.toString();
+    return query ? `/api/leads?${query}` : "/api/leads";
+  }
+
+  function handleFunnelClick(event: MouseEvent<HTMLDivElement>) {
+    const stageLabel = (event.target as HTMLElement).closest("article")?.querySelector("em")?.textContent;
+    if (stageLabel) {
+      setStatusFilter(funnelStatusMap[stageLabel] ?? "all");
+    }
+  }
+
+  async function load(options: { preserveFeedback?: boolean; filters?: typeof leadFilters } = {}) {
+    const filters = options.filters ?? leadFilters;
     if (!options.preserveFeedback) {
       setPendingOperation("load");
       setOperationFeedback({
         phase: "pending",
         title: "正在刷新客户队列",
-        detail: "正在读取 /api/leads，刷新后会更新线索工作流。",
+        detail: "正在按当前条件更新线索工作流。",
         target: "线索工作流",
       });
     }
     try {
-      const data = await apiRequest<Lead[]>("/api/leads");
+      const data = await apiRequest<Lead[]>(buildLeadQuery(filters));
       setLeads(data);
       if (!options.preserveFeedback) {
         setOperationFeedback({
-          phase: data.length ? "success" : "fallback",
-          title: data.length ? "客户队列已刷新" : "当前暂无客户，已展示待跟进样例",
-          detail: `当前工作流显示 ${data.length || crmPrototypeRows.length} 条线索，可继续筛选或进入客户 360。`,
+          phase: data.length ? "success" : "pending",
+          title: data.length ? "客户队列已刷新" : "当前条件暂无匹配客户",
+          detail: `当前工作流显示 ${data.length} 条线索，可调整筛选或进入客户 360。`,
           target: "线索工作流",
           timestamp: formatOperationTime(),
         });
@@ -100,7 +147,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         setOperationFeedback({
           phase: "error",
           title: "客户队列刷新失败",
-          detail: error instanceof Error ? `${error.message}。已保留样例队列，可稍后重试。` : "接口不可用。已保留样例队列，可稍后重试。",
+          detail: error instanceof Error ? `${error.message}。可稍后重试。` : "客户队列暂时无法刷新，可稍后重试。",
           target: "线索工作流",
           timestamp: formatOperationTime(),
         });
@@ -113,8 +160,11 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   }
 
   useEffect(() => {
-    void load();
-  }, []);
+    const timer = window.setTimeout(() => {
+      void load({ filters: leadFilters });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [leadFilters]);
 
   async function createLead() {
     const name = customerName.trim();
@@ -143,13 +193,14 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           customer_name: name,
           contact_info: contactInfo.trim(),
           background_info: sourceText.trim(),
+          source_channel: "顾问录入",
           owner_id: 1,
         }),
       });
       setCreatedId(data.id);
       setHighlightLeadId(data.id);
       setActivePanel("insight");
-      await load({ preserveFeedback: true });
+      await load({ preserveFeedback: true, filters: leadFilters });
       setOperationFeedback({
         phase: "success",
         title: `线索已创建：${name}`,
@@ -162,7 +213,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
       setOperationFeedback({
         phase: "error",
         title: "线索创建失败",
-        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "接口不可用。表单内容已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "客户线索暂时无法保存。表单内容已保留，可重试。",
         target: name,
         timestamp: formatOperationTime(),
       });
@@ -213,7 +264,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
       setOperationFeedback({
         phase: "error",
         title: "画像研判失败",
-        detail: error instanceof Error ? `${error.message}。客户资料已保留，可重试。` : "接口不可用。客户资料已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。客户资料已保留，可重试。` : "画像研判暂时无法完成。客户资料已保留，可重试。",
         target: createdId ? `线索 #${createdId}` : "当前资料",
         timestamp: formatOperationTime(),
       });
@@ -232,23 +283,20 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         customer_name: lead.customer_name,
         status: lead.status,
         statusLabel: statusMap[lead.status] ?? lead.status,
+        source: lead.source_channel || "顾问维护",
       };
     });
-    return realRows.length ? realRows : crmPrototypeRows;
+    return realRows;
   }, [leads]);
 
   const rows = useMemo(() => {
-    return queueRows.filter((item) => {
-      const hitKeyword = item.customer_name.includes(keyword) || item.project.includes(keyword) || item.owner.includes(keyword);
-      const hitStatus = statusFilter === "all" || item.status === statusFilter;
-      return hitKeyword && hitStatus;
-    });
-  }, [keyword, queueRows, statusFilter]);
+    return queueRows;
+  }, [queueRows]);
 
   const commandMetrics = useMemo(() => {
     const highPotentialCount = queueRows.filter((item) => item.status === "high_potential").length;
     const activeCount = queueRows.filter((item) => !["converted", "lost"].includes(item.status)).length;
-    const queueState = leads.length ? "已同步" : operationFeedback.phase === "error" ? "暂不可用" : "待跟进样例";
+    const queueState = operationFeedback.phase === "error" ? "暂不可用" : "已更新";
     return [
       { label: "高潜客户", value: String(highPotentialCount), note: "优先回访", tone: "warning" },
       { label: "待推进", value: String(activeCount), note: "未成交/未流失", tone: "danger" },
@@ -257,9 +305,9 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
     ];
   }, [leads.length, operationFeedback.phase, queueRows]);
 
-  const spotlightLead = rows[0] ?? queueRows[0];
+  const spotlightLead = rows[0] ?? crmPrototypeRows[0];
   const recommendationName = assessment?.matched_project || spotlightLead?.project || "待补充资料";
-  const todayActions = (rows.length ? rows : queueRows).slice(0, 3);
+  const todayActions = rows.slice(0, 3);
   const isRefreshing = pendingOperation === "load";
   const isCreating = pendingOperation === "createLead";
   const isAssessing = pendingOperation === "assessLead";
@@ -336,18 +384,26 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           </div>
           <div className="toolbar advisor-toolbar">
             <Search size={16} aria-hidden="true" />
-            <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索客户、负责人或推荐项目" />
+            <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索客户、联系方式或背景" />
             <Filter size={16} aria-hidden="true" />
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="状态筛选">
               <option value="all">全部状态</option>
               <option value="new">新线索</option>
+              <option value="contacted">已联系</option>
               <option value="high_potential">高潜跟进</option>
               <option value="consulting">咨询中</option>
               <option value="converted">已成交</option>
               <option value="lost">暂缓/流失</option>
             </select>
+            <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} aria-label="来源筛选">
+              <option value="all">全部来源</option>
+              <option value="官网咨询">官网咨询</option>
+              <option value="顾问录入">顾问录入</option>
+              <option value="活动报名">活动报名</option>
+              <option value="演示数据">演示数据</option>
+            </select>
           </div>
-          <div className="advisor-stage-line" aria-label="客户增长阶段漏斗">
+          <div className="advisor-stage-line" aria-label="客户增长阶段漏斗" onClick={handleFunnelClick}>
             {pipelineStages.map((stage, index) => (
               <article key={stage.label}>
                 <span>0{index + 1}</span>

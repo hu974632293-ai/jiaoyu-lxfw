@@ -5,6 +5,7 @@ class LeadCreate(BaseModel):
     customer_name: str
     contact_info: str | None = None
     background_info: str | None = None
+    source_channel: str = ""
     owner_id: int | None = None
 
 

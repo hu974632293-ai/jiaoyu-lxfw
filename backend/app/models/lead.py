@@ -14,6 +14,7 @@ class CrmLead(Base):
     contact_info: Mapped[str | None] = mapped_column(String(255))
     background_info: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="新增意向")
+    source_channel: Mapped[str] = mapped_column(String(64), default="")
     owner_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

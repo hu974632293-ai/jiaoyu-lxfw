@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from app.core.database import init_db
+from app.core.database import SessionLocal
 from app.main import app
+from app.models.user import SysUser
 
 
 init_db()
@@ -90,3 +95,83 @@ def test_crm_follow_up_task_stage_timeline_and_audit_api():
     assert "新增CRM跟进" in audit_actions
     assert "完成CRM任务" in audit_actions
     assert "更新CRM阶段" in audit_actions
+
+
+def test_leads_support_keyword_status_owner_source_and_time_filters():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+
+    db = SessionLocal()
+    try:
+        admin = db.query(SysUser).filter_by(username="admin").first()
+        assert admin is not None
+        owner_id = admin.id
+    finally:
+        db.close()
+
+    now = datetime.utcnow()
+    created_from = (now - timedelta(days=1)).date().isoformat()
+    created_to = (now + timedelta(days=1)).date().isoformat()
+    unique_token = uuid4().hex[:8]
+    target_name = f"阶段四筛选目标客户{unique_token}"
+    source_channel = f"官网咨询{unique_token}"
+
+    target_response = client.post(
+        "/api/leads",
+        json={
+            "customer_name": target_name,
+            "contact_info": "filter-target",
+            "background_info": "关注新加坡本科申请，需要顾问持续跟进。",
+            "owner_id": owner_id,
+            "source_channel": source_channel,
+        },
+    )
+    assert target_response.status_code == 200
+    target_id = target_response.json()["data"]["id"]
+
+    other_response = client.post(
+        "/api/leads",
+        json={
+            "customer_name": "阶段四筛选干扰客户",
+            "contact_info": "filter-other",
+            "background_info": "同样关注申请，但来源和负责人不同。",
+            "source_channel": "活动报名",
+        },
+    )
+    assert other_response.status_code == 200
+    other_id = other_response.json()["data"]["id"]
+
+    for lead_id in (target_id, other_id):
+        status_response = client.patch(
+            f"/api/leads/{lead_id}/status",
+            json={
+                "status": "high_potential",
+                "reason": "阶段四筛选测试",
+                "operator_username": "admin",
+            },
+        )
+        assert status_response.status_code == 200
+
+    filtered_response = client.get(
+        "/api/leads",
+        params={
+            "keyword": unique_token,
+            "status": "high_potential",
+            "owner_id": owner_id,
+            "source_channel": source_channel,
+            "created_from": created_from,
+            "created_to": created_to,
+        },
+    )
+    assert filtered_response.status_code == 200
+    payload = filtered_response.json()
+    assert payload["code"] == 0
+    assert payload["data"] == [
+        {
+            "id": target_id,
+            "customer_name": target_name,
+            "status": "high_potential",
+            "owner_id": owner_id,
+            "source_channel": source_channel,
+        }
+    ]

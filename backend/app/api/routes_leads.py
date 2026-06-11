@@ -18,9 +18,28 @@ def create(payload: LeadCreate, db: Session = Depends(get_db)):
 
 
 @router.get("")
-def list_all(db: Session = Depends(get_db)):
-    leads = list_leads(db)
-    return ok([{"id": item.id, "customer_name": item.customer_name, "status": item.status} for item in leads])
+def list_all(
+    keyword: str | None = None,
+    status: str | None = None,
+    owner_id: int | None = None,
+    source_channel: str | None = None,
+    created_from: str | None = None,
+    created_to: str | None = None,
+    db: Session = Depends(get_db),
+):
+    leads = list_leads(db, keyword, status, owner_id, source_channel, created_from, created_to)
+    return ok(
+        [
+            {
+                "id": item.id,
+                "customer_name": item.customer_name,
+                "status": item.status,
+                "owner_id": item.owner_id,
+                "source_channel": item.source_channel,
+            }
+            for item in leads
+        ]
+    )
 
 
 @router.get("/{lead_id}")
@@ -35,6 +54,8 @@ def detail(lead_id: int, db: Session = Depends(get_db)):
             "contact_info": lead.contact_info,
             "background_info": lead.background_info,
             "status": lead.status,
+            "source_channel": lead.source_channel,
+            "owner_id": lead.owner_id,
         }
     )
 

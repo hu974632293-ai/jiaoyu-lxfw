@@ -38,6 +38,7 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_compatible_columns()
+    _ensure_crm_lead_compatible_columns()
     _ensure_student_grade_compatible_columns()
 
 
@@ -124,6 +125,20 @@ def _ensure_student_grade_compatible_columns() -> None:
         {column["name"] for column in inspector.get_columns("student_grade")},
         {
             "updated_at": "DATETIME",
+        },
+    )
+
+
+def _ensure_crm_lead_compatible_columns() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "crm_lead" not in table_names:
+        return
+    _add_missing_columns(
+        "crm_lead",
+        {column["name"] for column in inspector.get_columns("crm_lead")},
+        {
+            "source_channel": "VARCHAR(64) DEFAULT ''",
         },
     )
 
