@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckSquare, Plus, RefreshCw, Save, UserPlus } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
@@ -128,7 +128,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [eventForm, setEventForm] = useState<EventForm>(defaultEventForm);
   const [registrationForm, setRegistrationForm] = useState<RegistrationForm>(defaultRegistrationForm);
-  const [message, setMessage] = useState("正在加载真实活动...");
+  const [message, setMessage] = useState("正在加载活动...");
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "pending",
     title: "正在加载活动",
@@ -142,7 +142,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
 
   async function load(nextSelectedId = selectedId) {
-    setMessage("正在刷新真实活动...");
+    setMessage("正在刷新活动...");
     setPendingOperation("load");
     setOperationFeedback({
       phase: "pending",
@@ -163,10 +163,10 @@ export default function EventsPage({ onNavigate }: PageProps) {
         setSelectedId(null);
         setRegistrations([]);
       }
-      setMessage(data.length ? "真实活动接口已加载" : "真实接口暂无活动，可用表单创建");
+      setMessage(data.length ? "活动列表已加载" : "当前暂无活动，可用表单创建");
       setOperationFeedback({
-        phase: data.length ? "success" : "fallback",
-        title: data.length ? "活动列表已刷新" : "真实接口暂无活动，可用表单创建",
+        phase: data.length ? "success" : "pending",
+        title: data.length ? "活动列表已刷新" : "当前暂无活动，可用表单创建",
         detail: `当前列表显示 ${data.length || eventPrototypeRows.length} 个活动。`,
         target: "活动列表",
         timestamp: formatOperationTime(),
@@ -176,11 +176,11 @@ export default function EventsPage({ onNavigate }: PageProps) {
       setRegistrations([]);
       setSelectedId(null);
       setIsFallback(true);
-      setMessage(error instanceof Error ? `真实活动接口失败：${error.message}` : "真实活动接口失败");
+      setMessage(error instanceof Error ? `活动列表刷新失败：${error.message}` : "活动列表刷新失败");
       setOperationFeedback({
         phase: "error",
         title: "活动列表刷新失败",
-        detail: error instanceof Error ? `${error.message}。已保留原型活动，可稍后重试。` : "接口不可用。已保留原型活动，可稍后重试。",
+        detail: error instanceof Error ? `${error.message}。请稍后重试。` : "接口不可用。请稍后重试。",
         target: "活动列表",
         timestamp: formatOperationTime(),
       });
@@ -218,7 +218,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       setOperationFeedback({
         phase: "error",
         title: "报名名单加载失败",
-        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "接口不可用。可稍后重试。",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "请稍后重试。",
         target: `活动 #${eventId}`,
         timestamp: formatOperationTime(),
       });
@@ -240,7 +240,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       });
       return;
     }
-    setMessage(selectedId && events.some((item) => item.id === selectedId) ? "正在更新真实活动..." : "正在创建真实活动...");
+    setMessage(selectedId && events.some((item) => item.id === selectedId) ? "正在更新活动..." : "正在创建活动...");
     setPendingOperation("save");
     setOperationFeedback({
       phase: "pending",
@@ -268,7 +268,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       setOperationFeedback({
         phase: "error",
         title: "活动保存失败",
-        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "接口不可用。表单内容已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。表单内容已保留，可重试。` : "表单内容已保留，可重试。",
         target: eventForm.event_name.trim(),
         timestamp: formatOperationTime(),
       });
@@ -300,7 +300,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       });
       return;
     }
-    setMessage("正在提交真实活动报名...");
+    setMessage("正在提交活动报名...");
     setPendingOperation("register");
     setOperationFeedback({
       phase: "pending",
@@ -328,7 +328,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       setOperationFeedback({
         phase: "error",
         title: "活动报名失败",
-        detail: error instanceof Error ? `${error.message}。报名表单内容已保留，可重试。` : "接口不可用。报名表单内容已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。报名表单内容已保留，可重试。` : "报名表单内容已保留，可重试。",
         target: registrationForm.subject_name,
         timestamp: formatOperationTime(),
       });
@@ -341,7 +341,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
     if (!selectedId) {
       return;
     }
-    setMessage("正在提交真实签到...");
+    setMessage("正在提交签到...");
     setPendingOperation("checkIn");
     setOperationFeedback({
       phase: "pending",
@@ -369,7 +369,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       setOperationFeedback({
         phase: "error",
         title: "签到失败",
-        detail: error instanceof Error ? `${error.message}。报名状态未改动，可重试。` : "接口不可用。报名状态未改动，可重试。",
+        detail: error instanceof Error ? `${error.message}。报名状态未改动，可重试。` : "报名状态未改动，可重试。",
         target: `报名 #${registrationId}`,
         timestamp: formatOperationTime(),
       });
@@ -409,7 +409,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
         <div>
           <p className="eyebrow">活动运营</p>
           <h2>活动创建、报名名单和签到闭环</h2>
-          <p>活动 CRUD、线索/学生报名、名单查询和签到已接入真实 API，接口失败时保留原型兜底。</p>
+          <p>统一维护活动、报名名单、签到状态和顾问承接。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={() => load()} disabled={hasPendingOperation}>
@@ -425,7 +425,7 @@ export default function EventsPage({ onNavigate }: PageProps) {
       <section className="toolbar">
         <OperationFeedback feedback={operationFeedback} />
         <span className="status-pill success">支持线索和学生两类主体</span>
-        {!events.length && !isFallback && <span className="status-pill warning">当前真实接口暂无活动</span>}
+        {!events.length && !isFallback && <span className="status-pill warning">当前暂无活动</span>}
       </section>
 
       <section className="crm-layout">

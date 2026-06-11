@@ -100,3 +100,74 @@ def test_event_operation_create_registration_roster_check_in_and_audit_api():
     assert "创建活动" in audit_actions
     assert "活动报名" in audit_actions
     assert "活动签到" in audit_actions
+
+
+def test_public_portal_registration_creates_consultant_lead_and_shared_roster():
+    create_response = client.post(
+        "/api/events",
+        json={
+            "event_name": "官网公开活动报名闭环测试",
+            "event_type": "公开说明会",
+            "start_time": "2026-08-08T14:00:00",
+            "location": "线上直播间",
+            "max_participants": 20,
+            "target_audience": "学生和家长",
+            "speaker": "升学规划顾问",
+            "status": "报名中",
+            "operator_username": "admin",
+        },
+    )
+    assert create_response.status_code == 200
+    assert create_response.json()["code"] == 0
+    event_id = create_response.json()["data"]["id"]
+
+    public_registration_response = client.post(
+        f"/api/events/{event_id}/registrations",
+        json={
+            "subject_type": "lead",
+            "subject_name": "官网访客李同学",
+            "contact_info": "13900008888",
+            "source_channel": "官网活动报名",
+            "operator_username": "public_portal",
+        },
+    )
+    assert public_registration_response.status_code == 200
+    public_registration_payload = public_registration_response.json()
+    assert public_registration_payload["code"] == 0
+    registration = public_registration_payload["data"]
+    assert registration["subject_type"] == "lead"
+    assert registration["subject_name"] == "官网访客李同学"
+    assert registration["contact_info"] == "13900008888"
+    assert registration["source_channel"] == "官网活动报名"
+    assert registration["lead_id"] is not None
+    assert registration["subject_id"] == registration["lead_id"]
+
+    leads_response = client.get("/api/leads", params={"source_channel": "官网活动报名"})
+    assert leads_response.status_code == 200
+    leads_payload = leads_response.json()
+    assert leads_payload["code"] == 0
+    assert any(
+        item["id"] == registration["lead_id"] and item["customer_name"] == "官网访客李同学"
+        for item in leads_payload["data"]
+    )
+
+    roster_response = client.get(f"/api/events/{event_id}/registrations")
+    assert roster_response.status_code == 200
+    roster_payload = roster_response.json()
+    assert roster_payload["code"] == 0
+    assert any(item["id"] == registration["id"] for item in roster_payload["data"])
+
+    check_in_response = client.post(
+        f"/api/events/{event_id}/check-ins",
+        json={"registration_id": registration["id"], "operator_username": "admin"},
+    )
+    assert check_in_response.status_code == 200
+    check_in_payload = check_in_response.json()
+    assert check_in_payload["code"] == 0
+    assert check_in_payload["data"]["status"] == "已签到"
+
+    timeline_response = client.get(f"/api/leads/{registration['lead_id']}/timeline")
+    assert timeline_response.status_code == 200
+    timeline_payload = timeline_response.json()
+    assert timeline_payload["code"] == 0
+    assert any(item["type"] == "event_registration" and item["meta"]["status"] == "已签到" for item in timeline_payload["data"])

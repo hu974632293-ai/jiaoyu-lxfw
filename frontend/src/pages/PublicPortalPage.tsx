@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Building2,
@@ -48,6 +48,29 @@ type PublicChatResult = {
   fallback_reason: string;
 };
 
+type PublicEventItem = {
+  id: number;
+  event_name: string;
+  event_type: string;
+  start_time: string;
+  location: string;
+  current_participants: number;
+  max_participants: number;
+  target_audience: string;
+  speaker: string;
+  status: string;
+  description: string;
+  checked_in_count: number;
+};
+
+type PublicEventRegistration = {
+  id: number;
+  lead_id: number | null;
+  subject_name: string;
+  contact_info: string;
+  source_channel: string;
+  status: string;
+};
 const publicAgentScenes: Array<{ key: PublicAgentScene; label: string; sample: string }> = [
   { key: "customer_service", label: "业务咨询", sample: "我想了解新加坡本科和德国双元制分别适合什么学生？" },
   { key: "policy", label: "政策问答", sample: "德国双元制通常需要提前准备哪些材料？" },
@@ -429,6 +452,64 @@ function ProjectsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate
 }
 
 function EventsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate">) {
+  const [events, setEvents] = useState<PublicEventItem[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [subjectName, setSubjectName] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [message, setMessage] = useState("正在加载活动");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function loadEvents() {
+    try {
+      const data = await apiRequest<PublicEventItem[]>("/api/events");
+      setEvents(data);
+      setSelectedEventId((current) => data.some((item) => item.id === current) ? current : data[0]?.id ?? null);
+      setMessage(data.length ? "选择活动后可直接报名" : "暂无可报名活动");
+    } catch (error) {
+      setEvents([]);
+      setSelectedEventId(null);
+      setMessage(error instanceof Error ? `活动加载失败：${error.message}` : "活动加载失败");
+    }
+  }
+
+  async function submitRegistration() {
+    if (!selectedEventId) {
+      setMessage("请先选择活动");
+      return;
+    }
+    if (!subjectName.trim() || !contactInfo.trim()) {
+      setMessage("请填写姓名和联系方式");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage("正在提交报名");
+    try {
+      const registration = await apiRequest<PublicEventRegistration>(`/api/events/${selectedEventId}/registrations`, {
+        method: "POST",
+        body: JSON.stringify({
+          subject_type: "lead",
+          subject_name: subjectName.trim(),
+          contact_info: contactInfo.trim(),
+          source_channel: "官网活动报名",
+          operator_username: "public_portal",
+        }),
+      });
+      setMessage(`${registration.subject_name} 已报名，顾问会继续跟进`);
+      setSubjectName("");
+      setContactInfo("");
+      await loadEvents();
+    } catch (error) {
+      setMessage(error instanceof Error ? `报名失败：${error.message}` : "报名失败");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
   return (
     <div className="public-subpage-editorial">
       <section className="subpage-hero events-hero">
@@ -441,21 +522,41 @@ function EventsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate">
           <CalendarDays size={20} aria-hidden="true" />
           <strong>报名路径</strong>
           <span>看主题、确认适合人群、提交报名或预约顾问。</span>
-          <button className="ghost-button" onClick={() => onNavigate("contact")}>联系报名</button>
+          <button className="ghost-button" onClick={() => onNavigate("contact")}>预约顾问</button>
         </aside>
       </section>
 
       <section className="event-invitation-list" aria-label="活动列表">
-        {eventPrototypeRows.map((item) => (
-          <article key={item.name}>
-            <span>{item.time}</span>
+        {events.map((item) => (
+          <article key={item.id} className={selectedEventId === item.id ? "selected-row" : ""}>
+            <span>{item.start_time.slice(5, 16).replace("T", " ")}</span>
             <div>
-              <strong>{item.name}</strong>
-              <p>{item.type} / {item.target} / 已报名 {item.signed}/{item.capacity}</p>
+              <strong>{item.event_name}</strong>
+              <p>{item.event_type} / {item.target_audience || "学生和家长"} / 已报名 {item.current_participants}/{item.max_participants}</p>
             </div>
-            <button className="tiny-button" onClick={() => onNavigate("contact")}>{item.status}</button>
+            <button className="tiny-button" onClick={() => setSelectedEventId(item.id)}>{selectedEventId === item.id ? "已选择" : item.status}</button>
           </article>
         ))}
+        {!events.length ? <div className="empty-state">{message}</div> : null}
+      </section>
+
+      <section className="public-contact-card">
+        <p className="eyebrow">活动报名</p>
+        <h2>留下联系方式，顾问继续承接</h2>
+        <p>{message}</p>
+        <div className="public-form-preview">
+          <label>
+            <span>姓名</span>
+            <input value={subjectName} onChange={(event) => setSubjectName(event.target.value)} placeholder="请输入姓名" />
+          </label>
+          <label>
+            <span>联系方式</span>
+            <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机 / 微信 / 邮箱" />
+          </label>
+        </div>
+        <button className="icon-button" onClick={submitRegistration} disabled={isSubmitting || !selectedEventId}>
+          {isSubmitting ? "正在报名" : "提交活动报名"}
+        </button>
       </section>
     </div>
   );
@@ -524,7 +625,7 @@ function PublicAgentPanel({ compact = false }: { compact?: boolean }) {
         body: JSON.stringify({ scene, question, lead_id: null, conversation_id: null }),
       });
       setResult(data);
-      setMessage(data.status === "success" ? "Dify 调用成功" : `当前状态：${data.status || "fallback"}`);
+      setMessage(data.status === "success" ? "已返回回答" : "已提供参考回答");
     } catch (error) {
       setResult(null);
       setMessage(error instanceof Error ? `知识库调用失败：${error.message}` : "知识库调用失败");
@@ -554,7 +655,7 @@ function PublicAgentPanel({ compact = false }: { compact?: boolean }) {
         <article className="agent-answer">
           <strong>{result.scene_label || "客服咨询"}</strong>
           <p>{result.answer}</p>
-          {result.fallback_reason ? <span>{result.fallback_reason}</span> : null}
+
         </article>
       ) : (
         <p className="agent-helper">可询问公司业务、留学政策、项目方向、活动报名和 FAQ。公开 Agent 不展示内部 CRM 数据。</p>

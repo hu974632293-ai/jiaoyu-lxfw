@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
+# 当前业务 API 统一使用 event_lecture 作为活动主表，报名和签到都围绕该表闭环。`Event` 仅保留历史表兼容。
 class EventLecture(Base):
     __tablename__ = "event_lecture"
 
@@ -24,6 +25,7 @@ class EventLecture(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+# 历史兼容表：不要在新业务服务中读写，避免活动数据双轨。
 class Event(Base):
     __tablename__ = "event"
 
@@ -58,6 +60,7 @@ class EventRegistration(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+# 历史兼容表：当前签到记录使用 operation.EventCheckIn(event_check_in)。
 class EventCheckin(Base):
     __tablename__ = "event_checkin"
 

@@ -86,7 +86,11 @@ def create_registration(db: Session, event_id: int, payload: EventRegisterReques
         lead_id = subject_id
         lead = db.query(CrmLead).filter_by(id=lead_id).first() if lead_id else None
         if not lead:
-            return None, "线索不存在"
+            lead, error = _create_public_registration_lead(db, event, payload)
+            if error:
+                return None, error
+            lead_id = lead.id
+            subject_id = lead.id
         subject_name = payload.subject_name or lead.customer_name
         contact_info = payload.contact_info or lead.contact_info or ""
     else:
@@ -206,6 +210,29 @@ def serialize_registration(item: EventRegistration) -> dict[str, Any]:
         "checked_in_at": item.checked_in_at.isoformat() if item.checked_in_at else None,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
+
+def _create_public_registration_lead(
+    db: Session,
+    event: EventLecture,
+    payload: EventRegisterRequest,
+) -> tuple[CrmLead | None, str | None]:
+    subject_name = payload.subject_name.strip()
+    contact_info = payload.contact_info.strip()
+    if not subject_name:
+        return None, "请填写报名人姓名"
+    if not contact_info:
+        return None, "请填写联系方式"
+
+    lead = CrmLead(
+        customer_name=subject_name,
+        contact_info=contact_info,
+        background_info=f"通过{event.event_name}提交活动报名。",
+        status="新增意向",
+        source_channel=payload.source_channel or "官网活动报名",
+    )
+    db.add(lead)
+    db.flush()
+    return lead, None
 
 
 def _get_operator(db: Session, username: str | None) -> SysUser | None:

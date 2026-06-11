@@ -12,7 +12,7 @@ from app.models.enterprise import (
     EmployeeProfile,
     OrganizationUnit,
 )
-from app.models.event import Event, EventLecture, EventRegistration
+from app.models.event import EventLecture, EventRegistration
 from app.models.knowledge import ChatMessage, ChatSession, KnowledgeChunk
 from app.models.lead import Customer, CrmLead, Lead, LeadRecommendation, LeadSourceFile, ProfileRule
 from app.models.operation import AuditLog, Notification, TodoItem
@@ -119,7 +119,7 @@ def seed_demo_data(db: Session):
         "audit_logs": db.query(AuditLog).count(),
         "customers": db.query(Customer).count(),
         "projects": db.query(CourseProject).count(),
-        "events": db.query(Event).count() + db.query(EventLecture).count(),
+        "events": db.query(EventLecture).count(),
         "leads": db.query(Lead).count() + db.query(CrmLead).count(),
         "employees": db.query(EmployeeProfile).count(),
         "students": db.query(StudentProfile).count(),
@@ -197,11 +197,6 @@ def _seed_final_business_models(db: Session, admin: SysUser) -> None:
             )
         )
 
-    if db.query(Event).count() == 0:
-        for item in _load_json("data/demo/events.json"):
-            event_data = item.copy()
-            event_data["start_time"] = datetime.fromisoformat(event_data["start_time"])
-            db.add(Event(**event_data, status="报名中", description="公开活动演示数据"))
 
     first_lecture = db.query(EventLecture).order_by(EventLecture.id).first()
     first_crm_lead = db.query(CrmLead).order_by(CrmLead.id).first()
