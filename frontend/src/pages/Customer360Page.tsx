@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, PanelRightClose, PanelRightOpen, Plus } from "lucide-react";
+import { CheckCircle2, ChevronRight, PanelRightClose, PanelRightOpen, Plus, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import {
   crmPrototypeRows,
   crmTimeline,
@@ -29,6 +30,7 @@ type TimelineItem = {
 
 type DisplayTimelineItem = { time: string; title: string; detail: string; taskId?: number; taskStatus?: string };
 type Customer360Tab = "overview" | "profile" | "recommendations" | "consulting" | "tasks" | "events" | "reports";
+type Customer360Operation = "refresh" | "status" | "followUp" | "createTask" | "completeTask" | null;
 
 type Customer360PageProps = {
   selectedLeadId: number | null;
@@ -66,6 +68,14 @@ function formatTimelineTime(raw: string | null) {
   return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
+
 function normalizeTimeline(items: TimelineItem[]): DisplayTimelineItem[] {
   return items.map((item) => ({
     time: formatTimelineTime(item.created_at),
@@ -80,7 +90,14 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
   const leadId = selectedLeadId ?? crmPrototypeRows[0].id;
   const [detail, setDetail] = useState<LeadDetail | null>(null);
   const [tab, setTab] = useState<Customer360Tab>("overview");
-  const [message, setMessage] = useState("正在加载客户 360...");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "pending",
+    title: "正在加载客户 360",
+    detail: "读取客户详情、时间线和任务状态。",
+    target: `客户 #${leadId}`,
+  });
+  const [pendingOperation, setPendingOperation] = useState<Customer360Operation>("refresh");
+  const [highlightArea, setHighlightArea] = useState<"timeline" | "tasks" | null>(null);
   const [adviceOpen, setAdviceOpen] = useState(true);
   const [followUpText, setFollowUpText] = useState("家长关注费用，希望周末参加说明会。");
   const [taskTitle, setTaskTitle] = useState("邀约客户参加周末说明会");
@@ -106,32 +123,83 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
     }
   }
 
-  async function refreshSelectedLead(nextLeadId = leadId) {
-    setMessage("正在刷新客户 360...");
+  async function refreshSelectedLead(nextLeadId = leadId, options: { preserveFeedback?: boolean } = {}) {
+    if (!options.preserveFeedback) {
+      setPendingOperation("refresh");
+      setOperationFeedback({
+        phase: "pending",
+        title: "正在刷新客户 360",
+        detail: "正在读取客户详情和真实时间线。",
+        target: `客户 #${nextLeadId}`,
+      });
+    }
     await Promise.all([loadDetail(nextLeadId), loadTimeline(nextLeadId)]);
-    setMessage("客户 360 已刷新；后端不可用时展示原型兜底");
+    if (!options.preserveFeedback) {
+      setOperationFeedback({
+        phase: "success",
+        title: "客户 360 已刷新",
+        detail: "客户详情、时间线和任务状态已同步；后端不可用时会展示原型兜底。",
+        target: `客户 #${nextLeadId}`,
+        timestamp: formatOperationTime(),
+      });
+      setPendingOperation(null);
+    }
   }
 
   async function updateStatus(status: string) {
-    setMessage("正在调用真实状态流转接口...");
+    setPendingOperation("status");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在更新客户阶段",
+      detail: `目标状态：${statusMap[status] ?? status}。`,
+      target: detail?.customer_name ?? selected.customer_name,
+    });
     try {
       await apiRequest(`/api/leads/${leadId}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status, reason: "客户 360 快捷阶段流转", operator_username: "admin" }),
       });
-      setMessage(`状态已更新为：${statusMap[status] ?? status}`);
-      await refreshSelectedLead();
+      setHighlightArea("timeline");
+      setTab("consulting");
+      await refreshSelectedLead(leadId, { preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: `客户阶段已更新为：${statusMap[status] ?? status}`,
+        detail: "阶段流转已写入客户时间线，可在咨询记录中查看最新处理记录。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `状态更新失败：${error.message}` : "状态更新失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "客户阶段更新失败",
+        detail: error instanceof Error ? `${error.message}。当前客户状态未改动，可重试。` : "接口不可用。当前客户状态未改动，可重试。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function addFollowUp() {
     if (!followUpText.trim()) {
-      setMessage("请先填写跟进内容");
+      setOperationFeedback({
+        phase: "error",
+        title: "跟进记录未写入",
+        detail: "请先填写跟进内容。当前任务标题和输入内容已保留。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在写入真实跟进记录...");
+    setPendingOperation("followUp");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在写入跟进记录",
+      detail: "保存后会同步进入客户时间线。",
+      target: detail?.customer_name ?? selected.customer_name,
+    });
     try {
       await apiRequest(`/api/leads/${leadId}/follow-ups`, {
         method: "POST",
@@ -142,48 +210,121 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
           operator_username: "admin",
         }),
       });
-      setMessage("跟进已写入后端，并进入真实时间线");
-      await refreshSelectedLead();
+      setHighlightArea("timeline");
+      setTab("consulting");
+      await refreshSelectedLead(leadId, { preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: "跟进记录已写入",
+        detail: "最新记录已定位到咨询记录时间线，可继续创建下一步任务。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `新增跟进失败：${error.message}` : "新增跟进失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "新增跟进失败",
+        detail: error instanceof Error ? `${error.message}。跟进内容已保留，可重试。` : "接口不可用。跟进内容已保留，可重试。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function createTask() {
     if (!taskTitle.trim()) {
-      setMessage("请先填写任务标题");
+      setOperationFeedback({
+        phase: "error",
+        title: "任务未创建",
+        detail: "请先填写任务标题。跟进内容和任务输入已保留。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在创建真实 CRM 任务...");
+    setPendingOperation("createTask");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在创建跟进任务",
+      detail: `任务标题：${taskTitle.trim()}。`,
+      target: detail?.customer_name ?? selected.customer_name,
+    });
     try {
       await apiRequest("/api/crm/tasks", {
         method: "POST",
         body: JSON.stringify({ lead_id: leadId, title: taskTitle, owner_username: "admin" }),
       });
-      setMessage("任务已创建，并进入真实时间线");
-      await refreshSelectedLead();
+      setHighlightArea("tasks");
+      setTab("tasks");
+      await refreshSelectedLead(leadId, { preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: "跟进任务已创建",
+        detail: "已切换到跟进任务页签，最新待办会在列表中高亮展示。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `创建任务失败：${error.message}` : "创建任务失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "创建任务失败",
+        detail: error instanceof Error ? `${error.message}。任务标题已保留，可重试。` : "接口不可用。任务标题已保留，可重试。",
+        target: detail?.customer_name ?? selected.customer_name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function completeTask(taskId: number) {
-    setMessage("正在完成真实 CRM 任务...");
+    setPendingOperation("completeTask");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在完成跟进任务",
+      detail: `正在更新任务 #${taskId} 并写入审计日志。`,
+      target: detail?.customer_name ?? selected.customer_name,
+    });
     try {
       await apiRequest(`/api/crm/tasks/${taskId}/complete`, {
         method: "PATCH",
         body: JSON.stringify({ operator_username: "admin" }),
       });
-      setMessage("任务已完成，并写入审计日志");
-      await refreshSelectedLead();
+      setHighlightArea("timeline");
+      setTab("consulting");
+      await refreshSelectedLead(leadId, { preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: "跟进任务已完成",
+        detail: "完成记录已写入审计日志，并定位到咨询记录时间线。",
+        target: `任务 #${taskId}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `完成任务失败：${error.message}` : "完成任务失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "完成任务失败",
+        detail: error instanceof Error ? `${error.message}。任务状态未改动，可重试。` : "接口不可用。任务状态未改动，可重试。",
+        target: `任务 #${taskId}`,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   useEffect(() => {
     refreshSelectedLead(leadId);
   }, [leadId]);
+
+  const hasPendingOperation = pendingOperation !== null;
+  const isRefreshing = pendingOperation === "refresh";
+  const isUpdatingStatus = pendingOperation === "status";
+  const isAddingFollowUp = pendingOperation === "followUp";
+  const isCreatingTask = pendingOperation === "createTask";
+  const isCompletingTask = pendingOperation === "completeTask";
 
   function renderTabContent() {
     if (tab === "profile") {
@@ -223,7 +364,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       return (
         <div className="timeline">
           {timeline.map((item, index) => (
-            <article key={`${item.time}-${item.title}-${index}`}>
+            <article className={highlightArea === "timeline" && index === 0 ? "is-highlighted" : ""} key={`${item.time}-${item.title}-${index}`}>
               <span>{item.time}</span>
               <div>
                 <strong>{item.title}</strong>
@@ -239,14 +380,14 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       return (
         <div className="task-list">
           {pendingTasks.length ? (
-            pendingTasks.map((task) => (
-              <article className="task-row" key={task.taskId}>
+            pendingTasks.map((task, index) => (
+              <article className={`task-row ${highlightArea === "tasks" && index === 0 ? "is-highlighted" : ""}`} key={task.taskId}>
                 <div>
                   <strong>{task.detail}</strong>
                   <span>待办任务 / 来源真实 CRM API</span>
                 </div>
-                <button className="ghost-button" onClick={() => completeTask(task.taskId!)}>
-                  完成
+                <button className="ghost-button" onClick={() => completeTask(task.taskId!)} disabled={hasPendingOperation}>
+                  {isCompletingTask ? "正在完成" : "完成任务"}
                 </button>
               </article>
             ))
@@ -312,6 +453,10 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
         </div>
         <div className="heading-actions">
           <span className="status-pill success">{statusMap[detail?.status ?? selected.status] ?? selected.statusLabel}</span>
+          <button className="ghost-button" onClick={() => refreshSelectedLead()} disabled={hasPendingOperation}>
+            <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isRefreshing ? "正在刷新" : "刷新客户 360"}
+          </button>
           <button className="ghost-button" onClick={() => onNavigate("customerGrowth")}>
             返回客户增长
           </button>
@@ -328,10 +473,12 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
             ))}
           </div>
 
+          <OperationFeedback feedback={operationFeedback} />
+
           <div className="panel-block">
             <div className="section-title">
               <h3>{tabs.find((item) => item.key === tab)?.label}</h3>
-              <span className="status-pill">{message}</span>
+              <span className="status-pill">{operationFeedback.phase === "pending" ? "处理中" : "已就绪"}</span>
             </div>
             {renderTabContent()}
           </div>
@@ -342,9 +489,15 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
               <span>真实接口优先，失败时保留提示</span>
             </div>
             <div className="inline-actions">
-              <button onClick={() => updateStatus("high_potential")}>标记高潜</button>
-              <button onClick={() => updateStatus("converted")}>标记成交</button>
-              <button className="ghost-button" onClick={() => updateStatus("lost")}>标记流失</button>
+              <button onClick={() => updateStatus("high_potential")} disabled={hasPendingOperation}>
+                {isUpdatingStatus ? "正在更新阶段" : "标记为高潜跟进"}
+              </button>
+              <button onClick={() => updateStatus("converted")} disabled={hasPendingOperation}>
+                {isUpdatingStatus ? "正在更新阶段" : "标记为已成交"}
+              </button>
+              <button className="ghost-button" onClick={() => updateStatus("lost")} disabled={hasPendingOperation}>
+                {isUpdatingStatus ? "正在更新阶段" : "标记为暂缓/流失"}
+              </button>
             </div>
             <label className="stacked-input">
               <span>新增跟进</span>
@@ -355,15 +508,16 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
               <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} />
             </label>
             <div className="inline-actions">
-              <button className="icon-button" onClick={addFollowUp}>
+              <button className="icon-button" onClick={addFollowUp} disabled={hasPendingOperation}>
                 <CheckCircle2 size={16} aria-hidden="true" />
-                写入跟进
+                {isAddingFollowUp ? "正在写入跟进" : "写入跟进记录"}
               </button>
-              <button className="icon-button secondary" onClick={createTask}>
+              <button className="icon-button secondary" onClick={createTask} disabled={hasPendingOperation}>
                 <Plus size={16} aria-hidden="true" />
-                创建任务
+                {isCreatingTask ? "正在创建任务" : "创建跟进任务"}
               </button>
             </div>
+            <OperationFeedback feedback={operationFeedback} compact />
           </div>
         </div>
 

@@ -1323,6 +1323,12 @@ td span {
   gap: 8px;
 }
 
+.task-row.is-highlighted {
+  border-color: #76b99f;
+  background: #f2fbf7;
+  box-shadow: 0 0 0 2px rgba(34, 128, 95, 0.14);
+}
+
 .task-row span,
 .task-row em,
 .source-list span,
@@ -1669,6 +1675,14 @@ textarea {
   display: grid;
   grid-template-columns: 70px 1fr;
   gap: 12px;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.timeline article.is-highlighted {
+  border: 1px solid #76b99f;
+  background: #f2fbf7;
+  box-shadow: 0 0 0 2px rgba(34, 128, 95, 0.12);
 }
 
 .timeline article > span {
