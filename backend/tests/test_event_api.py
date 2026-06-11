@@ -67,6 +67,7 @@ def test_event_operation_create_registration_roster_check_in_and_audit_api():
     assert student_registration_payload["code"] == 0
     student_registration_id = student_registration_payload["data"]["id"]
     assert student_registration_payload["data"]["subject_type"] == "student"
+    assert student_registration_payload["data"]["lead_id"] is None
 
     roster_response = client.get(f"/api/events/{event_id}/registrations")
     assert roster_response.status_code == 200

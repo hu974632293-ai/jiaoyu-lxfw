@@ -83,6 +83,7 @@ def _ensure_sqlite_compatible_columns():
                 "checked_in_at": "DATETIME",
             },
         )
+        _ensure_event_registration_nullable_lead_id(inspector)
     if "knowledge_chat_log" in table_names:
         _add_missing_columns(
             "knowledge_chat_log",
@@ -115,3 +116,69 @@ def _add_missing_columns(table_name: str, existing_columns: set[str], required_c
     with engine.begin() as connection:
         for column_name, column_definition in missing_columns.items():
             connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"))
+
+
+def _ensure_event_registration_nullable_lead_id(inspector) -> None:
+    columns = inspector.get_columns("event_registration")
+    lead_id_column = next((column for column in columns if column["name"] == "lead_id"), None)
+    if not lead_id_column or lead_id_column.get("nullable", True):
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("PRAGMA foreign_keys=OFF"))
+        connection.execute(text("ALTER TABLE event_registration RENAME TO event_registration_legacy"))
+        connection.execute(
+            text(
+                """
+                CREATE TABLE event_registration (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    event_id INTEGER NOT NULL,
+                    lead_id INTEGER,
+                    subject_type VARCHAR(32) NOT NULL,
+                    subject_id INTEGER,
+                    subject_name VARCHAR(64) NOT NULL,
+                    contact_info VARCHAR(255) NOT NULL,
+                    source_channel VARCHAR(64) NOT NULL,
+                    status VARCHAR(32) NOT NULL,
+                    checked_in_at DATETIME,
+                    created_at DATETIME NOT NULL,
+                    FOREIGN KEY(event_id) REFERENCES event_lecture (id),
+                    FOREIGN KEY(lead_id) REFERENCES crm_lead (id)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO event_registration (
+                    id,
+                    event_id,
+                    lead_id,
+                    subject_type,
+                    subject_id,
+                    subject_name,
+                    contact_info,
+                    source_channel,
+                    status,
+                    checked_in_at,
+                    created_at
+                )
+                SELECT
+                    id,
+                    event_id,
+                    NULLIF(lead_id, 0),
+                    subject_type,
+                    subject_id,
+                    subject_name,
+                    contact_info,
+                    source_channel,
+                    status,
+                    checked_in_at,
+                    created_at
+                FROM event_registration_legacy
+                """
+            )
+        )
+        connection.execute(text("DROP TABLE event_registration_legacy"))
+        connection.execute(text("PRAGMA foreign_keys=ON"))

@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
+from pathlib import Path
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
 
 
 def is_mysql_database_url(database_url: str) -> bool:

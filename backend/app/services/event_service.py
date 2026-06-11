@@ -95,7 +95,7 @@ def create_registration(db: Session, event_id: int, payload: EventRegisterReques
 
     registration = EventRegistration(
         event_id=event_id,
-        lead_id=lead_id or 0,
+        lead_id=lead_id,
         subject_type=subject_type,
         subject_id=subject_id,
         subject_name=subject_name,
