@@ -40,6 +40,7 @@ def init_db():
     _ensure_sqlite_compatible_columns()
     _ensure_crm_lead_compatible_columns()
     _ensure_student_grade_compatible_columns()
+    _ensure_enterprise_compatible_columns()
 
 
 def _ensure_sqlite_compatible_columns():
@@ -125,6 +126,20 @@ def _ensure_student_grade_compatible_columns() -> None:
         {column["name"] for column in inspector.get_columns("student_grade")},
         {
             "updated_at": "DATETIME",
+        },
+    )
+
+
+def _ensure_enterprise_compatible_columns() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "organization_unit" not in table_names:
+        return
+    _add_missing_columns(
+        "organization_unit",
+        {column["name"] for column in inspector.get_columns("organization_unit")},
+        {
+            "responsibilities": "TEXT",
         },
     )
 

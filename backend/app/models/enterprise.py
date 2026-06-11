@@ -28,6 +28,7 @@ class OrganizationUnit(Base):
     unit_type: Mapped[str] = mapped_column(String(32), default="部门")
     leader_user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_user.id"))
     contact_info: Mapped[str] = mapped_column(String(255), default="")
+    responsibilities: Mapped[str] = mapped_column(Text, default="")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

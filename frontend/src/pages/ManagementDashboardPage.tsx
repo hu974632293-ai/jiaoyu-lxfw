@@ -17,10 +17,15 @@ type ReportDetail = ReportCreated & {
 };
 
 type DailySummary = {
+  summary_type: "daily" | "weekly";
+  period_start: string | null;
+  period_end: string | null;
   report_count: number;
   progress_text: string;
   risks_text: string;
   status: string;
+  departments: { department: string; report_count: number }[];
+  employees: { user_id: number; employee_name: string; department: string; report_count: number }[];
 };
 
 type ManagementDashboardPageProps = {
@@ -47,6 +52,12 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
   const [reports, setReports] = useState<ReportCreated[]>([]);
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(null);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
+  const [dailySummaryFilters, setDailySummaryFilters] = useState({
+    summaryType: "daily" as "daily" | "weekly",
+    date: "",
+    weekStart: "",
+    department: "",
+  });
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "idle",
     title: "经营管理后台待刷新",
@@ -64,6 +75,21 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
     void refresh();
   }, []);
 
+  function buildDailySummaryPath() {
+    const params = new URLSearchParams();
+    params.set("summary_type", dailySummaryFilters.summaryType);
+    if (dailySummaryFilters.summaryType === "daily" && dailySummaryFilters.date) {
+      params.set("date", dailySummaryFilters.date);
+    }
+    if (dailySummaryFilters.summaryType === "weekly" && dailySummaryFilters.weekStart) {
+      params.set("week_start", dailySummaryFilters.weekStart);
+    }
+    if (dailySummaryFilters.department.trim()) {
+      params.set("department", dailySummaryFilters.department.trim());
+    }
+    return `/api/enterprise-assistant/daily-reports/summary?${params.toString()}`;
+  }
+
   async function refresh(options: { preserveFeedback?: boolean } = {}) {
     if (!options.preserveFeedback) {
       setPendingOperation("refresh");
@@ -77,7 +103,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
     try {
       const [reportData, summaryData] = await Promise.all([
         apiRequest<ReportCreated[]>("/api/reports"),
-        apiRequest<DailySummary>("/api/enterprise-assistant/daily-reports/summary"),
+        apiRequest<DailySummary>(buildDailySummaryPath()),
       ]);
       setReports(reportData);
       setDailySummary(summaryData);
@@ -85,7 +111,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
         setOperationFeedback({
           phase: "success",
           title: "经营数据已刷新",
-          detail: `已同步 ${reportData.length} 份报告和 ${summaryData.report_count} 条日报汇总。`,
+          detail: `已同步 ${reportData.length} 份报告和 ${summaryData.report_count} 条${summaryData.summary_type === "weekly" ? "周" : "日"}报记录。`,
           target: "经营管理后台",
           timestamp: formatOperationTime(),
         });
@@ -266,7 +292,58 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
               <h3>员工日报汇总</h3>
               <ClipboardList size={18} aria-hidden="true" />
             </div>
+            <div className="form-grid compact-form-grid">
+              <label className="stacked-input">
+                <span>周期</span>
+                <select
+                  value={dailySummaryFilters.summaryType}
+                  onChange={(event) =>
+                    setDailySummaryFilters((current) => ({
+                      ...current,
+                      summaryType: event.target.value as "daily" | "weekly",
+                    }))
+                  }
+                >
+                  <option value="daily">日汇总</option>
+                  <option value="weekly">周汇总</option>
+                </select>
+              </label>
+              {dailySummaryFilters.summaryType === "daily" ? (
+                <label className="stacked-input">
+                  <span>日期</span>
+                  <input
+                    type="date"
+                    value={dailySummaryFilters.date}
+                    onChange={(event) => setDailySummaryFilters((current) => ({ ...current, date: event.target.value }))}
+                  />
+                </label>
+              ) : (
+                <label className="stacked-input">
+                  <span>周起始</span>
+                  <input
+                    type="date"
+                    value={dailySummaryFilters.weekStart}
+                    onChange={(event) => setDailySummaryFilters((current) => ({ ...current, weekStart: event.target.value }))}
+                  />
+                </label>
+              )}
+              <label className="stacked-input">
+                <span>部门</span>
+                <input
+                  value={dailySummaryFilters.department}
+                  onChange={(event) => setDailySummaryFilters((current) => ({ ...current, department: event.target.value }))}
+                  placeholder="如：升学规划部"
+                />
+              </label>
+            </div>
+            <button className="tiny-button" onClick={() => refresh()} disabled={hasPendingOperation}>
+              查看汇总
+            </button>
             <dl className="detail-list">
+              <div>
+                <dt>周期</dt>
+                <dd>{dailySummary?.summary_type === "weekly" ? "周汇总" : "日汇总"} / {dailySummary?.period_start || "不限"} 至 {dailySummary?.period_end || "不限"}</dd>
+              </div>
               <div>
                 <dt>状态</dt>
                 <dd>{dailySummary?.status ?? "暂无"}</dd>
@@ -280,6 +357,25 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
                 <dd>{dailySummary?.risks_text || "暂无"}</dd>
               </div>
             </dl>
+            <div className="source-list">
+              {(dailySummary?.departments ?? []).slice(0, 4).map((item) => (
+                <article key={item.department}>
+                  <strong>{item.department}</strong>
+                  <span>{item.report_count} 条日报</span>
+                  <em>部门汇总</em>
+                </article>
+              ))}
+              {dailySummary && !dailySummary.departments.length ? <div className="empty-state">当前筛选下暂无部门汇总。</div> : null}
+            </div>
+            <div className="log-list">
+              {(dailySummary?.employees ?? []).slice(0, 5).map((item) => (
+                <article key={`${item.user_id}-${item.department}`}>
+                  <strong>{item.employee_name || `员工 #${item.user_id}`}</strong>
+                  <span>{item.department || "未分配部门"}</span>
+                  <em>{item.report_count} 条</em>
+                </article>
+              ))}
+            </div>
           </section>
         </aside>
       </section>

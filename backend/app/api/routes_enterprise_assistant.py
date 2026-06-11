@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -7,7 +9,10 @@ from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2
 from app.services.enterprise_service import (
     create_daily_report,
     daily_report_summary,
+    get_daily_report,
+    get_directory_contact,
     handle_enterprise_chat,
+    list_directory_contacts,
     list_daily_reports,
     list_org_units,
     run_controlled_nl2sql,
@@ -27,18 +32,45 @@ def create_report(payload: DailyReportCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/daily-reports")
-def reports(db: Session = Depends(get_db)):
-    return ok(list_daily_reports(db))
+def reports(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    employee: str | None = None,
+    department: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return ok(list_daily_reports(db, start_date, end_date, employee, department))
 
 
 @router.get("/daily-reports/summary")
-def report_summary(db: Session = Depends(get_db)):
-    return ok(daily_report_summary(db))
+def report_summary(
+    summary_type: str = "daily",
+    date: date | None = None,
+    week_start: date | None = None,
+    department: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return ok(daily_report_summary(db, summary_type, date, week_start, department))
+
+
+@router.get("/daily-reports/{report_id}")
+def report_detail(report_id: int, db: Session = Depends(get_db)):
+    return ok(get_daily_report(db, report_id))
 
 
 @router.get("/org-units")
-def org_units(db: Session = Depends(get_db)):
-    return ok(list_org_units(db))
+def org_units(keyword: str | None = None, db: Session = Depends(get_db)):
+    return ok(list_org_units(db, keyword))
+
+
+@router.get("/directory")
+def directory(keyword: str | None = None, department: str | None = None, db: Session = Depends(get_db)):
+    return ok(list_directory_contacts(db, keyword, department))
+
+
+@router.get("/directory/{contact_id}")
+def directory_detail(contact_id: int, db: Session = Depends(get_db)):
+    return ok(get_directory_contact(db, contact_id))
 
 
 @router.post("/nl2sql/query")

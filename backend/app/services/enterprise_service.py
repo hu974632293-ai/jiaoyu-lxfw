@@ -1,12 +1,13 @@
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, object_session
 
 from app.models.assistant import AssistantConversation, AssistantIntentLog, Nl2SqlQueryLog
-from app.models.enterprise import OrganizationUnit, WorkDailyReport
+from app.models.enterprise import EmployeeDirectory, EmployeeProfile, OrganizationUnit, WorkDailyReport
 from app.models.event import EventLecture
 from app.models.lead import CrmLead
 from app.models.operation import AuditLog
@@ -73,52 +74,139 @@ def create_daily_report(db: Session, payload: DailyReportCreate) -> dict[str, An
     return serialize_daily_report(report)
 
 
-def list_daily_reports(db: Session) -> list[dict[str, Any]]:
-    reports = db.query(WorkDailyReport).order_by(WorkDailyReport.id.desc()).limit(50).all()
+def list_daily_reports(
+    db: Session,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    employee: str | None = None,
+    department: str | None = None,
+) -> list[dict[str, Any]]:
+    reports = _daily_report_query(db, start_date, end_date, employee, department).order_by(
+        WorkDailyReport.report_date.desc(),
+        WorkDailyReport.id.desc(),
+    ).limit(50).all()
     return [serialize_daily_report(item) for item in reports]
 
 
-def daily_report_summary(db: Session) -> dict[str, Any]:
-    reports = db.query(WorkDailyReport).order_by(WorkDailyReport.id.desc()).limit(20).all()
+def get_daily_report(db: Session, report_id: int) -> dict[str, Any] | None:
+    report = db.query(WorkDailyReport).filter(WorkDailyReport.id == report_id).first()
+    return serialize_daily_report(report) if report else None
+
+
+def daily_report_summary(
+    db: Session,
+    summary_type: str = "daily",
+    target_date: date | None = None,
+    week_start: date | None = None,
+    department: str | None = None,
+) -> dict[str, Any]:
+    summary_type = "weekly" if summary_type == "weekly" else "daily"
+    today = target_date or date.today()
+    if summary_type == "weekly":
+        period_start = week_start or (today - timedelta(days=today.weekday()))
+        period_end = period_start + timedelta(days=6)
+    else:
+        period_start = target_date
+        period_end = target_date
+    reports = _daily_report_query(db, period_start, period_end, None, department).order_by(
+        WorkDailyReport.report_date.desc(),
+        WorkDailyReport.id.desc(),
+    ).all()
     risks: list[str] = []
     progress: list[str] = []
+    department_stats: dict[str, int] = {}
+    employee_stats: dict[int, dict[str, Any]] = {}
     for report in reports:
         structured = _parse_json(report.structured_summary, {})
         report_risks = _parse_json(report.risks, [])
         if structured.get("progress"):
             progress.append(structured["progress"])
         risks.extend(str(item) for item in report_risks)
+        employee_context = _employee_context(db, report.user_id)
+        department_name = employee_context["department"] or "未分配部门"
+        department_stats[department_name] = department_stats.get(department_name, 0) + 1
+        employee_item = employee_stats.setdefault(
+            report.user_id,
+            {
+                "user_id": report.user_id,
+                "employee_name": employee_context["employee_name"],
+                "department": department_name,
+                "report_count": 0,
+            },
+        )
+        employee_item["report_count"] += 1
     return {
+        "summary_type": summary_type,
+        "period_start": period_start.isoformat() if period_start else None,
+        "period_end": period_end.isoformat() if period_end else None,
         "report_count": len(reports),
         "progress_text": "；".join(progress[:5]),
         "risks_text": "；".join(risks[:10]),
+        "departments": [
+            {"department": item[0], "report_count": item[1]}
+            for item in sorted(department_stats.items(), key=lambda pair: pair[0])
+        ],
+        "employees": list(employee_stats.values()),
         "status": "summary_ready",
     }
 
 
 def ensure_default_org_units(db: Session) -> None:
     defaults = [
-        ("总经理办公室", "部门", "总部统筹 / 8000", 1),
-        ("升学规划部", "部门", "升学咨询 / 8010", 2),
-        ("双元制事业部", "部门", "赵凯 / 企业微信 / 8012", 3),
-        ("学生服务部", "部门", "周老师 / 企业微信 / 8020", 4),
+        ("总经理办公室", "部门", "总部统筹 / 8000", "经营决策、资源协调、关键事项审批", 1),
+        ("升学规划部", "部门", "升学咨询 / 8010", "客户咨询、项目匹配、申请规划", 2),
+        ("双元制事业部", "部门", "赵凯 / 企业微信 / 8012", "德国双元制项目咨询、企业匹配、签证材料协同", 3),
+        ("学生服务部", "部门", "周老师 / 企业微信 / 8020", "请假审批、投诉处理、学生关怀", 4),
     ]
-    for unit_name, unit_type, contact_info, sort_order in defaults:
-        if not db.query(OrganizationUnit).filter_by(unit_name=unit_name).first():
-            db.add(
+    for unit_name, unit_type, contact_info, responsibilities, sort_order in defaults:
+        unit = db.query(OrganizationUnit).filter_by(unit_name=unit_name).first()
+        if not unit:
+            unit = (
                 OrganizationUnit(
                     unit_name=unit_name,
                     unit_type=unit_type,
                     contact_info=contact_info,
+                    responsibilities=responsibilities,
                     sort_order=sort_order,
                 )
             )
+            db.add(unit)
+        elif not unit.responsibilities:
+            unit.responsibilities = responsibilities
+    db.flush()
+    directory_defaults = [
+        ("赵凯", "双元制项目负责人", "企业微信 / 8012", "负责双元制项目咨询和企业资源协调", "双元制事业部"),
+        ("周老师", "学生服务负责人", "企业微信 / 8020", "负责请假、反馈和学生关怀跟进", "学生服务部"),
+    ]
+    for display_name, role_title, contact_info, responsibilities, unit_name in directory_defaults:
+        if db.query(EmployeeDirectory).filter_by(display_name=display_name).first():
+            continue
+        unit = db.query(OrganizationUnit).filter_by(unit_name=unit_name).first()
+        db.add(
+            EmployeeDirectory(
+                organization_unit_id=unit.id if unit else None,
+                display_name=display_name,
+                role_title=role_title,
+                contact_info=contact_info,
+                responsibilities=responsibilities,
+            )
+        )
     db.commit()
 
 
-def list_org_units(db: Session) -> list[dict[str, Any]]:
+def list_org_units(db: Session, keyword: str | None = None) -> list[dict[str, Any]]:
     ensure_default_org_units(db)
-    units = db.query(OrganizationUnit).order_by(OrganizationUnit.sort_order, OrganizationUnit.id).all()
+    query = db.query(OrganizationUnit)
+    if keyword:
+        like_keyword = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                OrganizationUnit.unit_name.like(like_keyword),
+                OrganizationUnit.contact_info.like(like_keyword),
+                OrganizationUnit.responsibilities.like(like_keyword),
+            )
+        )
+    units = query.order_by(OrganizationUnit.sort_order, OrganizationUnit.id).all()
     return [
         {
             "id": item.id,
@@ -127,10 +215,39 @@ def list_org_units(db: Session) -> list[dict[str, Any]]:
             "unit_type": item.unit_type,
             "leader_user_id": item.leader_user_id,
             "contact_info": item.contact_info,
+            "responsibilities": item.responsibilities,
             "sort_order": item.sort_order,
         }
         for item in units
     ]
+
+
+def list_directory_contacts(db: Session, keyword: str | None = None, department: str | None = None) -> list[dict[str, Any]]:
+    ensure_default_org_units(db)
+    query = db.query(EmployeeDirectory).outerjoin(
+        OrganizationUnit,
+        EmployeeDirectory.organization_unit_id == OrganizationUnit.id,
+    )
+    if keyword:
+        like_keyword = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                EmployeeDirectory.display_name.like(like_keyword),
+                EmployeeDirectory.role_title.like(like_keyword),
+                EmployeeDirectory.contact_info.like(like_keyword),
+                EmployeeDirectory.responsibilities.like(like_keyword),
+                OrganizationUnit.unit_name.like(like_keyword),
+            )
+        )
+    if department:
+        query = query.filter(OrganizationUnit.unit_name == department)
+    contacts = query.order_by(EmployeeDirectory.id.desc()).limit(50).all()
+    return [serialize_directory_contact(db, item) for item in contacts]
+
+
+def get_directory_contact(db: Session, contact_id: int) -> dict[str, Any] | None:
+    contact = db.query(EmployeeDirectory).filter(EmployeeDirectory.id == contact_id).first()
+    return serialize_directory_contact(db, contact) if contact else None
 
 
 def run_controlled_nl2sql(db: Session, payload: Nl2SqlQueryRequest) -> dict[str, Any]:
@@ -181,15 +298,78 @@ def run_controlled_nl2sql(db: Session, payload: Nl2SqlQueryRequest) -> dict[str,
 
 
 def serialize_daily_report(item: WorkDailyReport) -> dict[str, Any]:
+    employee_context = _employee_context(object_session(item), item.user_id)
     return {
         "id": item.id,
         "user_id": item.user_id,
+        **employee_context,
         "report_date": item.report_date.isoformat() if item.report_date else None,
         "content": item.content,
         "structured_summary": _parse_json(item.structured_summary, {}),
         "risks": _parse_json(item.risks, []),
         "status": item.status,
         "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+def serialize_directory_contact(db: Session, item: EmployeeDirectory) -> dict[str, Any]:
+    unit = db.query(OrganizationUnit).filter(OrganizationUnit.id == item.organization_unit_id).first()
+    employee_no = ""
+    department = unit.unit_name if unit else ""
+    if item.employee_id:
+        profile = db.query(EmployeeProfile).filter(EmployeeProfile.id == item.employee_id).first()
+        if profile:
+            employee_no = profile.employee_no
+            department = profile.department or department
+    return {
+        "id": item.id,
+        "employee_id": item.employee_id,
+        "employee_no": employee_no,
+        "organization_unit_id": item.organization_unit_id,
+        "unit_name": unit.unit_name if unit else "",
+        "department": department,
+        "display_name": item.display_name,
+        "role_title": item.role_title,
+        "contact_info": item.contact_info,
+        "responsibilities": item.responsibilities,
+        "status": item.status,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+def _daily_report_query(
+    db: Session,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    employee: str | None = None,
+    department: str | None = None,
+):
+    query = db.query(WorkDailyReport).outerjoin(SysUser, WorkDailyReport.user_id == SysUser.id).outerjoin(
+        EmployeeProfile,
+        EmployeeProfile.user_id == WorkDailyReport.user_id,
+    )
+    if start_date:
+        query = query.filter(WorkDailyReport.report_date >= start_date)
+    if end_date:
+        query = query.filter(WorkDailyReport.report_date <= end_date)
+    if employee:
+        like_employee = f"%{employee}%"
+        query = query.filter(or_(SysUser.real_name.like(like_employee), SysUser.username.like(like_employee)))
+    if department:
+        query = query.filter(EmployeeProfile.department == department)
+    return query
+
+
+def _employee_context(db: Session | None, user_id: int) -> dict[str, Any]:
+    if not db:
+        return {"employee_name": "", "employee_no": "", "department": "", "position": ""}
+    user = db.query(SysUser).filter(SysUser.id == user_id).first()
+    profile = db.query(EmployeeProfile).filter(EmployeeProfile.user_id == user_id).first()
+    return {
+        "employee_name": user.real_name if user else "",
+        "employee_no": profile.employee_no if profile else "",
+        "department": profile.department if profile else "",
+        "position": profile.position if profile else "",
     }
 
 
