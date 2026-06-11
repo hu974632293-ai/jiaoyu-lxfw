@@ -177,4 +177,20 @@ export const roleDefaultPage: Record<RoleKey, BackofficePageKey> = {
   student: "roleOverview",
 };
 
+export const appModeKeys: AppMode[] = ["public", "login", "backoffice"];
+export const publicPageKeys = publicNavItems.map((item) => item.key);
+export const backofficePageKeys = backofficeNavItems.map((item) => item.key);
+
+export function isAppMode(value: string | null): value is AppMode {
+  return Boolean(value && appModeKeys.includes(value as AppMode));
+}
+
+export function isPublicPageKey(value: string | null): value is PublicPageKey {
+  return Boolean(value && publicPageKeys.includes(value as PublicPageKey));
+}
+
+export function isBackofficePageKey(value: string | null): value is BackofficePageKey {
+  return Boolean(value && backofficePageKeys.includes(value as BackofficePageKey));
+}
+
 export const loginNavItem = { label: "登录", icon: LogIn };
