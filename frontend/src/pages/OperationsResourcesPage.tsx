@@ -58,12 +58,60 @@ export default function OperationsResourcesPage(props: PageProps) {
       <section className="page-heading">
         <div>
           <p className="eyebrow">运营资源</p>
-          <h2>把项目、活动和知识库收纳为运营支撑入口</h2>
-          <p>这里不复制完整表格，只提供后台运营资源的分组入口；进入子视图后继续复用已有真实 API 能力。</p>
+          <h2>项目、活动和知识库运营台</h2>
         </div>
       </section>
 
-      <section className="operations-resource-grid" aria-label="运营资源入口">
+      <section className="role-snapshot-grid" aria-label="运营资源概览">
+        <article>
+          <span>项目资源</span>
+          <strong>{projectRows.length}</strong>
+          <em>支撑客户匹配</em>
+        </article>
+        <article>
+          <span>活动场次</span>
+          <strong>{eventPrototypeRows.length}</strong>
+          <em>承接报名转化</em>
+        </article>
+        <article>
+          <span>知识场景</span>
+          <strong>4</strong>
+          <em>Dify 与 fallback</em>
+        </article>
+      </section>
+
+      <section className="operations-command-grid">
+        <div className="panel-block">
+          <div className="section-title">
+            <h3>今日运营任务</h3>
+            <span className="status-pill success">后台可见</span>
+          </div>
+          <div className="task-list">
+            <article className="task-row">
+              <div>
+                <strong>校准项目标签</strong>
+                <span>检查项目费用、周期和推荐标签，避免顾问匹配失真。</span>
+              </div>
+              <em>项目</em>
+            </article>
+            <article className="task-row">
+              <div>
+                <strong>跟进活动报名</strong>
+                <span>核对讲座容量、签到状态和客户转化来源。</span>
+              </div>
+              <em>活动</em>
+            </article>
+            <article className="task-row">
+              <div>
+                <strong>检查知识 fallback</strong>
+                <span>Dify 未配置时确保公开咨询和内部问答不阻断。</span>
+              </div>
+              <em>知识</em>
+            </article>
+          </div>
+        </div>
+
+        <div className="operations-resource-grid" aria-label="运营资源入口">
         {resourceEntries.map((entry) => {
           const Icon = entry.icon;
           return (
@@ -78,9 +126,10 @@ export default function OperationsResourcesPage(props: PageProps) {
             </button>
           );
         })}
+        </div>
       </section>
 
-      <section className="split-layout secondary">
+      <section className="split-layout secondary operations-boundary-grid">
         <div className="panel-block">
           <div className="section-title">
             <h3>资源归类边界</h3>

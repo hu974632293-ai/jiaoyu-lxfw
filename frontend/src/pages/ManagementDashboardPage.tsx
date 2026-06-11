@@ -206,7 +206,14 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
             <BarChart3 size={18} aria-hidden="true" />
           </div>
           {activeReport ? (
-            <pre>{JSON.stringify(activeReport.content, null, 2)}</pre>
+            <div className="report-business-list compact-report-list">
+              {Object.entries(activeReport.content).slice(0, 6).map(([key, value]) => (
+                <article key={key}>
+                  <span>{formatReportKey(key)}</span>
+                  <strong>{formatReportValue(value)}</strong>
+                </article>
+              ))}
+            </div>
           ) : (
             <div className="empty-state">选择或生成报告后展示。</div>
           )}
@@ -214,4 +221,20 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
       </section>
     </div>
   );
+}
+
+function formatReportKey(value: string): string {
+  return value.replace(/_/g, " ");
+}
+
+function formatReportValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => formatReportValue(item)).join("；") || "暂无";
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `${formatReportKey(key)}：${formatReportValue(item)}`)
+      .join("；") || "暂无";
+  }
+  return String(value ?? "暂无");
 }

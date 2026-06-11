@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FileJson, Play, RefreshCw } from "lucide-react";
+import { BarChart3, Play, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import type { PageProps } from "../App";
 import { reportTypes } from "../data/prototype";
@@ -69,8 +69,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
       <section className="page-heading">
         <div>
           <p className="eyebrow">报告中心</p>
-          <h2>四类管理报告和 JSON 快照</h2>
-          <p>报告先做页面报告和结构化快照，不做 PDF/Word 导出；四类报告均调用真实 API 并保存快照。</p>
+          <h2>经营、日报、心理和投诉报告</h2>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={loadReports}>
@@ -129,15 +128,15 @@ export default function ReportsPage({ onNavigate }: PageProps) {
           )}
 
           {detail ? (
-            <article className="answer-card">
+            <article className="answer-card report-business-card">
               <div className="section-title">
                 <h3>报告详情</h3>
-                <FileJson size={18} aria-hidden="true" />
+                <BarChart3 size={18} aria-hidden="true" />
               </div>
-              <pre>{JSON.stringify(detail.content, null, 2)}</pre>
+              <ReportBusinessSummary content={detail.content} />
             </article>
           ) : (
-            <div className="empty-state">点击生成报告后展示结构化 JSON 快照。</div>
+            <div className="empty-state">点击生成报告后展示业务摘要。</div>
           )}
         </div>
 
@@ -161,4 +160,35 @@ export default function ReportsPage({ onNavigate }: PageProps) {
       </section>
     </div>
   );
+}
+
+function ReportBusinessSummary({ content }: { content: Record<string, unknown> }) {
+  const entries = Object.entries(content).slice(0, 8);
+
+  return (
+    <div className="report-business-list">
+      {entries.map(([key, value]) => (
+        <article key={key}>
+          <span>{formatReportKey(key)}</span>
+          <strong>{formatReportValue(value)}</strong>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function formatReportKey(value: string): string {
+  return value.replace(/_/g, " ");
+}
+
+function formatReportValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => formatReportValue(item)).join("；") || "暂无";
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `${formatReportKey(key)}：${formatReportValue(item)}`)
+      .join("；") || "暂无";
+  }
+  return String(value ?? "暂无");
 }

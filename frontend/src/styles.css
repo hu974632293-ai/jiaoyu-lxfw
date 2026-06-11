@@ -1098,6 +1098,17 @@ td span {
   gap: 12px;
 }
 
+.operations-command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.operations-command-grid .operations-resource-grid {
+  grid-template-columns: 1fr;
+}
+
 .assistant-entry-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1108,7 +1119,7 @@ td span {
 .assistant-entry-card {
   display: grid;
   gap: 10px;
-  min-height: 210px;
+  min-height: 160px;
   border: 1px solid var(--line);
   background: white;
   border-radius: 8px;
@@ -1309,6 +1320,37 @@ td span {
   margin: 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.report-business-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-business-list article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #e1e8ef;
+  background: #f8fbfd;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.report-business-list span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.report-business-list strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.compact-report-list {
+  max-height: 420px;
+  overflow: auto;
 }
 
 .customer-main-panel {
@@ -1704,6 +1746,7 @@ textarea {
   .assistant-layout,
   .student-layout,
   .management-layout,
+  .operations-command-grid,
   .knowledge-layout,
   .report-layout,
   .admin-grid {

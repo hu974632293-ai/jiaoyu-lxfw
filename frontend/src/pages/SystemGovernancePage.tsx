@@ -27,15 +27,16 @@ export default function SystemGovernancePage(props: PageProps) {
       <section className="governance-control-grid">
         <article className="panel-block">
           <div className="section-title">
-            <h3>seed</h3>
+            <h3>基础数据</h3>
             <Database size={18} aria-hidden="true" />
           </div>
           <span className={seedStatus.includes("成功") ? "status-pill success" : seedStatus.includes("失败") ? "status-pill danger" : "status-pill"}>{seedStatus}</span>
+          <p className="muted">初始化仅用于演示数据和验收环境，不替代生产迁移。</p>
         </article>
 
         <article className="panel-block">
           <div className="section-title">
-            <h3>fallback</h3>
+            <h3>AI 边界</h3>
             <ShieldCheck size={18} aria-hidden="true" />
           </div>
           <div className="tag-cloud">
