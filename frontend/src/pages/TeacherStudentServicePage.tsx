@@ -174,6 +174,24 @@ export default function TeacherStudentServicePage() {
         <span className="status-pill danger">心理预警仅辅助跟进</span>
       </section>
 
+      <section className="role-snapshot-grid" aria-label="老师今日待办概览">
+        <article>
+          <span>请假审批</span>
+          <strong>{tasks.leaves.length}</strong>
+          <em>待老师处理</em>
+        </article>
+        <article>
+          <span>反馈工单</span>
+          <strong>{tasks.feedback_tickets.length}</strong>
+          <em>投诉与服务反馈</em>
+        </article>
+        <article>
+          <span>辅助预警</span>
+          <strong>{tasks.psych_alerts.length || psychAlerts.length}</strong>
+          <em>只做辅助识别</em>
+        </article>
+      </section>
+
       <section className="role-action-grid" aria-label="老师待办入口">
         <button className="role-action-card" onClick={approveLeave}>
           <CheckCircle2 size={20} aria-hidden="true" />
@@ -197,8 +215,8 @@ export default function TeacherStudentServicePage() {
         </button>
       </section>
 
-      <section className="student-layout">
-        <aside className="panel-block">
+      <section className="role-workbench-grid teacher-workbench-grid">
+        <aside className="panel-block teacher-roster-panel">
           <div className="section-title">
             <h3>学生</h3>
             <span>{displayStudents.length} 人</span>
@@ -214,7 +232,7 @@ export default function TeacherStudentServicePage() {
           </div>
         </aside>
 
-        <div className="panel-block">
+        <div className="panel-block teacher-focus-panel">
           <div className="section-title">
             <h3>{selected.name} 学业</h3>
             <span className="status-pill">{selected.status}</span>
@@ -230,7 +248,7 @@ export default function TeacherStudentServicePage() {
           </div>
         </div>
 
-        <aside className="side-stack">
+        <aside className="side-stack teacher-side-panel">
           <section className="panel-block">
             <div className="section-title">
               <h3>进度</h3>

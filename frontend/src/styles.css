@@ -859,6 +859,7 @@ td span {
 }
 
 .split-layout,
+.role-workbench-grid,
 .crm-layout,
 .assistant-layout,
 .student-layout,
@@ -875,6 +876,18 @@ td span {
 
 .split-layout.secondary {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.role-workbench-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+}
+
+.employee-workbench-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+}
+
+.teacher-workbench-grid {
+  grid-template-columns: 240px minmax(0, 1fr) minmax(280px, 0.72fr);
 }
 
 .growth-overview-grid {
@@ -929,6 +942,33 @@ td span {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.role-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.role-snapshot-grid article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #dce6ef;
+  background: #f8fbfd;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.role-snapshot-grid span,
+.role-snapshot-grid em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.role-snapshot-grid strong {
+  color: var(--ink);
+  font-size: 22px;
 }
 
 .role-action-card {
@@ -1654,6 +1694,7 @@ textarea {
   .workspace-grid.sidebar-collapsed,
   .split-layout,
   .split-layout.secondary,
+  .role-workbench-grid,
   .growth-overview-grid,
   .public-hero,
   .public-two-column,
@@ -1706,6 +1747,8 @@ textarea {
   .operations-resource-grid,
   .assistant-entry-grid,
   .role-action-grid,
+  .role-snapshot-grid,
+  .compact-select-list,
   .governance-control-grid,
   .management-report-grid,
   .recent-customer-grid {
@@ -1732,7 +1775,9 @@ textarea {
   .workflow-grid,
   .quick-command-grid,
   .role-action-grid,
+  .role-snapshot-grid,
   .service-grid,
+  .compact-select-list,
   .parameter-grid,
   .role-grid,
   .count-grid {
@@ -1749,6 +1794,7 @@ textarea {
   .operations-resource-grid,
   .assistant-entry-grid,
   .role-action-grid,
+  .role-snapshot-grid,
   .governance-control-grid,
   .management-report-grid,
   .recent-customer-grid {
@@ -3431,8 +3477,25 @@ textarea {
   background: #eef5ff;
 }
 
+.student-identity-strip {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #eadfd2;
+  border-radius: 18px;
+  background: rgba(255, 253, 249, 0.84);
+  padding: 14px;
+}
+
+.compact-select-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compact-select-list button {
+  min-height: 72px;
+}
+
 .student-soft-layout {
-  grid-template-columns: 220px minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
 }
 
 .student-chat-panel .message {

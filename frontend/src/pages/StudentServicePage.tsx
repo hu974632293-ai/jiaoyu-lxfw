@@ -142,7 +142,6 @@ export default function StudentServicePage() {
         <div>
           <p className="eyebrow">学生服务台</p>
           <h2>请假、反馈、进度和生活支持，一页完成</h2>
-          <p>学生端保持轻量、亲和和少表格，重点帮助学生快速提交事项、查看进度和获得生活支持。</p>
         </div>
         <div className="student-hero-card">
           <strong>{selected.name}</strong>
@@ -179,23 +178,23 @@ export default function StudentServicePage() {
         </button>
       </section>
 
-      <section className="student-layout student-soft-layout">
-        <aside className="panel-block student-selector">
-          <div className="section-title">
-            <h3>我的身份</h3>
-            <span>{displayStudents.length} 人</span>
-          </div>
-          <div className="select-list">
-            {displayStudents.map((item) => (
-              <button className={item.id === selected.id ? "active" : ""} onClick={() => setSelectedId(item.id)}>
-                <strong>{item.name}</strong>
-                <span>{item.project}</span>
-                <em>{item.status}</em>
-              </button>
-            ))}
-          </div>
-        </aside>
+      <section className="student-identity-strip" aria-label="学生身份选择">
+        <div className="section-title">
+          <h3>我的身份</h3>
+          <span>{displayStudents.length} 人</span>
+        </div>
+        <div className="select-list compact-select-list">
+          {displayStudents.map((item) => (
+            <button className={item.id === selected.id ? "active" : ""} key={item.id} onClick={() => setSelectedId(item.id)}>
+              <strong>{item.name}</strong>
+              <span>{item.project}</span>
+              <em>{item.status}</em>
+            </button>
+          ))}
+        </div>
+      </section>
 
+      <section className="student-layout student-soft-layout">
         <div className="panel-block chat-panel student-chat-panel">
           <div className="section-title">
             <h3>{selected.name} 的服务对话</h3>
@@ -203,7 +202,7 @@ export default function StudentServicePage() {
           </div>
           <div className="message-list">
             {messages.map((item, index) => (
-              <article className={item.from === "学生" ? "message user" : `message ${item.status ?? ""}`}>
+              <article className={item.from === "学生" ? "message user" : `message ${item.status ?? ""}`} key={`${item.from}-${index}`}>
                 <div>
                   <strong>{item.from}</strong>
                   {item.status ? <span className={`status-pill ${item.status}`}>{item.status}</span> : null}
@@ -229,7 +228,7 @@ export default function StudentServicePage() {
             </div>
             <div className="guide-list">
               {(progressItems.length ? progressItems : [{ id: 0, stage: "材料补充", status: "进行中", description: "推荐信待上传" }]).map((item) => (
-                <article>
+                <article key={item.id}>
                   <strong>{item.stage}</strong>
                   <span>{item.status} / {item.description}</span>
                 </article>
@@ -244,7 +243,7 @@ export default function StudentServicePage() {
             </div>
             <div className="service-grid">
               {(academicEvents.length ? academicEvents : [{ id: 0, event_name: "语言测试模拟考", event_type: "考务", due_time: "2026-06-16T09:00:00", status: "待提醒" }]).map((item) => (
-                <article>
+                <article key={item.id}>
                   <strong>{item.event_name}</strong>
                   <span>{item.status}</span>
                   <p>{item.event_type} / {formatDate(item.due_time)}</p>

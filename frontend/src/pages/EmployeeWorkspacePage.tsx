@@ -137,6 +137,24 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
         <span className={message.includes("失败") || message.includes("阻断") ? "status-pill warning" : "status-pill success"}>{message}</span>
       </section>
 
+      <section className="role-snapshot-grid" aria-label="员工今日概览">
+        <article>
+          <span>日报数量</span>
+          <strong>{dailySummary?.report_count ?? dailyReports.length}</strong>
+          <em>今日结构化记录</em>
+        </article>
+        <article>
+          <span>组织资源</span>
+          <strong>{orgUnits.length || "待加载"}</strong>
+          <em>部门与联系人</em>
+        </article>
+        <article>
+          <span>受控查询</span>
+          <strong>{queryResult?.status ?? "待查询"}</strong>
+          <em>只读白名单</em>
+        </article>
+      </section>
+
       <section className="role-action-grid" aria-label="员工快捷入口">
         <button className="role-action-card" onClick={() => runCommand(customerDraft, () => onNavigate("customerGrowth"))}>
           <UserPlus size={20} aria-hidden="true" />
@@ -160,8 +178,8 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
         </button>
       </section>
 
-      <section className="split-layout">
-        <div className="panel-block">
+      <section className="role-workbench-grid employee-workbench-grid">
+        <div className="panel-block employee-daily-panel">
           <div className="section-title">
             <h3>日报</h3>
             <span className="status-pill">{dailySummary?.report_count ?? 0} 条</span>
@@ -191,7 +209,7 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
           )}
         </div>
 
-        <aside className="side-stack">
+        <aside className="side-stack employee-side-panel">
           <section className="panel-block">
             <div className="section-title">
               <h3>组织架构</h3>
