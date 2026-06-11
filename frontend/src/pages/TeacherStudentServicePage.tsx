@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, GraduationCap, MessageSquare, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { psychAlerts, studentRows } from "../data/prototype";
 
 type StudentItem = {
@@ -49,8 +50,18 @@ type TeacherTasks = {
   feedback_tickets: FeedbackTicket[];
   psych_alerts: PsychAlert[];
 };
+type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "psych" | "academic" | null;
+type TeacherActionKey = "leave" | "feedback" | "psych" | "academic" | null;
 
 const emptyTasks: TeacherTasks = { leaves: [], feedback_tickets: [], psych_alerts: [] };
+
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
 
 export default function TeacherStudentServicePage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
@@ -58,7 +69,13 @@ export default function TeacherStudentServicePage() {
   const [tasks, setTasks] = useState<TeacherTasks>(emptyTasks);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [progressItems, setProgressItems] = useState<ApplicationProgress[]>([]);
-  const [message, setMessage] = useState("学生服务工作台待处理");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "idle",
+    title: "学生服务工作台待处理",
+    detail: "可处理请假审批、反馈工单、心理辅助预警和学业进度查询。",
+  });
+  const [pendingOperation, setPendingOperation] = useState<TeacherOperation>(null);
+  const [highlightAction, setHighlightAction] = useState<TeacherActionKey>(null);
 
   const displayStudents = students.length
     ? students.map((item) => ({
@@ -80,7 +97,13 @@ export default function TeacherStudentServicePage() {
   }, [selectedId]);
 
   async function loadAll() {
-    setMessage("正在加载学生服务待办...");
+    setPendingOperation("refresh");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在加载学生服务待办",
+      detail: "读取学生列表、请假审批、反馈工单和心理辅助预警。",
+      target: "老师工作台",
+    });
     try {
       const [studentData, taskData] = await Promise.all([
         apiRequest<StudentItem[]>("/api/student-assistant/students"),
@@ -91,9 +114,23 @@ export default function TeacherStudentServicePage() {
       if (studentData[0]) {
         setSelectedId(studentData[0].id);
       }
-      setMessage("学生服务待办已加载");
+      setOperationFeedback({
+        phase: "success",
+        title: "学生服务待办已加载",
+        detail: `已同步 ${studentData.length || studentRows.length} 名学生和 ${taskData.leaves.length + taskData.feedback_tickets.length} 条待处理事项。`,
+        target: "老师工作台",
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `学生服务接口失败：${error.message}` : "学生服务接口失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "学生服务待办加载失败",
+        detail: error instanceof Error ? `${error.message}。已保留页面兜底数据，可重试。` : "接口不可用。已保留页面兜底数据，可重试。",
+        target: "老师工作台",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -119,40 +156,131 @@ export default function TeacherStudentServicePage() {
   async function approveLeave() {
     const leave = tasks.leaves.find((item) => item.status.includes("待")) ?? tasks.leaves[0];
     if (!leave) {
-      setMessage("暂无请假审批");
+      setOperationFeedback({
+        phase: "fallback",
+        title: "暂无请假审批",
+        detail: "当前没有待处理请假申请，可刷新待办或查看其他学生服务事项。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在处理请假审批...");
+    setPendingOperation("approveLeave");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在审批请假",
+      detail: `正在处理请假申请 #${leave.id}，审批结果将写入学生服务记录。`,
+      target: selected.name,
+    });
     try {
       await apiRequest<LeaveTask>(`/api/student-assistant/leaves/${leave.id}/approve`, {
         method: "POST",
         body: JSON.stringify({ status: "已同意", resolution: "同意请假，返校后补交材料。", actor_username: "admin" }),
       });
       await reloadTasks();
-      setMessage("请假审批已更新");
+      setHighlightAction("leave");
+      setOperationFeedback({
+        phase: "success",
+        title: "请假审批已更新",
+        detail: `请假申请 #${leave.id} 已审批为已同意，处理记录已同步到学生服务任务。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `请假审批失败：${error.message}` : "请假审批失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "请假审批失败",
+        detail: error instanceof Error ? `${error.message}。该请假申请状态未改动，可重试。` : "接口不可用。该请假申请状态未改动，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function handleFeedback() {
     const ticket = tasks.feedback_tickets.find((item) => !item.status.includes("已")) ?? tasks.feedback_tickets[0];
     if (!ticket) {
-      setMessage("暂无反馈处理");
+      setOperationFeedback({
+        phase: "fallback",
+        title: "暂无反馈工单",
+        detail: "当前没有待处理反馈，可刷新待办或查看心理辅助预警。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在更新反馈处理...");
+    setPendingOperation("handleFeedback");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在处理反馈工单",
+      detail: `正在更新反馈工单 #${ticket.id}，处理结果将同步给学生。`,
+      target: selected.name,
+    });
     try {
       await apiRequest<FeedbackTicket>(`/api/student-assistant/feedback-tickets/${ticket.id}/handle`, {
         method: "POST",
         body: JSON.stringify({ resolution: "已分配老师跟进，并同步处理结果。", actor_username: "admin" }),
       });
       await reloadTasks();
-      setMessage("反馈处理已更新");
+      setHighlightAction("feedback");
+      setOperationFeedback({
+        phase: "success",
+        title: "反馈处理已更新",
+        detail: `反馈工单 #${ticket.id} 已记录处理结果，后续可在学生服务台查看状态。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `反馈处理失败：${error.message}` : "反馈处理失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "反馈处理失败",
+        detail: error instanceof Error ? `${error.message}。工单状态未改动，可重试。` : "接口不可用。工单状态未改动，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
+
+  async function refreshAcademic() {
+    setPendingOperation("academic");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在查询学业与申请进度",
+      detail: "读取当前学生的考务节点和申请进度。",
+      target: selected.name,
+    });
+    await loadStudentDetails(selected.id);
+    setHighlightAction("academic");
+    setOperationFeedback({
+      phase: "success",
+      title: "学业与申请进度已刷新",
+      detail: "当前学生的考务节点和申请阶段已显示在工作台中。",
+      target: selected.name,
+      timestamp: formatOperationTime(),
+    });
+    setPendingOperation(null);
+  }
+
+  function openPsychQueue() {
+    setHighlightAction("psych");
+    setOperationFeedback({
+      phase: "success",
+      title: "心理辅助预警已进入跟进视图",
+      detail: "预警仅用于辅助识别和跟进记录，不替代专业心理诊断。",
+      target: selected.name,
+      timestamp: formatOperationTime(),
+    });
+  }
+
+  const hasPendingOperation = pendingOperation !== null;
+  const isRefreshing = pendingOperation === "refresh";
+  const isApprovingLeave = pendingOperation === "approveLeave";
+  const isHandlingFeedback = pendingOperation === "handleFeedback";
+  const isRefreshingAcademic = pendingOperation === "academic";
 
   return (
     <div className="page-stack">
@@ -162,15 +290,15 @@ export default function TeacherStudentServicePage() {
           <h2>请假审批、反馈处理和心理预警</h2>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={loadAll}>
-            <RefreshCw size={16} aria-hidden="true" />
-            刷新
+          <button className="icon-button secondary" onClick={loadAll} disabled={hasPendingOperation}>
+            <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isRefreshing ? "正在刷新" : "刷新学生待办"}
           </button>
         </div>
       </section>
 
       <section className="toolbar">
-        <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
+        <OperationFeedback feedback={operationFeedback} />
         <span className="status-pill danger">心理预警仅辅助跟进</span>
       </section>
 
@@ -193,25 +321,25 @@ export default function TeacherStudentServicePage() {
       </section>
 
       <section className="role-action-grid" aria-label="老师待办入口">
-        <button className="role-action-card" onClick={approveLeave}>
+        <button className={`role-action-card ${highlightAction === "leave" ? "is-highlighted" : ""}`} onClick={approveLeave} disabled={hasPendingOperation}>
           <CheckCircle2 size={20} aria-hidden="true" />
           <strong>请假审批</strong>
-          <span>{tasks.leaves.length} 条</span>
+          <span>{isApprovingLeave ? "正在审批" : `${tasks.leaves.length} 条`}</span>
         </button>
-        <button className="role-action-card" onClick={handleFeedback}>
+        <button className={`role-action-card ${highlightAction === "feedback" ? "is-highlighted" : ""}`} onClick={handleFeedback} disabled={hasPendingOperation}>
           <MessageSquare size={20} aria-hidden="true" />
           <strong>反馈处理</strong>
-          <span>{tasks.feedback_tickets.length} 条</span>
+          <span>{isHandlingFeedback ? "正在处理" : `${tasks.feedback_tickets.length} 条`}</span>
         </button>
-        <button className="role-action-card" onClick={() => setMessage("心理预警已进入跟进队列")}>
+        <button className={`role-action-card ${highlightAction === "psych" ? "is-highlighted" : ""}`} onClick={openPsychQueue}>
           <AlertTriangle size={20} aria-hidden="true" />
           <strong>心理预警</strong>
           <span>{tasks.psych_alerts.length || psychAlerts.length} 条</span>
         </button>
-        <button className="role-action-card" onClick={() => void loadStudentDetails(selected.id)}>
+        <button className={`role-action-card ${highlightAction === "academic" ? "is-highlighted" : ""}`} onClick={() => void refreshAcademic()} disabled={hasPendingOperation}>
           <GraduationCap size={20} aria-hidden="true" />
           <strong>学业/进度</strong>
-          <span>节点查询</span>
+          <span>{isRefreshingAcademic ? "正在查询" : "节点查询"}</span>
         </button>
       </section>
 

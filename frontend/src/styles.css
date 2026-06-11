@@ -1107,6 +1107,13 @@ td span {
   background: #edf6ff;
 }
 
+.role-action-card.is-highlighted,
+.student-chat-panel .message.is-highlighted {
+  border-color: #76b99f;
+  background: #f2fbf7;
+  box-shadow: 0 0 0 2px rgba(34, 128, 95, 0.14);
+}
+
 .role-action-card svg {
   color: var(--blue);
 }

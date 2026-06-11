@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, HeartHandshake, MessageSquareWarning, Send, ShieldAlert } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { studentRows } from "../data/prototype";
 
 type StudentItem = {
@@ -40,6 +41,15 @@ type Message = {
   text: string;
   status?: "success" | "fallback";
 };
+type StudentOperation = "load" | "chat" | "feedback" | "progress" | null;
+
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
 
 export default function StudentServicePage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
@@ -48,7 +58,13 @@ export default function StudentServicePage() {
   const [messages, setMessages] = useState<Message[]>([{ from: "服务台", text: "请选择事项并提交。", status: "success" }]);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [progressItems, setProgressItems] = useState<ApplicationProgress[]>([]);
-  const [message, setMessage] = useState("学生服务台待提交");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "idle",
+    title: "学生服务台待提交",
+    detail: "可提交请假、投诉建议、查询进度或咨询生活支持。",
+  });
+  const [pendingOperation, setPendingOperation] = useState<StudentOperation>(null);
+  const [highlightLatestMessage, setHighlightLatestMessage] = useState(false);
 
   const displayStudents = students.length
     ? students.map((item) => ({
@@ -70,15 +86,36 @@ export default function StudentServicePage() {
   }, [selectedId]);
 
   async function loadStudents() {
+    setPendingOperation("load");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在加载学生信息",
+      detail: "读取学生身份、申请进度和考务节点。",
+      target: "学生服务台",
+    });
     try {
       const data = await apiRequest<StudentItem[]>("/api/student-assistant/students");
       setStudents(data);
       if (data[0]) {
         setSelectedId(data[0].id);
       }
-      setMessage("学生信息已加载");
+      setOperationFeedback({
+        phase: "success",
+        title: "学生信息已加载",
+        detail: `已同步 ${data.length || studentRows.length} 名学生，可继续提交事项或查询进度。`,
+        target: "学生服务台",
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `学生信息加载失败：${error.message}` : "学生信息加载失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "学生信息加载失败",
+        detail: error instanceof Error ? `${error.message}。已保留页面兜底数据，可稍后重试。` : "接口不可用。已保留页面兜底数据，可稍后重试。",
+        target: "学生服务台",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -99,11 +136,24 @@ export default function StudentServicePage() {
   async function sendChat(text = input) {
     const content = text.trim();
     if (!content) {
-      setMessage("请先填写内容");
+      setOperationFeedback({
+        phase: "error",
+        title: "服务事项未提交",
+        detail: "请先填写内容。当前输入框已保留，可补充后重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
+    setPendingOperation("chat");
+    setHighlightLatestMessage(false);
     setMessages((items) => [...items, { from: "学生", text: content }]);
-    setMessage("正在提交...");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在提交服务事项",
+      detail: "服务台会返回处理建议，并同步刷新进度与考务节点。",
+      target: selected.name,
+    });
     try {
       const reply = await apiRequest<ChatResponse>("/api/student-assistant/chat", {
         method: "POST",
@@ -111,30 +161,97 @@ export default function StudentServicePage() {
       });
       setMessages((items) => [...items, { from: "服务台", text: reply.answer, status: reply.status }]);
       await loadStudentDetails(selected.id);
-      setMessage(reply.status === "fallback" ? "已使用服务台 fallback" : "提交成功");
+      setHighlightLatestMessage(true);
+      setOperationFeedback({
+        phase: reply.status === "fallback" ? "fallback" : "success",
+        title: reply.status === "fallback" ? "服务事项已提交，当前使用兜底回复" : "服务事项已提交",
+        detail: "最新服务台回复已高亮显示，可继续补充说明或查看右侧进度。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `提交失败：${error.message}` : "提交失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "服务事项提交失败",
+        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "接口不可用。输入内容已保留，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
   async function submitFeedback() {
     const content = input.trim();
     if (!content) {
-      setMessage("请先填写投诉建议");
+      setOperationFeedback({
+        phase: "error",
+        title: "投诉建议未提交",
+        detail: "请先填写投诉建议内容。当前输入框已保留。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
       return;
     }
-    setMessage("正在提交投诉建议...");
+    setPendingOperation("feedback");
+    setHighlightLatestMessage(false);
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在提交投诉建议",
+      detail: "提交成功后会生成服务工单，并在对话中显示工单状态。",
+      target: selected.name,
+    });
     try {
       const ticket = await apiRequest<FeedbackTicket>("/api/student-assistant/feedback-tickets", {
         method: "POST",
         body: JSON.stringify({ student_id: selected.id, category: "投诉建议", content, actor_username: "admin" }),
       });
       setMessages((items) => [...items, { from: "学生", text: content }, { from: "服务台", text: `投诉建议已提交，状态：${ticket.status}`, status: "success" }]);
-      setMessage("投诉建议已提交");
+      setHighlightLatestMessage(true);
+      setOperationFeedback({
+        phase: "success",
+        title: "投诉建议已提交",
+        detail: `服务工单状态：${ticket.status}。最新处理结果已高亮显示。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `投诉建议提交失败：${error.message}` : "投诉建议提交失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "投诉建议提交失败",
+        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "接口不可用。输入内容已保留，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
+
+  async function refreshProgress() {
+    setPendingOperation("progress");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在查询申请进度",
+      detail: "读取当前学生的申请阶段和考务节点。",
+      target: selected.name,
+    });
+    await loadStudentDetails(selected.id);
+    setOperationFeedback({
+      phase: "success",
+      title: "申请进度已刷新",
+      detail: "右侧申请进度和考务节点已更新，可继续咨询服务台。",
+      target: selected.name,
+      timestamp: formatOperationTime(),
+    });
+    setPendingOperation(null);
+  }
+
+  const hasPendingOperation = pendingOperation !== null;
+  const isSending = pendingOperation === "chat";
+  const isSubmittingFeedback = pendingOperation === "feedback";
+  const isRefreshingProgress = pendingOperation === "progress";
 
   return (
     <div className="page-stack student-service-page">
@@ -151,30 +268,30 @@ export default function StudentServicePage() {
       </section>
 
       <section className="student-status-strip">
-        <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
+        <OperationFeedback feedback={operationFeedback} />
         <span className="status-pill danger">心理支持仅作辅助识别，不替代专业诊断</span>
       </section>
 
       <section className="student-action-grid" aria-label="学生服务入口">
-        <button className="student-action-card leave" onClick={() => sendChat("请假申请：我需要请假两天，原因是家庭事务。")}>
+        <button className="student-action-card leave" onClick={() => sendChat("请假申请：我需要请假两天，原因是家庭事务。")} disabled={hasPendingOperation}>
           <CalendarDays size={22} aria-hidden="true" />
           <strong>请假申请</strong>
-          <span>提交给老师审批</span>
+          <span>{isSending ? "正在提交" : "提交给老师审批"}</span>
         </button>
-        <button className="student-action-card feedback" onClick={submitFeedback}>
+        <button className="student-action-card feedback" onClick={submitFeedback} disabled={hasPendingOperation}>
           <MessageSquareWarning size={22} aria-hidden="true" />
           <strong>投诉建议</strong>
-          <span>生成服务工单</span>
+          <span>{isSubmittingFeedback ? "正在生成工单" : "生成服务工单"}</span>
         </button>
-        <button className="student-action-card progress" onClick={() => void loadStudentDetails(selected.id)}>
+        <button className="student-action-card progress" onClick={() => void refreshProgress()} disabled={hasPendingOperation}>
           <ShieldAlert size={22} aria-hidden="true" />
           <strong>申请进度</strong>
-          <span>查看阶段和材料</span>
+          <span>{isRefreshingProgress ? "正在查询" : "查看阶段和材料"}</span>
         </button>
-        <button className="student-action-card support" onClick={() => sendChat("我需要生活支持，想咨询住宿和行前准备。")}>
+        <button className="student-action-card support" onClick={() => sendChat("我需要生活支持，想咨询住宿和行前准备。")} disabled={hasPendingOperation}>
           <HeartHandshake size={22} aria-hidden="true" />
           <strong>生活支持</strong>
-          <span>咨询服务台</span>
+          <span>{isSending ? "正在咨询" : "咨询服务台"}</span>
         </button>
       </section>
 
@@ -202,7 +319,12 @@ export default function StudentServicePage() {
           </div>
           <div className="message-list">
             {messages.map((item, index) => (
-              <article className={item.from === "学生" ? "message user" : `message ${item.status ?? ""}`} key={`${item.from}-${index}`}>
+              <article
+                className={`${item.from === "学生" ? "message user" : `message ${item.status ?? ""}`} ${
+                  highlightLatestMessage && index === messages.length - 1 ? "is-highlighted" : ""
+                }`}
+                key={`${item.from}-${index}`}
+              >
                 <div>
                   <strong>{item.from}</strong>
                   {item.status ? <span className={`status-pill ${item.status}`}>{item.status}</span> : null}
@@ -213,9 +335,9 @@ export default function StudentServicePage() {
           </div>
           <div className="composer">
             <textarea value={input} onChange={(event) => setInput(event.target.value)} rows={3} />
-            <button className="icon-button" onClick={() => sendChat()}>
+            <button className="icon-button" onClick={() => sendChat()} disabled={hasPendingOperation}>
               <Send size={16} aria-hidden="true" />
-              发送
+              {isSending ? "正在发送" : "发送给服务台"}
             </button>
           </div>
         </div>
