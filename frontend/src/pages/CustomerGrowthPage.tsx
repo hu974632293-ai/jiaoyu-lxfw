@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ClipboardList, Filter, RefreshCw, Sparkles, UserPlus, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, ClipboardList, Filter, PhoneCall, RefreshCw, Search, Sparkles, Target, UserPlus, Users } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { crmPrototypeRows, pipelineStages } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
@@ -103,7 +103,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
     }
   }
 
-  const rows = useMemo(() => {
+  const queueRows = useMemo(() => {
     const realRows = leads.map((lead) => {
       const mock = crmPrototypeRows.find((item) => item.id === lead.id);
       return {
@@ -115,21 +115,40 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         statusLabel: statusMap[lead.status] ?? lead.status,
       };
     });
-    const source = realRows.length ? realRows : crmPrototypeRows;
-    return source.filter((item) => {
+    return realRows.length ? realRows : crmPrototypeRows;
+  }, [leads]);
+
+  const rows = useMemo(() => {
+    return queueRows.filter((item) => {
       const hitKeyword = item.customer_name.includes(keyword) || item.project.includes(keyword) || item.owner.includes(keyword);
       const hitStatus = statusFilter === "all" || item.status === statusFilter;
       return hitKeyword && hitStatus;
     });
-  }, [keyword, leads, statusFilter]);
+  }, [keyword, queueRows, statusFilter]);
+
+  const commandMetrics = useMemo(() => {
+    const highPotentialCount = queueRows.filter((item) => item.status === "high_potential").length;
+    const activeCount = queueRows.filter((item) => !["converted", "lost"].includes(item.status)).length;
+    const apiState = leads.length ? "真实 API" : message.includes("失败") ? "接口异常" : "样例队列";
+    return [
+      { label: "高潜客户", value: String(highPotentialCount), note: "优先回访", tone: "warning" },
+      { label: "待推进", value: String(activeCount), note: "未成交/未流失", tone: "danger" },
+      { label: "活动转化", value: "42%", note: "本周讲座", tone: "success" },
+      { label: "接口状态", value: apiState, note: leads.length ? "/api/leads" : "可继续操作", tone: message.includes("失败") ? "danger" : "success" },
+    ];
+  }, [leads.length, message, queueRows]);
+
+  const spotlightLead = rows[0] ?? queueRows[0];
+  const recommendationName = assessment?.matched_project || spotlightLead?.project || "待补充资料";
+  const todayActions = (rows.length ? rows : queueRows).slice(0, 3);
 
   return (
     <div className="page-stack advisor-page">
       <section className="page-heading advisor-heading">
         <div>
-          <p className="eyebrow">客户增长</p>
-          <h2>用一张工作台推进线索、研判、推荐和客户 360</h2>
-          <p>顾问后台采用高效 SaaS 结构，优先支持频繁录入、筛选、跟进和客户详情跳转。</p>
+          <p className="eyebrow">顾问作战台</p>
+          <h2>今天先处理高潜、待跟进和活动转化</h2>
+          <p>围绕线索录入、画像研判、客户队列、下一步任务和客户 360，保留真实 API 闭环。</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={load}>
@@ -143,10 +162,20 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         </div>
       </section>
 
-      <section className="advisor-command-grid">
+      <section className="advisor-command-strip" aria-label="今日增长指挥条">
+        {commandMetrics.map((metric) => (
+          <article className={`advisor-command-card ${metric.tone}`} key={metric.label}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <em>{metric.note}</em>
+          </article>
+        ))}
+      </section>
+
+      <section className="advisor-workbench-grid">
         <div className="panel-block advisor-create-panel">
           <div className="section-title">
-            <h3>快速录入</h3>
+            <h3>快速录入与研判</h3>
             <UserPlus size={18} aria-hidden="true" />
           </div>
           <div className="form-grid compact">
@@ -173,102 +202,137 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
             </button>
             {createdId ? (
               <button className="ghost-button" onClick={() => onNavigate("customer360", createdId)}>
-                客户 360 <ArrowRight size={13} aria-hidden="true" />
+                打开客户 360 <ArrowRight size={13} aria-hidden="true" />
               </button>
             ) : null}
           </div>
-        </div>
-
-        <div className="panel-block advisor-insight-panel">
-          <div className="section-title">
-            <h3>研判结果</h3>
-            <ClipboardList size={18} aria-hidden="true" />
-          </div>
-          {assessment ? (
-            <dl className="detail-list">
-              <div>
-                <dt>推荐项目</dt>
-                <dd>{assessment.matched_project || "待补充资料"}</dd>
-              </div>
-              <div>
-                <dt>匹配评分</dt>
-                <dd>新加坡 {assessment.singapore_score} / 德国 {assessment.germany_score}</dd>
-              </div>
-              <div>
-                <dt>缺失字段</dt>
-                <dd>{assessment.missing_fields.join("、") || "暂无"}</dd>
-              </div>
-            </dl>
-          ) : (
-            <div className="empty-state">录入客户资料后，可触发画像研判并生成推荐方向。</div>
-          )}
           <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
         </div>
-      </section>
 
-      <section className="pipeline-stage-grid advisor-pipeline" aria-label="客户增长阶段漏斗">
-        {pipelineStages.map((stage, index) => (
-          <article className="pipeline-stage-card">
-            <span>0{index + 1}</span>
-            <strong>{stage.count}</strong>
-            <em>{stage.label}</em>
-          </article>
-        ))}
-      </section>
-
-      <section className="toolbar advisor-toolbar">
-        <Filter size={16} aria-hidden="true" />
-        <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索客户、负责人或推荐项目" />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="状态筛选">
-          <option value="all">全部状态</option>
-          <option value="new">新线索</option>
-          <option value="high_potential">高潜跟进</option>
-          <option value="consulting">咨询中</option>
-          <option value="converted">已成交</option>
-          <option value="lost">暂缓/流失</option>
-        </select>
-      </section>
-
-      <section className="panel-block table-panel advisor-table">
-        <div className="section-title">
-          <h3>客户队列</h3>
-          <span>{rows.length} 位客户</span>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>客户</th>
-              <th>阶段</th>
-              <th>推荐项目</th>
-              <th>负责人</th>
-              <th>下一步</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((lead) => (
-              <tr onClick={() => onNavigate("customer360", lead.id)}>
-                <td>
-                  <strong>{lead.customer_name}</strong>
-                  <span>{lead.contact}</span>
-                </td>
-                <td>
-                  <span className="badge">{lead.statusLabel}</span>
-                </td>
-                <td>{lead.project}</td>
-                <td>{lead.owner}</td>
-                <td>{lead.nextTask}</td>
-                <td>
-                  <button className="tiny-button" onClick={() => onNavigate("customer360", lead.id)}>
-                    <Users size={14} aria-hidden="true" />
-                    客户 360 <ArrowRight size={13} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
+        <div className="panel-block advisor-queue-panel">
+          <div className="section-title advisor-queue-title">
+            <div>
+              <h3>线索工作流</h3>
+              <span>{rows.length} 位客户匹配当前筛选</span>
+            </div>
+            <button className="tiny-button" onClick={load}>
+              <RefreshCw size={14} aria-hidden="true" />
+              同步
+            </button>
+          </div>
+          <div className="toolbar advisor-toolbar">
+            <Search size={16} aria-hidden="true" />
+            <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索客户、负责人或推荐项目" />
+            <Filter size={16} aria-hidden="true" />
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="状态筛选">
+              <option value="all">全部状态</option>
+              <option value="new">新线索</option>
+              <option value="high_potential">高潜跟进</option>
+              <option value="consulting">咨询中</option>
+              <option value="converted">已成交</option>
+              <option value="lost">暂缓/流失</option>
+            </select>
+          </div>
+          <div className="advisor-stage-line" aria-label="客户增长阶段漏斗">
+            {pipelineStages.map((stage, index) => (
+              <article key={stage.label}>
+                <span>0{index + 1}</span>
+                <strong>{stage.count}</strong>
+                <em>{stage.label}</em>
+              </article>
             ))}
-          </tbody>
-        </table>
-        {!rows.length && <div className="empty-state">当前筛选无匹配客户。</div>}
+          </div>
+          <div className="advisor-lead-list">
+            {rows.map((lead) => (
+              <button className="advisor-lead-card" key={lead.id} onClick={() => onNavigate("customer360", lead.id)}>
+                <span className="advisor-lead-rank">#{lead.id}</span>
+                <div className="advisor-lead-main">
+                  <strong>{lead.customer_name}</strong>
+                  <small>{lead.contact}</small>
+                </div>
+                <span className="badge">{lead.statusLabel}</span>
+                <div className="advisor-lead-detail">
+                  <span>{lead.project}</span>
+                  <em>{lead.recent}</em>
+                </div>
+                <div className="advisor-next-step">
+                  <CalendarClock size={15} aria-hidden="true" />
+                  <span>{lead.nextTask}</span>
+                </div>
+                <div className="advisor-card-action">
+                  <Users size={14} aria-hidden="true" />
+                  客户 360 <ArrowRight size={13} aria-hidden="true" />
+                </div>
+              </button>
+            ))}
+          </div>
+          {!rows.length && <div className="empty-state">当前筛选无匹配客户。</div>}
+        </div>
+
+        <aside className="advisor-side-stack">
+          <div className="panel-block advisor-insight-panel">
+            <div className="section-title">
+              <h3>研判与推荐</h3>
+              <ClipboardList size={18} aria-hidden="true" />
+            </div>
+            {assessment ? (
+              <dl className="detail-list">
+                <div>
+                  <dt>推荐项目</dt>
+                  <dd>{assessment.matched_project || "待补充资料"}</dd>
+                </div>
+                <div>
+                  <dt>匹配评分</dt>
+                  <dd>新加坡 {assessment.singapore_score} / 德国 {assessment.germany_score}</dd>
+                </div>
+                <div>
+                  <dt>缺失字段</dt>
+                  <dd>{assessment.missing_fields.join("、") || "暂无"}</dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="advisor-recommend-card">
+                <Target size={18} aria-hidden="true" />
+                <strong>{recommendationName}</strong>
+                <span>优先补齐预算、目标国家和入学时间后触发画像研判。</span>
+              </div>
+            )}
+          </div>
+
+          <div className="panel-block advisor-today-panel">
+            <div className="section-title">
+              <h3>今日推进</h3>
+              <PhoneCall size={18} aria-hidden="true" />
+            </div>
+            <div className="advisor-action-list">
+              {todayActions.map((lead) => (
+                <button key={lead.id} onClick={() => onNavigate("customer360", lead.id)}>
+                  <span className="status-pill warning">{lead.statusLabel}</span>
+                  <strong>{lead.customer_name}</strong>
+                  <small>{lead.nextTask}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel-block advisor-next-panel">
+            <div className="section-title">
+              <h3>下一步任务</h3>
+              <Sparkles size={18} aria-hidden="true" />
+            </div>
+            <div className="advisor-task-checklist">
+              <span>补齐资料字段</span>
+              <span>触发画像研判</span>
+              <span>进入客户 360 记录跟进</span>
+              {spotlightLead ? (
+                <button className="ghost-button" onClick={() => onNavigate("customer360", spotlightLead.id)}>
+                  处理 {spotlightLead.customer_name}
+                  <ArrowRight size={13} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </aside>
       </section>
     </div>
   );

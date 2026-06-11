@@ -2760,33 +2760,329 @@ textarea {
   color: #1268c4;
 }
 
+.advisor-page {
+  gap: 14px;
+}
+
 .advisor-heading h2 {
+  max-width: 780px;
   font-size: 30px;
 }
 
-.advisor-command-grid {
+.advisor-heading p:not(.eyebrow) {
+  max-width: 760px;
+}
+
+.advisor-command-strip {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.advisor-command-card {
+  display: grid;
+  gap: 6px;
+  min-height: 96px;
+  padding: 13px 14px;
+  border: 1px solid #d8e4ef;
+  border-left: 4px solid #1268c4;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(30, 60, 90, 0.06);
+}
+
+.advisor-command-card span,
+.advisor-command-card em {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.advisor-command-card strong {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.advisor-command-card.success {
+  border-left-color: var(--green);
+}
+
+.advisor-command-card.warning {
+  border-left-color: var(--amber);
+}
+
+.advisor-command-card.danger {
+  border-left-color: var(--red);
+}
+
+.advisor-workbench-grid {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.72fr) minmax(420px, 1.45fr) minmax(250px, 0.83fr);
   gap: 14px;
+  align-items: start;
 }
 
 .advisor-create-panel,
 .advisor-insight-panel,
-.advisor-table {
+.advisor-queue-panel,
+.advisor-today-panel,
+.advisor-next-panel {
   background: #ffffff;
 }
 
-.advisor-pipeline .pipeline-stage-card {
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #f4f9fd);
+.advisor-create-panel,
+.advisor-side-stack {
+  position: sticky;
+  top: 14px;
 }
 
-.advisor-pipeline .pipeline-stage-card span {
-  color: #1268c4;
+.advisor-create-panel textarea {
+  min-height: 132px;
+}
+
+.advisor-create-panel .status-pill {
+  margin-top: 2px;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.advisor-queue-title {
+  align-items: flex-start;
+}
+
+.advisor-queue-title span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .advisor-toolbar {
+  margin-bottom: 10px;
+  background: #f8fbfe;
+}
+
+.advisor-stage-line {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.advisor-stage-line article {
+  display: grid;
+  gap: 3px;
+  min-height: 74px;
+  padding: 10px;
+  border: 1px solid #dfe8f2;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #f4f9fd);
+}
+
+.advisor-stage-line span {
+  color: #1268c4;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.advisor-stage-line strong {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.advisor-stage-line em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.advisor-lead-list,
+.advisor-side-stack,
+.advisor-action-list,
+.advisor-task-checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.advisor-lead-card {
+  display: grid;
+  grid-template-columns: 46px minmax(120px, 0.85fr) auto minmax(180px, 1fr) minmax(150px, 0.9fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dfe8f2;
+  border-radius: 10px;
   background: #ffffff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.advisor-lead-card:hover {
+  border-color: #b8d9f4;
+  background: #f3f9ff;
+}
+
+.advisor-lead-rank {
+  color: #1268c4;
+  font-weight: 700;
+}
+
+.advisor-lead-main,
+.advisor-lead-detail,
+.advisor-next-step {
+  display: grid;
+  gap: 4px;
+}
+
+.advisor-lead-main strong {
+  font-size: 16px;
+}
+
+.advisor-lead-main small,
+.advisor-lead-detail em,
+.advisor-next-step span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.advisor-lead-detail span {
+  font-weight: 700;
+}
+
+.advisor-next-step,
+.advisor-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.advisor-next-step svg,
+.advisor-card-action svg {
+  color: #1268c4;
+  flex: 0 0 auto;
+}
+
+.advisor-card-action {
+  justify-content: flex-end;
+  color: #1268c4;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.advisor-recommend-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dceadf;
+  border-radius: 10px;
+  background: #f2f9f4;
+}
+
+.advisor-recommend-card svg {
+  color: var(--green);
+}
+
+.advisor-recommend-card span {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.advisor-action-list button {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #e1e8ef;
+  border-radius: 9px;
+  background: #f9fbfd;
+  color: var(--ink);
+  text-align: left;
+}
+
+.advisor-action-list button:hover {
+  border-color: #b8d9f4;
+  background: #edf6ff;
+}
+
+.advisor-action-list small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.advisor-task-checklist span {
+  position: relative;
+  padding-left: 18px;
+  color: #2f3b4d;
+}
+
+.advisor-task-checklist span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1268c4;
+}
+
+@media (max-width: 1180px) {
+  .advisor-workbench-grid {
+    grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .advisor-side-stack {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: static;
+  }
+}
+
+@media (max-width: 980px) {
+  .advisor-command-strip,
+  .advisor-stage-line {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .advisor-create-panel {
+    position: static;
+  }
+
+  .advisor-lead-card {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+  }
+
+  .advisor-lead-detail,
+  .advisor-next-step,
+  .advisor-card-action {
+    grid-column: 2 / -1;
+  }
+
+  .advisor-card-action {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .advisor-command-strip,
+  .advisor-stage-line,
+  .advisor-side-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .advisor-lead-card {
+    grid-template-columns: 1fr;
+  }
+
+  .advisor-lead-rank,
+  .advisor-lead-detail,
+  .advisor-next-step,
+  .advisor-card-action {
+    grid-column: auto;
+  }
 }
 
 .student-shell {
@@ -2944,7 +3240,7 @@ textarea {
   .subpage-hero,
   .subpage-split,
   .contact-consult-layout,
-  .advisor-command-grid,
+  .advisor-workbench-grid,
   .student-hero,
   .student-soft-layout,
   .student-workspace-grid {
