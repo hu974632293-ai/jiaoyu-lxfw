@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, ClipboardList, FileText, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { dashboardMetrics, reportTypes, todoItems } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
 
@@ -25,6 +26,7 @@ type DailySummary = {
 type ManagementDashboardPageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
 };
+type ManagementOperation = "refresh" | "generate" | "openReport" | null;
 
 const reportLabels: Record<string, string> = {
   customer_operation: "客户经营报告",
@@ -33,11 +35,25 @@ const reportLabels: Record<string, string> = {
   feedback_weekly: "投诉处理周报",
 };
 
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
+
 export default function ManagementDashboardPage({ onNavigate }: ManagementDashboardPageProps) {
   const [reports, setReports] = useState<ReportCreated[]>([]);
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(null);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
-  const [message, setMessage] = useState("经营管理后台待刷新");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "idle",
+    title: "经营管理后台待刷新",
+    detail: "可刷新经营数据，或生成客户经营、日报、心理和投诉报告。",
+  });
+  const [pendingOperation, setPendingOperation] = useState<ManagementOperation>(null);
+  const [highlightReportId, setHighlightReportId] = useState<number | null>(null);
 
   const riskQueue = useMemo(
     () => todoItems.filter((item) => item.level === "高" || item.meta.includes("投诉") || item.meta.includes("心理")),
@@ -48,8 +64,16 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
     void refresh();
   }, []);
 
-  async function refresh() {
-    setMessage("正在刷新经营数据...");
+  async function refresh(options: { preserveFeedback?: boolean } = {}) {
+    if (!options.preserveFeedback) {
+      setPendingOperation("refresh");
+      setOperationFeedback({
+        phase: "pending",
+        title: "正在刷新经营数据",
+        detail: "读取报告列表和员工日报汇总。",
+        target: "经营管理后台",
+      });
+    }
     try {
       const [reportData, summaryData] = await Promise.all([
         apiRequest<ReportCreated[]>("/api/reports"),
@@ -57,16 +81,43 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
       ]);
       setReports(reportData);
       setDailySummary(summaryData);
-      setMessage("经营数据已刷新");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: "success",
+          title: "经营数据已刷新",
+          detail: `已同步 ${reportData.length} 份报告和 ${summaryData.report_count} 条日报汇总。`,
+          target: "经营管理后台",
+          timestamp: formatOperationTime(),
+        });
+      }
     } catch (error) {
       setReports([]);
       setDailySummary(null);
-      setMessage(error instanceof Error ? `经营数据加载失败：${error.message}` : "经营数据加载失败");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: "error",
+          title: "经营数据加载失败",
+          detail: error instanceof Error ? `${error.message}。可稍后重试，已保留页面兜底信息。` : "接口不可用。可稍后重试，已保留页面兜底信息。",
+          target: "经营管理后台",
+          timestamp: formatOperationTime(),
+        });
+      }
+    } finally {
+      if (!options.preserveFeedback) {
+        setPendingOperation(null);
+      }
     }
   }
 
   async function generateReport(reportType: string) {
-    setMessage(`正在生成${reportLabels[reportType] ?? "报告"}...`);
+    const reportLabel = reportLabels[reportType] ?? "报告";
+    setPendingOperation("generate");
+    setOperationFeedback({
+      phase: "pending",
+      title: `正在生成${reportLabel}`,
+      detail: "生成后会自动打开报告详情，并刷新最近报告列表。",
+      target: reportLabel,
+    });
     try {
       const created = await apiRequest<ReportCreated>("/api/reports/generate", {
         method: "POST",
@@ -80,12 +131,63 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
       });
       const detail = await apiRequest<ReportDetail>(`/api/reports/${created.id}`);
       setActiveReport(detail);
-      setMessage(`${reportLabels[reportType] ?? created.title}已生成`);
-      await refresh();
+      setHighlightReportId(created.id);
+      await refresh({ preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: `${reportLabel}已生成`,
+        detail: "最新报告已打开详情，并在最近报告列表中高亮。",
+        target: `${created.title} / #${created.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `报告生成失败：${error.message}` : "报告生成失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "报告生成失败",
+        detail: error instanceof Error ? `${error.message}。报告类型已保留，可重试。` : "接口不可用。报告类型已保留，可重试。",
+        target: reportLabel,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
+
+  async function openReport(reportId: number) {
+    setPendingOperation("openReport");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在打开报告详情",
+      detail: `读取报告 #${reportId} 的经营摘要。`,
+      target: `报告 #${reportId}`,
+    });
+    try {
+      const detail = await apiRequest<ReportDetail>(`/api/reports/${reportId}`);
+      setActiveReport(detail);
+      setHighlightReportId(reportId);
+      setOperationFeedback({
+        phase: "success",
+        title: "报告详情已打开",
+        detail: "经营摘要已显示在详情区域。",
+        target: `${detail.title} / #${reportId}`,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "报告详情加载失败",
+        detail: error instanceof Error ? `${error.message}。列表选择已保留，可重试。` : "接口不可用。列表选择已保留，可重试。",
+        target: `报告 #${reportId}`,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  const hasPendingOperation = pendingOperation !== null;
+  const isRefreshing = pendingOperation === "refresh";
+  const isGenerating = pendingOperation === "generate";
 
   return (
     <div className="page-stack">
@@ -95,9 +197,9 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
           <h2>增长总览、报告和风险队列</h2>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={refresh}>
-            <RefreshCw size={16} aria-hidden="true" />
-            刷新
+          <button className="icon-button secondary" onClick={() => refresh()} disabled={hasPendingOperation}>
+            <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isRefreshing ? "正在刷新" : "刷新经营数据"}
           </button>
           <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>
             客户增长
@@ -106,7 +208,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
       </section>
 
       <section className="toolbar">
-        <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
+        <OperationFeedback feedback={operationFeedback} />
         <span className="status-pill">日报：{dailySummary?.report_count ?? 0} 条</span>
       </section>
 
@@ -132,8 +234,8 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
                 <span>{item.mode}</span>
                 <strong>{reportLabels[item.key] ?? item.title}</strong>
                 <p>{item.summary}</p>
-                <button className="tiny-button" onClick={() => generateReport(item.key)}>
-                  生成
+                <button className="tiny-button" onClick={() => generateReport(item.key)} disabled={hasPendingOperation}>
+                  {isGenerating ? "生成中" : "生成报告"}
                 </button>
               </article>
             ))}
@@ -190,7 +292,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
           </div>
           <div className="log-list">
             {reports.slice(0, 5).map((item) => (
-              <article key={item.id} onClick={() => apiRequest<ReportDetail>(`/api/reports/${item.id}`).then(setActiveReport).catch(() => setMessage("报告详情加载失败"))}>
+              <article className={highlightReportId === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openReport(item.id)}>
                 <strong>{item.title}</strong>
                 <span>{reportLabels[item.report_type] ?? item.report_type}</span>
                 <em>{item.generation_mode}</em>

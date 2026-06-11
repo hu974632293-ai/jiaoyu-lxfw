@@ -1336,6 +1336,14 @@ td span {
   box-shadow: 0 0 0 2px rgba(34, 128, 95, 0.14);
 }
 
+.log-list article.is-highlighted,
+.source-list article.is-highlighted,
+.roster-list article.is-highlighted {
+  border-color: #76b99f;
+  background: #f2fbf7;
+  box-shadow: 0 0 0 2px rgba(34, 128, 95, 0.14);
+}
+
 .task-row span,
 .task-row em,
 .source-list span,

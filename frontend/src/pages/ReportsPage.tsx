@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BarChart3, Play, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
+import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import type { PageProps } from "../App";
 import { reportTypes } from "../data/prototype";
 
@@ -18,26 +19,77 @@ type ReportDetail = ReportCreated & {
 type ReportListItem = ReportCreated & {
   created_at: string | null;
 };
+type ReportOperation = "load" | "generate" | "open" | null;
+
+function formatOperationTime() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date());
+}
 
 export default function ReportsPage({ onNavigate }: PageProps) {
   const [activeType, setActiveType] = useState(reportTypes[0].key);
   const [created, setCreated] = useState<ReportCreated | null>(null);
   const [detail, setDetail] = useState<ReportDetail | null>(null);
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [message, setMessage] = useState("选择报告类型后生成");
+  const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
+    phase: "idle",
+    title: "选择报告类型后生成",
+    detail: "生成后会自动打开报告详情，并在报告列表中高亮最新快照。",
+  });
+  const [pendingOperation, setPendingOperation] = useState<ReportOperation>(null);
+  const [highlightReportId, setHighlightReportId] = useState<number | null>(null);
 
-  async function loadReports() {
+  async function loadReports(options: { preserveFeedback?: boolean } = {}) {
+    if (!options.preserveFeedback) {
+      setPendingOperation("load");
+      setOperationFeedback({
+        phase: "pending",
+        title: "正在刷新报告列表",
+        detail: "读取报告中心快照列表。",
+        target: "报告列表",
+      });
+    }
     try {
       setReports(await apiRequest<ReportListItem[]>("/api/reports"));
-      setMessage("报告列表已刷新");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: "success",
+          title: "报告列表已刷新",
+          detail: "可打开已有报告详情，或继续生成新的业务报告。",
+          target: "报告列表",
+          timestamp: formatOperationTime(),
+        });
+      }
     } catch (error) {
       setReports([]);
-      setMessage(error instanceof Error ? `报告列表加载失败：${error.message}` : "报告列表加载失败");
+      if (!options.preserveFeedback) {
+        setOperationFeedback({
+          phase: "error",
+          title: "报告列表加载失败",
+          detail: error instanceof Error ? `${error.message}。可稍后重试，当前报告生成条件不会丢失。` : "接口不可用。可稍后重试，当前报告生成条件不会丢失。",
+          target: "报告列表",
+          timestamp: formatOperationTime(),
+        });
+      }
+    } finally {
+      if (!options.preserveFeedback) {
+        setPendingOperation(null);
+      }
     }
   }
 
   async function generate() {
-    setMessage("正在调用报告中心真实 API...");
+    const active = reportTypes.find((item) => item.key === activeType) ?? reportTypes[0];
+    setPendingOperation("generate");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在生成报告",
+      detail: `报告类型：${active.title}。生成后会自动打开详情。`,
+      target: active.title,
+    });
     try {
       const data = await apiRequest<ReportCreated>("/api/reports/generate", {
         method: "POST",
@@ -51,10 +103,57 @@ export default function ReportsPage({ onNavigate }: PageProps) {
       });
       setCreated(data);
       setDetail(await apiRequest<ReportDetail>(`/api/reports/${data.id}`));
-      setMessage("报告已通过真实 API 生成");
-      await loadReports();
+      setHighlightReportId(data.id);
+      await loadReports({ preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: "报告已生成并打开详情",
+        detail: "最新报告已显示在业务摘要区域，并在右侧报告列表中高亮。",
+        target: `${data.title} / #${data.id}`,
+        timestamp: formatOperationTime(),
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? `报告生成失败：${error.message}` : "报告生成失败");
+      setOperationFeedback({
+        phase: "error",
+        title: "报告生成失败",
+        detail: error instanceof Error ? `${error.message}。报告类型和时间条件已保留，可重试。` : "接口不可用。报告类型和时间条件已保留，可重试。",
+        target: active.title,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function openReport(reportId: number) {
+    setPendingOperation("open");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在打开报告详情",
+      detail: `读取报告 #${reportId} 的业务摘要。`,
+      target: `报告 #${reportId}`,
+    });
+    try {
+      const nextDetail = await apiRequest<ReportDetail>(`/api/reports/${reportId}`);
+      setDetail(nextDetail);
+      setHighlightReportId(reportId);
+      setOperationFeedback({
+        phase: "success",
+        title: "报告详情已打开",
+        detail: "业务摘要已显示在中间详情区域。",
+        target: `${nextDetail.title} / #${reportId}`,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "报告详情加载失败",
+        detail: error instanceof Error ? `${error.message}。列表选择已保留，可重试。` : "接口不可用。列表选择已保留，可重试。",
+        target: `报告 #${reportId}`,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
     }
   }
 
@@ -63,6 +162,9 @@ export default function ReportsPage({ onNavigate }: PageProps) {
   }, []);
 
   const active = reportTypes.find((item) => item.key === activeType) ?? reportTypes[0];
+  const hasPendingOperation = pendingOperation !== null;
+  const isLoadingReports = pendingOperation === "load";
+  const isGenerating = pendingOperation === "generate";
 
   return (
     <div className="page-stack">
@@ -72,22 +174,24 @@ export default function ReportsPage({ onNavigate }: PageProps) {
           <h2>经营、日报、心理和投诉报告</h2>
         </div>
         <div className="heading-actions">
-          <button className="icon-button secondary" onClick={loadReports}>
-            <RefreshCw size={16} aria-hidden="true" />
-            刷新列表
+          <button className="icon-button secondary" onClick={() => loadReports()} disabled={hasPendingOperation}>
+            <RefreshCw className={isLoadingReports ? "spin-icon" : ""} size={16} aria-hidden="true" />
+            {isLoadingReports ? "正在刷新" : "刷新报告列表"}
           </button>
-          <button className="icon-button" onClick={generate}>
+          <button className="icon-button" onClick={generate} disabled={hasPendingOperation}>
             <Play size={16} aria-hidden="true" />
-            生成报告
+            {isGenerating ? "正在生成" : "生成当前报告"}
           </button>
         </div>
       </section>
+
+      <OperationFeedback feedback={operationFeedback} />
 
       <section className="report-layout">
         <aside className="panel-block">
           <div className="section-title">
             <h3>报告类型</h3>
-            <span className="status-pill">{message}</span>
+            <span className="status-pill">{operationFeedback.phase === "pending" ? "处理中" : "可操作"}</span>
           </div>
           <div className="select-list">
             {reportTypes.map((item) => (
@@ -147,7 +251,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
           </div>
           <div className="log-list">
             {reports.map((item) => (
-              <article key={item.id} onClick={() => apiRequest<ReportDetail>(`/api/reports/${item.id}`).then(setDetail).catch(() => setMessage("报告详情加载失败"))}>
+              <article className={highlightReportId === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openReport(item.id)}>
                 <strong>{item.title}</strong>
                 <span>{item.report_type}</span>
                 <em>{item.created_at?.slice(0, 16).replace("T", " ") ?? `#${item.id}`}</em>
