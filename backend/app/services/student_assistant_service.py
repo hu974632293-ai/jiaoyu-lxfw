@@ -11,6 +11,7 @@ from app.models.student import (
     StudentAcademicEvent,
     StudentApplicationProgress,
     StudentFeedbackTicket,
+    StudentLeaveApproval,
     StudentLeaveRequest,
     StudentProfile,
     StudentPsychAlert,
@@ -19,9 +20,12 @@ from app.models.student import (
 from app.models.user import SysUser
 from app.schemas.student_assistant import (
     FeedbackHandleRequest,
+    FeedbackReplyRequest,
     FeedbackTicketCreate,
     LeaveApprovalRequest,
     LeaveCreate,
+    LeaveUpdate,
+    StudentServiceActionRequest,
     StudentChatRequest,
 )
 
@@ -86,10 +90,10 @@ def handle_student_chat(db: Session, payload: StudentChatRequest) -> dict[str, A
     else:
         status = "fallback"
         result = {
-            "fallback_reason": "Dify 未配置或未调用真实学生生活知识库，使用学生生活支持模板 fallback。",
+            "fallback_reason": "已使用学生生活支持模板建议。",
             "support_path": "紧急事项联系学生服务部或当地紧急求助渠道。",
         }
-        answer = "当前使用学生生活支持 fallback；如涉及医疗、心理或法律问题，只提供求助路径，不直接给结论。"
+        answer = "已提供学生生活支持建议；如涉及医疗、心理或法律问题，只提供求助路径，不直接给结论。"
 
     conversation = _record_conversation(db, student.id, payload.actor_username, message, answer, intent, status)
     _record_intent(db, conversation.id, intent, result, status)
@@ -132,6 +136,64 @@ def create_leave_request(db: Session, payload: LeaveCreate, commit: bool = True)
     return leave
 
 
+def list_leave_requests(db: Session, student_id: int | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    ensure_default_student_data(db)
+    query = db.query(StudentLeaveRequest)
+    if student_id is not None:
+        query = query.filter_by(student_id=student_id)
+    if status:
+        query = query.filter_by(status=status)
+    return [serialize_leave(item) for item in query.order_by(StudentLeaveRequest.id.desc()).all()]
+
+
+def get_leave_detail(db: Session, leave_id: int) -> dict[str, Any] | None:
+    leave = db.query(StudentLeaveRequest).filter_by(id=leave_id).first()
+    if not leave:
+        return None
+    approvals = (
+        db.query(StudentLeaveApproval)
+        .filter_by(leave_request_id=leave_id)
+        .order_by(StudentLeaveApproval.id.desc())
+        .all()
+    )
+    return {
+        "leave": serialize_leave(leave),
+        "approvals": [serialize_leave_approval(item) for item in approvals],
+        "timeline": _resource_timeline(db, "student_leave_request", leave_id),
+    }
+
+
+def update_leave_request(db: Session, leave_id: int, payload: LeaveUpdate) -> StudentLeaveRequest | None:
+    leave = db.query(StudentLeaveRequest).filter_by(id=leave_id).first()
+    if not leave:
+        return None
+    if leave.status not in {"待审批", "待补充"}:
+        raise ValueError("当前请假状态不支持学生修改")
+    leave.reason = payload.reason
+    leave.start_time = payload.start_time
+    leave.end_time = payload.end_time
+    db.flush()
+    _create_audit_log(
+        db,
+        payload.actor_username,
+        "学生修改请假",
+        "student_leave_request",
+        str(leave.id),
+        {"reason": payload.reason, "start_time": payload.start_time.isoformat(), "end_time": payload.end_time.isoformat()},
+    )
+    db.commit()
+    db.refresh(leave)
+    return leave
+
+
+def cancel_leave_request(db: Session, leave_id: int, payload: StudentServiceActionRequest) -> StudentLeaveRequest | None:
+    return _change_leave_status(db, leave_id, "已撤销", "学生撤销请假", payload)
+
+
+def archive_leave_request(db: Session, leave_id: int, payload: StudentServiceActionRequest) -> StudentLeaveRequest | None:
+    return _change_leave_status(db, leave_id, "已归档", "请假申请归档", payload)
+
+
 def approve_leave_request(db: Session, leave_id: int, payload: LeaveApprovalRequest) -> StudentLeaveRequest | None:
     leave = db.query(StudentLeaveRequest).filter_by(id=leave_id).first()
     if not leave:
@@ -141,6 +203,15 @@ def approve_leave_request(db: Session, leave_id: int, payload: LeaveApprovalRequ
     leave.approver_id = actor.id if actor else None
     leave.approved_at = datetime.utcnow()
     db.flush()
+    db.add(
+        StudentLeaveApproval(
+            leave_request_id=leave.id,
+            approver_id=actor.id if actor else None,
+            approval_status=leave.status,
+            approval_comment=payload.resolution,
+            approved_at=leave.approved_at,
+        )
+    )
     _create_audit_log(
         db,
         payload.actor_username,
@@ -150,6 +221,26 @@ def approve_leave_request(db: Session, leave_id: int, payload: LeaveApprovalRequ
         {"status": leave.status, "resolution": payload.resolution},
     )
     _create_notification(db, None, "请假审批已更新", f"请假申请状态：{leave.status}", "student_leave", leave.id)
+    db.commit()
+    db.refresh(leave)
+    return leave
+
+
+def _change_leave_status(db: Session, leave_id: int, status: str, action: str, payload: StudentServiceActionRequest) -> StudentLeaveRequest | None:
+    leave = db.query(StudentLeaveRequest).filter_by(id=leave_id).first()
+    if not leave:
+        return None
+    leave.status = status
+    db.flush()
+    _create_audit_log(
+        db,
+        payload.actor_username,
+        action,
+        "student_leave_request",
+        str(leave.id),
+        {"status": status, "reason": payload.reason},
+    )
+    _create_notification(db, None, "请假状态已更新", f"请假申请状态：{status}", "student_leave", leave.id)
     db.commit()
     db.refresh(leave)
     return leave
@@ -183,6 +274,47 @@ def create_feedback_ticket(db: Session, payload: FeedbackTicketCreate) -> Studen
     return ticket
 
 
+def list_feedback_tickets(db: Session, student_id: int | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    ensure_default_student_data(db)
+    query = db.query(StudentFeedbackTicket)
+    if student_id is not None:
+        query = query.filter_by(student_id=student_id)
+    if status:
+        query = query.filter_by(status=status)
+    return [serialize_feedback_ticket(item) for item in query.order_by(StudentFeedbackTicket.id.desc()).all()]
+
+
+def get_feedback_ticket_detail(db: Session, ticket_id: int) -> dict[str, Any] | None:
+    ticket = db.query(StudentFeedbackTicket).filter_by(id=ticket_id).first()
+    if not ticket:
+        return None
+    return {
+        "ticket": serialize_feedback_ticket(ticket),
+        "timeline": _resource_timeline(db, "student_feedback_ticket", ticket_id),
+    }
+
+
+def reply_feedback_ticket(db: Session, ticket_id: int, payload: FeedbackReplyRequest) -> StudentFeedbackTicket | None:
+    ticket = db.query(StudentFeedbackTicket).filter_by(id=ticket_id).first()
+    if not ticket:
+        return None
+    ticket.status = "处理中"
+    ticket.updated_at = datetime.utcnow()
+    db.flush()
+    _create_audit_log(
+        db,
+        payload.actor_username,
+        "学生补充反馈",
+        "student_feedback_ticket",
+        str(ticket.id),
+        {"content": payload.content},
+    )
+    _create_notification(db, ticket.handler_id, "反馈补充说明", payload.content, "student_feedback", ticket.id)
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
 def handle_feedback_ticket(db: Session, ticket_id: int, payload: FeedbackHandleRequest) -> StudentFeedbackTicket | None:
     ticket = db.query(StudentFeedbackTicket).filter_by(id=ticket_id).first()
     if not ticket:
@@ -202,6 +334,37 @@ def handle_feedback_ticket(db: Session, ticket_id: int, payload: FeedbackHandleR
         {"resolution": payload.resolution},
     )
     _create_notification(db, None, "反馈处理已更新", payload.resolution, "student_feedback", ticket.id)
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+def close_feedback_ticket(db: Session, ticket_id: int, payload: StudentServiceActionRequest) -> StudentFeedbackTicket | None:
+    return _change_feedback_status(db, ticket_id, "已关闭", "反馈工单关闭", payload)
+
+
+def archive_feedback_ticket(db: Session, ticket_id: int, payload: StudentServiceActionRequest) -> StudentFeedbackTicket | None:
+    return _change_feedback_status(db, ticket_id, "已归档", "反馈工单归档", payload)
+
+
+def _change_feedback_status(db: Session, ticket_id: int, status: str, action: str, payload: StudentServiceActionRequest) -> StudentFeedbackTicket | None:
+    ticket = db.query(StudentFeedbackTicket).filter_by(id=ticket_id).first()
+    if not ticket:
+        return None
+    ticket.status = status
+    if payload.reason:
+        ticket.resolution = payload.reason
+    ticket.updated_at = datetime.utcnow()
+    db.flush()
+    _create_audit_log(
+        db,
+        payload.actor_username,
+        action,
+        "student_feedback_ticket",
+        str(ticket.id),
+        {"status": status, "reason": payload.reason},
+    )
+    _create_notification(db, None, "反馈状态已更新", f"反馈工单状态：{status}", "student_feedback", ticket.id)
     db.commit()
     db.refresh(ticket)
     return ticket
@@ -270,6 +433,19 @@ def serialize_leave(item: StudentLeaveRequest) -> dict[str, Any]:
         "end_time": item.end_time.isoformat() if item.end_time else None,
         "status": item.status,
         "approver_id": item.approver_id,
+        "approved_at": item.approved_at.isoformat() if item.approved_at else None,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+def serialize_leave_approval(item: StudentLeaveApproval) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "leave_request_id": item.leave_request_id,
+        "service_id": item.service_id,
+        "approver_id": item.approver_id,
+        "approval_status": item.approval_status,
+        "approval_comment": item.approval_comment,
         "approved_at": item.approved_at.isoformat() if item.approved_at else None,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
@@ -468,6 +644,32 @@ def _record_intent(db: Session, conversation_id: int, intent: str, result: dict[
             status=status,
         )
     )
+
+
+def _resource_timeline(db: Session, resource_type: str, resource_id: int) -> list[dict[str, Any]]:
+    records = (
+        db.query(AuditLog)
+        .filter_by(resource_type=resource_type, resource_id=str(resource_id))
+        .order_by(AuditLog.id)
+        .all()
+    )
+    timeline = []
+    for record in records:
+        try:
+            detail = json.loads(record.detail or "{}")
+        except json.JSONDecodeError:
+            detail = {"raw": record.detail}
+        timeline.append(
+            {
+                "id": record.id,
+                "action": record.action,
+                "resource_type": record.resource_type,
+                "resource_id": record.resource_id,
+                "detail": detail,
+                "created_at": record.created_at.isoformat() if record.created_at else None,
+            }
+        )
+    return timeline
 
 
 def _get_student(db: Session, student_id: int) -> StudentProfile | None:

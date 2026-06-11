@@ -14,12 +14,21 @@ type StudentItem = {
 
 type LeaveTask = {
   id: number;
+  student_id: number;
+  reason: string;
   status: string;
+  start_time: string | null;
+  end_time: string | null;
 };
 
 type FeedbackTicket = {
   id: number;
+  student_id: number;
+  category: string;
+  content: string;
+  summary: string;
   status: string;
+  resolution: string;
 };
 
 type PsychAlert = {
@@ -50,7 +59,13 @@ type TeacherTasks = {
   feedback_tickets: FeedbackTicket[];
   psych_alerts: PsychAlert[];
 };
-type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "psych" | "academic" | null;
+type TimelineItem = {
+  id: number;
+  action: string;
+  created_at: string | null;
+  detail: Record<string, unknown>;
+};
+type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "closeFeedback" | "archiveFeedback" | "psych" | "academic" | null;
 type TeacherActionKey = "leave" | "feedback" | "psych" | "academic" | null;
 
 const emptyTasks: TeacherTasks = { leaves: [], feedback_tickets: [], psych_alerts: [] };
@@ -69,6 +84,9 @@ export default function TeacherStudentServicePage() {
   const [tasks, setTasks] = useState<TeacherTasks>(emptyTasks);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [progressItems, setProgressItems] = useState<ApplicationProgress[]>([]);
+  const [selectedLeaveId, setSelectedLeaveId] = useState<number | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+  const [selectedTimeline, setSelectedTimeline] = useState<TimelineItem[]>([]);
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "idle",
     title: "学生服务工作台待处理",
@@ -87,6 +105,8 @@ export default function TeacherStudentServicePage() {
       }))
     : studentRows;
   const selected = displayStudents.find((item) => item.id === selectedId) ?? displayStudents[0];
+  const selectedLeave = tasks.leaves.find((item) => item.id === selectedLeaveId) ?? tasks.leaves[0];
+  const selectedTicket = tasks.feedback_tickets.find((item) => item.id === selectedTicketId) ?? tasks.feedback_tickets[0];
 
   useEffect(() => {
     void loadAll();
@@ -95,6 +115,18 @@ export default function TeacherStudentServicePage() {
   useEffect(() => {
     void loadStudentDetails(selectedId);
   }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedLeaveId) {
+      void loadTimeline("leave", selectedLeaveId);
+    }
+  }, [selectedLeaveId]);
+
+  useEffect(() => {
+    if (selectedTicketId) {
+      void loadTimeline("feedback", selectedTicketId);
+    }
+  }, [selectedTicketId]);
 
   async function loadAll() {
     setPendingOperation("refresh");
@@ -114,6 +146,8 @@ export default function TeacherStudentServicePage() {
       if (studentData[0]) {
         setSelectedId(studentData[0].id);
       }
+      setSelectedLeaveId(taskData.leaves[0]?.id ?? null);
+      setSelectedTicketId(taskData.feedback_tickets[0]?.id ?? null);
       setOperationFeedback({
         phase: "success",
         title: "学生服务待办已加载",
@@ -125,7 +159,7 @@ export default function TeacherStudentServicePage() {
       setOperationFeedback({
         phase: "error",
         title: "学生服务待办加载失败",
-        detail: error instanceof Error ? `${error.message}。已保留页面兜底数据，可重试。` : "接口不可用。已保留页面兜底数据，可重试。",
+        detail: error instanceof Error ? `${error.message}。已保留当前页面数据，可重试。` : "服务暂不可用。已保留当前页面数据，可重试。",
         target: "老师工作台",
         timestamp: formatOperationTime(),
       });
@@ -151,13 +185,15 @@ export default function TeacherStudentServicePage() {
   async function reloadTasks() {
     const data = await apiRequest<TeacherTasks>("/api/student-assistant/teacher-tasks");
     setTasks(data);
+    setSelectedLeaveId((current) => current ?? data.leaves[0]?.id ?? null);
+    setSelectedTicketId((current) => current ?? data.feedback_tickets[0]?.id ?? null);
   }
 
   async function approveLeave() {
-    const leave = tasks.leaves.find((item) => item.status.includes("待")) ?? tasks.leaves[0];
+    const leave = selectedLeave;
     if (!leave) {
       setOperationFeedback({
-        phase: "fallback",
+        phase: "idle",
         title: "暂无请假审批",
         detail: "当前没有待处理请假申请，可刷新待办或查看其他学生服务事项。",
         target: selected.name,
@@ -178,6 +214,7 @@ export default function TeacherStudentServicePage() {
         body: JSON.stringify({ status: "已同意", resolution: "同意请假，返校后补交材料。", actor_username: "admin" }),
       });
       await reloadTasks();
+      await loadTimeline("leave", leave.id);
       setHighlightAction("leave");
       setOperationFeedback({
         phase: "success",
@@ -190,7 +227,7 @@ export default function TeacherStudentServicePage() {
       setOperationFeedback({
         phase: "error",
         title: "请假审批失败",
-        detail: error instanceof Error ? `${error.message}。该请假申请状态未改动，可重试。` : "接口不可用。该请假申请状态未改动，可重试。",
+        detail: error instanceof Error ? `${error.message}。该请假申请状态未改动，可重试。` : "服务暂不可用。该请假申请状态未改动，可重试。",
         target: selected.name,
         timestamp: formatOperationTime(),
       });
@@ -200,10 +237,10 @@ export default function TeacherStudentServicePage() {
   }
 
   async function handleFeedback() {
-    const ticket = tasks.feedback_tickets.find((item) => !item.status.includes("已")) ?? tasks.feedback_tickets[0];
+    const ticket = selectedTicket;
     if (!ticket) {
       setOperationFeedback({
-        phase: "fallback",
+        phase: "idle",
         title: "暂无反馈工单",
         detail: "当前没有待处理反馈，可刷新待办或查看心理辅助预警。",
         target: selected.name,
@@ -224,6 +261,7 @@ export default function TeacherStudentServicePage() {
         body: JSON.stringify({ resolution: "已分配老师跟进，并同步处理结果。", actor_username: "admin" }),
       });
       await reloadTasks();
+      await loadTimeline("feedback", ticket.id);
       setHighlightAction("feedback");
       setOperationFeedback({
         phase: "success",
@@ -236,12 +274,117 @@ export default function TeacherStudentServicePage() {
       setOperationFeedback({
         phase: "error",
         title: "反馈处理失败",
-        detail: error instanceof Error ? `${error.message}。工单状态未改动，可重试。` : "接口不可用。工单状态未改动，可重试。",
+        detail: error instanceof Error ? `${error.message}。工单状态未改动，可重试。` : "服务暂不可用。工单状态未改动，可重试。",
         target: selected.name,
         timestamp: formatOperationTime(),
       });
     } finally {
       setPendingOperation(null);
+    }
+  }
+
+  async function closeFeedback() {
+    const ticket = selectedTicket;
+    if (!ticket) {
+      setOperationFeedback({
+        phase: "idle",
+        title: "暂无可关闭反馈",
+        detail: "当前没有选中的反馈工单。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+      return;
+    }
+    setPendingOperation("closeFeedback");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在关闭反馈工单",
+      detail: `正在关闭反馈工单 #${ticket.id}。`,
+      target: selected.name,
+    });
+    try {
+      await apiRequest<FeedbackTicket>(`/api/student-assistant/feedback-tickets/${ticket.id}/close`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "学生确认处理结果，关闭工单。", actor_username: "admin" }),
+      });
+      await reloadTasks();
+      await loadTimeline("feedback", ticket.id);
+      setHighlightAction("feedback");
+      setOperationFeedback({
+        phase: "success",
+        title: "反馈工单已关闭",
+        detail: `反馈工单 #${ticket.id} 已关闭，可继续归档。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "反馈关闭失败",
+        detail: error instanceof Error ? `${error.message}。工单状态未改动，可重试。` : "服务暂不可用。工单状态未改动，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function archiveFeedback() {
+    const ticket = selectedTicket;
+    if (!ticket) {
+      setOperationFeedback({
+        phase: "idle",
+        title: "暂无可归档反馈",
+        detail: "当前没有选中的反馈工单。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+      return;
+    }
+    setPendingOperation("archiveFeedback");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在归档反馈工单",
+      detail: `正在归档反馈工单 #${ticket.id}。`,
+      target: selected.name,
+    });
+    try {
+      await apiRequest<FeedbackTicket>(`/api/student-assistant/feedback-tickets/${ticket.id}/archive`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "服务记录归档。", actor_username: "admin" }),
+      });
+      await reloadTasks();
+      await loadTimeline("feedback", ticket.id);
+      setHighlightAction("feedback");
+      setOperationFeedback({
+        phase: "success",
+        title: "反馈工单已归档",
+        detail: `反馈工单 #${ticket.id} 已归档，学生端可查看最终状态。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "反馈归档失败",
+        detail: error instanceof Error ? `${error.message}。工单状态未改动，可重试。` : "服务暂不可用。工单状态未改动，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function loadTimeline(type: "leave" | "feedback", id: number) {
+    try {
+      const data = await apiRequest<{ timeline: TimelineItem[] }>(
+        type === "leave" ? `/api/student-assistant/leaves/${id}` : `/api/student-assistant/feedback-tickets/${id}`,
+      );
+      setSelectedTimeline(data.timeline);
+    } catch {
+      setSelectedTimeline([]);
     }
   }
 
@@ -280,6 +423,8 @@ export default function TeacherStudentServicePage() {
   const isRefreshing = pendingOperation === "refresh";
   const isApprovingLeave = pendingOperation === "approveLeave";
   const isHandlingFeedback = pendingOperation === "handleFeedback";
+  const isClosingFeedback = pendingOperation === "closeFeedback";
+  const isArchivingFeedback = pendingOperation === "archiveFeedback";
   const isRefreshingAcademic = pendingOperation === "academic";
 
   return (
@@ -324,12 +469,12 @@ export default function TeacherStudentServicePage() {
         <button className={`role-action-card ${highlightAction === "leave" ? "is-highlighted" : ""}`} onClick={approveLeave} disabled={hasPendingOperation}>
           <CheckCircle2 size={20} aria-hidden="true" />
           <strong>请假审批</strong>
-          <span>{isApprovingLeave ? "正在审批" : `${tasks.leaves.length} 条`}</span>
+          <span>{isApprovingLeave ? "正在审批" : selectedLeave ? `选中 #${selectedLeave.id}` : `${tasks.leaves.length} 条`}</span>
         </button>
         <button className={`role-action-card ${highlightAction === "feedback" ? "is-highlighted" : ""}`} onClick={handleFeedback} disabled={hasPendingOperation}>
           <MessageSquare size={20} aria-hidden="true" />
           <strong>反馈处理</strong>
-          <span>{isHandlingFeedback ? "正在处理" : `${tasks.feedback_tickets.length} 条`}</span>
+          <span>{isHandlingFeedback ? "正在处理" : selectedTicket ? `选中 #${selectedTicket.id}` : `${tasks.feedback_tickets.length} 条`}</span>
         </button>
         <button className={`role-action-card ${highlightAction === "psych" ? "is-highlighted" : ""}`} onClick={openPsychQueue}>
           <AlertTriangle size={20} aria-hidden="true" />
@@ -359,6 +504,81 @@ export default function TeacherStudentServicePage() {
             ))}
           </div>
         </aside>
+
+        <div className="panel-block teacher-focus-panel">
+          <div className="section-title">
+            <h3>{selected.name} 待办队列</h3>
+            <span className="status-pill">{selected.status}</span>
+          </div>
+          <div className="teacher-workbench-grid">
+            <section className="panel-block">
+              <div className="section-title">
+                <h3>请假队列</h3>
+                <span>{tasks.leaves.length} 条</span>
+              </div>
+              <div className="select-list">
+                {tasks.leaves.map((item) => (
+                  <button className={item.id === selectedLeave?.id ? "active" : ""} key={item.id} onClick={() => setSelectedLeaveId(item.id)}>
+                    <strong>#{item.id} {item.status}</strong>
+                    <span>{item.reason}</span>
+                    <em>{formatDate(item.start_time)} - {formatDate(item.end_time)}</em>
+                  </button>
+                ))}
+                {!tasks.leaves.length ? <div className="empty-state">暂无请假申请。</div> : null}
+              </div>
+            </section>
+
+            <section className="panel-block">
+              <div className="section-title">
+                <h3>反馈队列</h3>
+                <span>{tasks.feedback_tickets.length} 条</span>
+              </div>
+              <div className="select-list">
+                {tasks.feedback_tickets.map((item) => (
+                  <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
+                    <strong>#{item.id} {item.category} / {item.status}</strong>
+                    <span>{item.summary || item.content}</span>
+                    <em>{item.resolution || "待处理"}</em>
+                  </button>
+                ))}
+                {!tasks.feedback_tickets.length ? <div className="empty-state">暂无反馈工单。</div> : null}
+              </div>
+            </section>
+          </div>
+
+          <div className="panel-block">
+            <div className="section-title">
+              <h3>处理面板</h3>
+              <span>{selectedTimeline.length} 条记录</span>
+            </div>
+            <div className="inline-actions">
+              <button onClick={approveLeave} disabled={hasPendingOperation || !selectedLeave}>
+                {isApprovingLeave ? "正在审批" : "同意请假"}
+              </button>
+              <button onClick={handleFeedback} disabled={hasPendingOperation || !selectedTicket}>
+                {isHandlingFeedback ? "正在处理" : "记录反馈处理"}
+              </button>
+              <button className="ghost-button" onClick={closeFeedback} disabled={hasPendingOperation || !selectedTicket}>
+                {isClosingFeedback ? "正在关闭" : "关闭反馈"}
+              </button>
+              <button className="ghost-button" onClick={archiveFeedback} disabled={hasPendingOperation || !selectedTicket}>
+                {isArchivingFeedback ? "正在归档" : "归档反馈"}
+              </button>
+            </div>
+            <div className="timeline">
+              {selectedTimeline.map((item) => (
+                <article key={item.id}>
+                  <span>{formatDate(item.created_at)}</span>
+                  <div>
+                    <strong>{item.action}</strong>
+                    <p>{String(item.detail.reason ?? item.detail.resolution ?? item.detail.content ?? item.detail.status ?? "已记录")}</p>
+                  </div>
+                </article>
+              ))}
+              {!selectedTimeline.length ? <div className="empty-state">选择请假或反馈记录后查看处理时间线。</div> : null}
+            </div>
+          </div>
+        </div>
 
         <div className="panel-block teacher-focus-panel">
           <div className="section-title">

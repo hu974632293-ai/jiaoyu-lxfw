@@ -15,9 +15,19 @@ class LeaveApprovalRequest(BaseModel):
     actor_username: str | None = None
 
 
+class StudentServiceActionRequest(BaseModel):
+    reason: str = ""
+    actor_username: str | None = None
+
+
 class FeedbackTicketCreate(BaseModel):
     student_id: int
     category: str = "建议"
+    content: str
+    actor_username: str | None = None
+
+
+class FeedbackReplyRequest(BaseModel):
     content: str
     actor_username: str | None = None
 
@@ -29,6 +39,13 @@ class FeedbackHandleRequest(BaseModel):
 
 class LeaveCreate(BaseModel):
     student_id: int
+    reason: str
+    start_time: datetime
+    end_time: datetime
+    actor_username: str | None = None
+
+
+class LeaveUpdate(BaseModel):
     reason: str
     start_time: datetime
     end_time: datetime

@@ -114,3 +114,141 @@ def test_student_assistant_chat_leave_feedback_psych_and_progress_api():
     assert "学生提交反馈" in audit_actions
     assert "老师处理反馈" in audit_actions
     assert "学生心理辅助预警" in audit_actions
+
+
+def test_student_leave_request_supports_student_and_teacher_lifecycle():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+    student_id = client.get("/api/student-assistant/students").json()["data"][0]["id"]
+
+    create_response = client.post(
+        "/api/student-assistant/leaves",
+        json={
+            "student_id": student_id,
+            "reason": "6月20日需要办理签证材料，请假一天。",
+            "start_time": "2026-06-20T09:00:00",
+            "end_time": "2026-06-20T18:00:00",
+            "actor_username": "admin",
+        },
+    )
+    assert create_response.status_code == 200
+    create_payload = create_response.json()
+    assert create_payload["code"] == 0
+    leave_id = create_payload["data"]["id"]
+    assert create_payload["data"]["status"] == "待审批"
+
+    update_response = client.patch(
+        f"/api/student-assistant/leaves/{leave_id}",
+        json={
+            "reason": "6月20日需要办理签证材料，并补交护照复印件。",
+            "start_time": "2026-06-20T09:00:00",
+            "end_time": "2026-06-20T18:00:00",
+            "actor_username": "admin",
+        },
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["data"]["reason"].endswith("护照复印件。")
+
+    list_response = client.get(f"/api/student-assistant/leaves?student_id={student_id}")
+    assert list_response.status_code == 200
+    list_payload = list_response.json()
+    assert list_payload["code"] == 0
+    assert any(item["id"] == leave_id for item in list_payload["data"])
+
+    detail_response = client.get(f"/api/student-assistant/leaves/{leave_id}")
+    assert detail_response.status_code == 200
+    detail_payload = detail_response.json()
+    assert detail_payload["code"] == 0
+    assert detail_payload["data"]["leave"]["id"] == leave_id
+    assert any(item["action"] == "学生修改请假" for item in detail_payload["data"]["timeline"])
+
+    approve_response = client.post(
+        f"/api/student-assistant/leaves/{leave_id}/approve",
+        json={"status": "已同意", "resolution": "同意请假，返校后补交材料。", "actor_username": "admin"},
+    )
+    assert approve_response.status_code == 200
+    assert approve_response.json()["data"]["status"] == "已同意"
+
+    archive_response = client.post(
+        f"/api/student-assistant/leaves/{leave_id}/archive",
+        json={"reason": "审批完成后归档。", "actor_username": "admin"},
+    )
+    assert archive_response.status_code == 200
+    assert archive_response.json()["data"]["status"] == "已归档"
+
+    cancel_create_response = client.post(
+        "/api/student-assistant/leaves",
+        json={
+            "student_id": student_id,
+            "reason": "临时请假申请，稍后撤销。",
+            "start_time": "2026-06-22T09:00:00",
+            "end_time": "2026-06-22T18:00:00",
+            "actor_username": "admin",
+        },
+    )
+    cancel_leave_id = cancel_create_response.json()["data"]["id"]
+    cancel_response = client.post(
+        f"/api/student-assistant/leaves/{cancel_leave_id}/cancel",
+        json={"reason": "行程取消，撤销请假。", "actor_username": "admin"},
+    )
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["data"]["status"] == "已撤销"
+
+
+def test_student_feedback_ticket_supports_reply_close_archive_and_history():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+    student_id = client.get("/api/student-assistant/students").json()["data"][0]["id"]
+
+    create_response = client.post(
+        "/api/student-assistant/feedback-tickets",
+        json={
+            "student_id": student_id,
+            "category": "投诉",
+            "content": "住宿安排没有按承诺时间反馈，希望今天给出明确方案。",
+            "actor_username": "admin",
+        },
+    )
+    assert create_response.status_code == 200
+    ticket_id = create_response.json()["data"]["id"]
+
+    reply_response = client.post(
+        f"/api/student-assistant/feedback-tickets/{ticket_id}/reply",
+        json={"content": "学生补充：希望优先保留原住宿区域。", "actor_username": "admin"},
+    )
+    assert reply_response.status_code == 200
+    assert reply_response.json()["data"]["status"] == "处理中"
+
+    handle_response = client.post(
+        f"/api/student-assistant/feedback-tickets/{ticket_id}/handle",
+        json={"resolution": "已联系住宿顾问，今天 18:00 前同步处理结果。", "actor_username": "admin"},
+    )
+    assert handle_response.status_code == 200
+    assert handle_response.json()["data"]["status"] == "已处理"
+
+    close_response = client.post(
+        f"/api/student-assistant/feedback-tickets/{ticket_id}/close",
+        json={"reason": "学生确认处理结果。", "actor_username": "admin"},
+    )
+    assert close_response.status_code == 200
+    assert close_response.json()["data"]["status"] == "已关闭"
+
+    archive_response = client.post(
+        f"/api/student-assistant/feedback-tickets/{ticket_id}/archive",
+        json={"reason": "服务记录归档。", "actor_username": "admin"},
+    )
+    assert archive_response.status_code == 200
+    assert archive_response.json()["data"]["status"] == "已归档"
+
+    list_response = client.get(f"/api/student-assistant/feedback-tickets?student_id={student_id}")
+    assert list_response.status_code == 200
+    assert any(item["id"] == ticket_id and item["status"] == "已归档" for item in list_response.json()["data"])
+
+    detail_response = client.get(f"/api/student-assistant/feedback-tickets/{ticket_id}")
+    assert detail_response.status_code == 200
+    detail_payload = detail_response.json()
+    assert detail_payload["data"]["ticket"]["id"] == ticket_id
+    timeline_actions = [item["action"] for item in detail_payload["data"]["timeline"]]
+    assert "学生补充反馈" in timeline_actions
+    assert "老师处理反馈" in timeline_actions
+    assert "反馈工单关闭" in timeline_actions

@@ -4,22 +4,37 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.response import fail, ok
 from app.schemas.student_assistant import (
+    FeedbackReplyRequest,
     FeedbackHandleRequest,
     FeedbackTicketCreate,
     LeaveApprovalRequest,
+    LeaveCreate,
+    LeaveUpdate,
+    StudentServiceActionRequest,
     StudentChatRequest,
 )
 from app.services.student_assistant_service import (
+    archive_feedback_ticket,
+    archive_leave_request,
     approve_leave_request,
+    cancel_leave_request,
+    close_feedback_ticket,
     create_feedback_ticket,
+    create_leave_request,
+    get_feedback_ticket_detail,
+    get_leave_detail,
     handle_feedback_ticket,
     handle_student_chat,
+    list_feedback_tickets,
     list_academic_events,
     list_application_progress,
+    list_leave_requests,
     list_students,
+    reply_feedback_ticket,
     serialize_feedback_ticket,
     serialize_leave,
     teacher_tasks,
+    update_leave_request,
 )
 
 router = APIRouter(prefix="/api/student-assistant", tags=["student-assistant"])
@@ -38,12 +53,65 @@ def chat(payload: StudentChatRequest, db: Session = Depends(get_db)):
         return fail(str(exc), 40402)
 
 
+@router.get("/leaves")
+def list_leaves(student_id: int | None = None, status: str | None = None, db: Session = Depends(get_db)):
+    return ok(list_leave_requests(db, student_id, status))
+
+
+@router.post("/leaves")
+def create_leave(payload: LeaveCreate, db: Session = Depends(get_db)):
+    try:
+        return ok(serialize_leave(create_leave_request(db, payload)))
+    except ValueError as exc:
+        return fail(str(exc), 40402)
+
+
+@router.get("/leaves/{leave_id}")
+def get_leave(leave_id: int, db: Session = Depends(get_db)):
+    detail = get_leave_detail(db, leave_id)
+    if not detail:
+        return fail("请假申请不存在", 40402)
+    return ok(detail)
+
+
+@router.patch("/leaves/{leave_id}")
+def update_leave(leave_id: int, payload: LeaveUpdate, db: Session = Depends(get_db)):
+    try:
+        leave = update_leave_request(db, leave_id, payload)
+    except ValueError as exc:
+        return fail(str(exc), 40002)
+    if not leave:
+        return fail("请假申请不存在", 40402)
+    return ok(serialize_leave(leave))
+
+
 @router.post("/leaves/{leave_id}/approve")
 def approve_leave(leave_id: int, payload: LeaveApprovalRequest, db: Session = Depends(get_db)):
     leave = approve_leave_request(db, leave_id, payload)
     if not leave:
         return fail("请假申请不存在", 40402)
     return ok(serialize_leave(leave))
+
+
+@router.post("/leaves/{leave_id}/cancel")
+def cancel_leave(leave_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+    leave = cancel_leave_request(db, leave_id, payload)
+    if not leave:
+        return fail("请假申请不存在", 40402)
+    return ok(serialize_leave(leave))
+
+
+@router.post("/leaves/{leave_id}/archive")
+def archive_leave(leave_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+    leave = archive_leave_request(db, leave_id, payload)
+    if not leave:
+        return fail("请假申请不存在", 40402)
+    return ok(serialize_leave(leave))
+
+
+@router.get("/feedback-tickets")
+def list_feedback(student_id: int | None = None, status: str | None = None, db: Session = Depends(get_db)):
+    return ok(list_feedback_tickets(db, student_id, status))
 
 
 @router.post("/feedback-tickets")
@@ -54,9 +122,41 @@ def create_feedback(payload: FeedbackTicketCreate, db: Session = Depends(get_db)
         return fail(str(exc), 40402)
 
 
+@router.get("/feedback-tickets/{ticket_id}")
+def get_feedback(ticket_id: int, db: Session = Depends(get_db)):
+    detail = get_feedback_ticket_detail(db, ticket_id)
+    if not detail:
+        return fail("反馈工单不存在", 40402)
+    return ok(detail)
+
+
+@router.post("/feedback-tickets/{ticket_id}/reply")
+def reply_feedback(ticket_id: int, payload: FeedbackReplyRequest, db: Session = Depends(get_db)):
+    ticket = reply_feedback_ticket(db, ticket_id, payload)
+    if not ticket:
+        return fail("反馈工单不存在", 40402)
+    return ok(serialize_feedback_ticket(ticket))
+
+
 @router.post("/feedback-tickets/{ticket_id}/handle")
 def handle_feedback(ticket_id: int, payload: FeedbackHandleRequest, db: Session = Depends(get_db)):
     ticket = handle_feedback_ticket(db, ticket_id, payload)
+    if not ticket:
+        return fail("反馈工单不存在", 40402)
+    return ok(serialize_feedback_ticket(ticket))
+
+
+@router.post("/feedback-tickets/{ticket_id}/close")
+def close_feedback(ticket_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+    ticket = close_feedback_ticket(db, ticket_id, payload)
+    if not ticket:
+        return fail("反馈工单不存在", 40402)
+    return ok(serialize_feedback_ticket(ticket))
+
+
+@router.post("/feedback-tickets/{ticket_id}/archive")
+def archive_feedback(ticket_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+    ticket = archive_feedback_ticket(db, ticket_id, payload)
     if not ticket:
         return fail("反馈工单不存在", 40402)
     return ok(serialize_feedback_ticket(ticket))

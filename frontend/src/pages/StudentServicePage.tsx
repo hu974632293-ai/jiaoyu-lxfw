@@ -12,8 +12,31 @@ type StudentItem = {
   risk_level: string;
 };
 
-type FeedbackTicket = {
+type LeaveRequest = {
+  id: number;
+  student_id: number;
+  reason: string;
+  start_time: string | null;
+  end_time: string | null;
   status: string;
+  approved_at: string | null;
+};
+
+type FeedbackTicket = {
+  id: number;
+  student_id: number;
+  category: string;
+  content: string;
+  summary: string;
+  status: string;
+  resolution: string;
+};
+
+type TimelineItem = {
+  id: number;
+  action: string;
+  created_at: string | null;
+  detail: Record<string, unknown>;
 };
 
 type ChatResponse = {
@@ -41,7 +64,7 @@ type Message = {
   text: string;
   status?: "success" | "fallback";
 };
-type StudentOperation = "load" | "chat" | "feedback" | "progress" | null;
+type StudentOperation = "load" | "chat" | "leave" | "feedback" | "progress" | "cancelLeave" | "replyFeedback" | null;
 
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -51,6 +74,11 @@ function formatOperationTime() {
   }).format(new Date());
 }
 
+function formatMessageStatus(status?: "success" | "fallback") {
+  if (!status) return "";
+  return status === "fallback" ? "生活支持" : "已处理";
+}
+
 export default function StudentServicePage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [selectedId, setSelectedId] = useState(studentRows[0].id);
@@ -58,6 +86,9 @@ export default function StudentServicePage() {
   const [messages, setMessages] = useState<Message[]>([{ from: "服务台", text: "请选择事项并提交。", status: "success" }]);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [progressItems, setProgressItems] = useState<ApplicationProgress[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
+  const [selectedTimeline, setSelectedTimeline] = useState<TimelineItem[]>([]);
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "idle",
     title: "学生服务台待提交",
@@ -110,7 +141,7 @@ export default function StudentServicePage() {
       setOperationFeedback({
         phase: "error",
         title: "学生信息加载失败",
-        detail: error instanceof Error ? `${error.message}。已保留页面兜底数据，可稍后重试。` : "接口不可用。已保留页面兜底数据，可稍后重试。",
+        detail: error instanceof Error ? `${error.message}。已保留当前页面数据，可稍后重试。` : "服务暂不可用。已保留当前页面数据，可稍后重试。",
         target: "学生服务台",
         timestamp: formatOperationTime(),
       });
@@ -121,15 +152,21 @@ export default function StudentServicePage() {
 
   async function loadStudentDetails(studentId: number) {
     try {
-      const [academicData, progressData] = await Promise.all([
+      const [academicData, progressData, leaveData, ticketData] = await Promise.all([
         apiRequest<AcademicEvent[]>(`/api/student-assistant/students/${studentId}/academic-events`),
         apiRequest<ApplicationProgress[]>(`/api/student-assistant/students/${studentId}/application-progress`),
+        apiRequest<LeaveRequest[]>(`/api/student-assistant/leaves?student_id=${studentId}`),
+        apiRequest<FeedbackTicket[]>(`/api/student-assistant/feedback-tickets?student_id=${studentId}`),
       ]);
       setAcademicEvents(academicData);
       setProgressItems(progressData);
+      setLeaveRequests(leaveData);
+      setFeedbackTickets(ticketData);
     } catch {
       setAcademicEvents([]);
       setProgressItems([]);
+      setLeaveRequests([]);
+      setFeedbackTickets([]);
     }
   }
 
@@ -163,8 +200,8 @@ export default function StudentServicePage() {
       await loadStudentDetails(selected.id);
       setHighlightLatestMessage(true);
       setOperationFeedback({
-        phase: reply.status === "fallback" ? "fallback" : "success",
-        title: reply.status === "fallback" ? "服务事项已提交，当前使用兜底回复" : "服务事项已提交",
+        phase: "success",
+        title: reply.status === "fallback" ? "服务事项已提交，已提供生活支持建议" : "服务事项已提交",
         detail: "最新服务台回复已高亮显示，可继续补充说明或查看右侧进度。",
         target: selected.name,
         timestamp: formatOperationTime(),
@@ -173,7 +210,52 @@ export default function StudentServicePage() {
       setOperationFeedback({
         phase: "error",
         title: "服务事项提交失败",
-        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "接口不可用。输入内容已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "服务暂不可用。输入内容已保留，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function submitLeaveRequest() {
+    const content = input.trim() || "请假申请：我需要请假一天，请老师审批。";
+    setPendingOperation("leave");
+    setHighlightLatestMessage(false);
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在提交请假申请",
+      detail: "提交成功后会进入老师审批队列，并在请假记录中回显状态。",
+      target: selected.name,
+    });
+    try {
+      const leave = await apiRequest<LeaveRequest>("/api/student-assistant/leaves", {
+        method: "POST",
+        body: JSON.stringify({
+          student_id: selected.id,
+          reason: content,
+          start_time: "2026-06-20T09:00:00",
+          end_time: "2026-06-20T18:00:00",
+          actor_username: "admin",
+        }),
+      });
+      setMessages((items) => [...items, { from: "学生", text: content }, { from: "服务台", text: `请假申请已提交，状态：${leave.status}`, status: "success" }]);
+      await loadStudentDetails(selected.id);
+      await loadTimeline("leave", leave.id);
+      setHighlightLatestMessage(true);
+      setOperationFeedback({
+        phase: "success",
+        title: "请假申请已提交",
+        detail: `请假 #${leave.id} 已进入审批队列，学生端可刷新查看老师处理结果。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "请假申请提交失败",
+        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "服务暂不可用。输入内容已保留，可重试。",
         target: selected.name,
         timestamp: formatOperationTime(),
       });
@@ -208,6 +290,8 @@ export default function StudentServicePage() {
         body: JSON.stringify({ student_id: selected.id, category: "投诉建议", content, actor_username: "admin" }),
       });
       setMessages((items) => [...items, { from: "学生", text: content }, { from: "服务台", text: `投诉建议已提交，状态：${ticket.status}`, status: "success" }]);
+      await loadStudentDetails(selected.id);
+      await loadTimeline("feedback", ticket.id);
       setHighlightLatestMessage(true);
       setOperationFeedback({
         phase: "success",
@@ -220,12 +304,94 @@ export default function StudentServicePage() {
       setOperationFeedback({
         phase: "error",
         title: "投诉建议提交失败",
-        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "接口不可用。输入内容已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "服务暂不可用。输入内容已保留，可重试。",
         target: selected.name,
         timestamp: formatOperationTime(),
       });
     } finally {
       setPendingOperation(null);
+    }
+  }
+
+  async function cancelLeave(leave: LeaveRequest) {
+    setPendingOperation("cancelLeave");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在撤销请假申请",
+      detail: `请假 #${leave.id} 将从待审批状态更新为已撤销。`,
+      target: selected.name,
+    });
+    try {
+      const result = await apiRequest<LeaveRequest>(`/api/student-assistant/leaves/${leave.id}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "学生主动撤销。", actor_username: "admin" }),
+      });
+      await loadStudentDetails(selected.id);
+      await loadTimeline("leave", result.id);
+      setOperationFeedback({
+        phase: "success",
+        title: "请假申请已撤销",
+        detail: `请假 #${result.id} 当前状态：${result.status}。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "请假撤销失败",
+        detail: error instanceof Error ? `${error.message}。请假状态未改动，可重试。` : "服务暂不可用。请假状态未改动，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function replyFeedback(ticket: FeedbackTicket) {
+    const content = input.trim() || "补充说明：希望老师继续跟进并同步处理结果。";
+    setPendingOperation("replyFeedback");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在补充反馈说明",
+      detail: `反馈工单 #${ticket.id} 将追加学生补充内容。`,
+      target: selected.name,
+    });
+    try {
+      const result = await apiRequest<FeedbackTicket>(`/api/student-assistant/feedback-tickets/${ticket.id}/reply`, {
+        method: "POST",
+        body: JSON.stringify({ content, actor_username: "admin" }),
+      });
+      await loadStudentDetails(selected.id);
+      await loadTimeline("feedback", result.id);
+      setOperationFeedback({
+        phase: "success",
+        title: "反馈补充已提交",
+        detail: `反馈工单 #${result.id} 当前状态：${result.status}。`,
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "反馈补充失败",
+        detail: error instanceof Error ? `${error.message}。补充内容已保留，可重试。` : "服务暂不可用。补充内容已保留，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function loadTimeline(type: "leave" | "feedback", id: number) {
+    try {
+      const data = await apiRequest<{ timeline: TimelineItem[] }>(
+        type === "leave" ? `/api/student-assistant/leaves/${id}` : `/api/student-assistant/feedback-tickets/${id}`,
+      );
+      setSelectedTimeline(data.timeline);
+    } catch {
+      setSelectedTimeline([]);
     }
   }
 
@@ -250,8 +416,11 @@ export default function StudentServicePage() {
 
   const hasPendingOperation = pendingOperation !== null;
   const isSending = pendingOperation === "chat";
+  const isSubmittingLeave = pendingOperation === "leave";
   const isSubmittingFeedback = pendingOperation === "feedback";
   const isRefreshingProgress = pendingOperation === "progress";
+  const latestLeave = leaveRequests[0];
+  const latestTicket = feedbackTickets[0];
 
   return (
     <div className="page-stack student-service-page">
@@ -273,10 +442,10 @@ export default function StudentServicePage() {
       </section>
 
       <section className="student-action-grid" aria-label="学生服务入口">
-        <button className="student-action-card leave" onClick={() => sendChat("请假申请：我需要请假两天，原因是家庭事务。")} disabled={hasPendingOperation}>
+        <button className="student-action-card leave" onClick={submitLeaveRequest} disabled={hasPendingOperation}>
           <CalendarDays size={22} aria-hidden="true" />
           <strong>请假申请</strong>
-          <span>{isSending ? "正在提交" : "提交给老师审批"}</span>
+          <span>{isSubmittingLeave ? "正在提交" : "提交给老师审批"}</span>
         </button>
         <button className="student-action-card feedback" onClick={submitFeedback} disabled={hasPendingOperation}>
           <MessageSquareWarning size={22} aria-hidden="true" />
@@ -327,7 +496,7 @@ export default function StudentServicePage() {
               >
                 <div>
                   <strong>{item.from}</strong>
-                  {item.status ? <span className={`status-pill ${item.status}`}>{item.status}</span> : null}
+                  {item.status ? <span className={`status-pill ${item.status}`}>{formatMessageStatus(item.status)}</span> : null}
                 </div>
                 <p>{item.text}</p>
               </article>
@@ -371,6 +540,65 @@ export default function StudentServicePage() {
                   <p>{item.event_type} / {formatDate(item.due_time)}</p>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section className="panel-block student-progress-panel">
+            <div className="section-title">
+              <h3>请假记录</h3>
+              <span>{leaveRequests.length} 条</span>
+            </div>
+            <div className="guide-list">
+              {(leaveRequests.length ? leaveRequests : []).map((item) => (
+                <article key={item.id}>
+                  <strong>#{item.id} {item.status}</strong>
+                  <span>{item.reason}</span>
+                  <div className="inline-actions">
+                    <button className="tiny-button" onClick={() => loadTimeline("leave", item.id)}>处理记录</button>
+                    {item.status === "待审批" ? <button className="tiny-button" onClick={() => cancelLeave(item)} disabled={hasPendingOperation}>撤销</button> : null}
+                  </div>
+                </article>
+              ))}
+              {!leaveRequests.length ? <div className="empty-state">暂无请假记录，可从左侧提交申请。</div> : null}
+            </div>
+          </section>
+
+          <section className="panel-block student-progress-panel">
+            <div className="section-title">
+              <h3>反馈记录</h3>
+              <span>{feedbackTickets.length} 条</span>
+            </div>
+            <div className="guide-list">
+              {(feedbackTickets.length ? feedbackTickets : []).map((item) => (
+                <article key={item.id}>
+                  <strong>#{item.id} {item.category} / {item.status}</strong>
+                  <span>{item.summary || item.content}</span>
+                  <div className="inline-actions">
+                    <button className="tiny-button" onClick={() => loadTimeline("feedback", item.id)}>处理记录</button>
+                    {!item.status.includes("归档") ? <button className="tiny-button" onClick={() => replyFeedback(item)} disabled={hasPendingOperation}>补充</button> : null}
+                  </div>
+                </article>
+              ))}
+              {!feedbackTickets.length ? <div className="empty-state">暂无反馈记录，可从左侧提交投诉建议。</div> : null}
+            </div>
+          </section>
+
+          <section className="panel-block student-progress-panel">
+            <div className="section-title">
+              <h3>处理记录</h3>
+              <span>{selectedTimeline.length} 条</span>
+            </div>
+            <div className="timeline">
+              {selectedTimeline.map((item) => (
+                <article key={item.id}>
+                  <span>{formatDate(item.created_at)}</span>
+                  <div>
+                    <strong>{item.action}</strong>
+                    <p>{String(item.detail.reason ?? item.detail.resolution ?? item.detail.content ?? item.detail.status ?? "已记录")}</p>
+                  </div>
+                </article>
+              ))}
+              {!selectedTimeline.length && (latestLeave || latestTicket) ? <div className="empty-state">选择请假或反馈记录后查看处理时间线。</div> : null}
             </div>
           </section>
         </aside>
