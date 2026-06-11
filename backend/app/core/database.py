@@ -38,6 +38,7 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_compatible_columns()
+    _ensure_student_grade_compatible_columns()
 
 
 def _ensure_sqlite_compatible_columns():
@@ -111,6 +112,20 @@ def _ensure_sqlite_compatible_columns():
                 "updated_at": "DATETIME",
             },
         )
+
+
+def _ensure_student_grade_compatible_columns() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "student_grade" not in table_names:
+        return
+    _add_missing_columns(
+        "student_grade",
+        {column["name"] for column in inspector.get_columns("student_grade")},
+        {
+            "updated_at": "DATETIME",
+        },
+    )
 
 
 def _add_missing_columns(table_name: str, existing_columns: set[str], required_columns: dict[str, str]) -> None:
