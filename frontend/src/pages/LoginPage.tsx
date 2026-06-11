@@ -1,19 +1,23 @@
-import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LockKeyhole } from "lucide-react";
+import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
+import { backofficeNavItems, roleVisiblePages } from "../navigation";
 
 type LoginPageProps = {
   onLogin: (role: RoleKey) => void;
   onBackToPortal: () => void;
 };
 
-const demoRoles: Array<{ role: RoleKey; title: string; desc: string }> = [
-  { role: "admin", title: "管理员", desc: "系统治理、权限、审计和演示控制" },
-  { role: "manager", title: "管理者", desc: "经营管理后台、报告中心和风险视图" },
-  { role: "consultant", title: "顾问", desc: "客户增长、客户 360 和跟进任务" },
-  { role: "employee", title: "员工", desc: "员工工作台、日报和组织信息" },
-  { role: "teacher", title: "老师", desc: "学生服务工作台、审批和反馈处理" },
-  { role: "student", title: "学生", desc: "学生服务自助入口" },
-];
+const demoRoles = roleOptions.map((option) => {
+  const entryPage = roleVisiblePages[option.key][0];
+  const entry = backofficeNavItems.find((item) => item.key === entryPage);
+  return {
+    ...option,
+    entryLabel: entry?.label ?? "业务后台",
+    entryDesc: entry?.desc ?? option.focus,
+    EntryIcon: entry?.icon ?? LockKeyhole,
+  };
+});
 
 export default function LoginPage({ onLogin, onBackToPortal }: LoginPageProps) {
   return (
@@ -38,11 +42,11 @@ export default function LoginPage({ onLogin, onBackToPortal }: LoginPageProps) {
         </div>
         <div className="role-login-grid">
           {demoRoles.map((item) => (
-            <button className="role-login-card" onClick={() => onLogin(item.role)}>
-              <ShieldCheck size={18} aria-hidden="true" />
+            <button className="role-login-card" onClick={() => onLogin(item.key)}>
+              <item.EntryIcon size={18} aria-hidden="true" />
               <span>
-                <strong>{item.title}</strong>
-                <small>{item.desc}</small>
+                <strong>{item.label}</strong>
+                <small>{item.entryLabel} · {item.entryDesc}</small>
               </span>
             </button>
           ))}
