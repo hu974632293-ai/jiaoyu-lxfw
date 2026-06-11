@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CalendarClock, ClipboardList, Filter, PhoneCall, RefreshCw, Search, Sparkles, Target, UserPlus, Users } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarClock,
+  ClipboardList,
+  Filter,
+  ListTodo,
+  PhoneCall,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Target,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { apiRequest } from "../api/client";
 import { crmPrototypeRows, pipelineStages } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
@@ -17,6 +31,8 @@ type AssessmentResult = {
 type CustomerGrowthPageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
 };
+
+type AdvisorPanel = "create" | "insight" | "today" | "tasks" | null;
 
 const statusMap: Record<string, string> = {
   new: "新线索",
@@ -38,6 +54,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [sourceText, setSourceText] = useState("19 岁，高中毕业，希望新加坡升学，家长关注预算和就业前景。");
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
+  const [activePanel, setActivePanel] = useState<AdvisorPanel>(null);
 
   async function load() {
     setMessage("正在刷新真实客户队列...");
@@ -74,6 +91,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
       });
       setCreatedId(data.id);
       setMessage("新建线索成功，可继续触发研判或进入客户 360");
+      setActivePanel("insight");
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? `新建线索失败：${error.message}` : "新建线索失败");
@@ -98,6 +116,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
       });
       setAssessment(data);
       setMessage(`画像研判完成，推荐：${data.matched_project || "待补充资料"}`);
+      setActivePanel("insight");
     } catch (error) {
       setMessage(error instanceof Error ? `画像研判失败：${error.message}` : "画像研判失败");
     }
@@ -155,7 +174,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
             <RefreshCw size={16} aria-hidden="true" />
             刷新队列
           </button>
-          <button className="icon-button" onClick={createLead}>
+          <button className="icon-button" onClick={() => setActivePanel("create")}>
             <UserPlus size={16} aria-hidden="true" />
             新建线索
           </button>
@@ -172,42 +191,25 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         ))}
       </section>
 
-      <section className="advisor-workbench-grid">
-        <div className="panel-block advisor-create-panel">
-          <div className="section-title">
-            <h3>快速录入与研判</h3>
-            <UserPlus size={18} aria-hidden="true" />
-          </div>
-          <div className="form-grid compact">
-            <label className="stacked-input">
-              <span>客户姓名</span>
-              <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="例如：王晴" />
-            </label>
-            <label className="stacked-input">
-              <span>联系方式</span>
-              <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机 / 微信 / 邮箱" />
-            </label>
-          </div>
-          <label className="stacked-input">
-            <span>客户背景资料</span>
-            <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={4} />
-          </label>
-          <div className="inline-actions">
-            <button className="icon-button" onClick={createLead}>
-              保存线索
-            </button>
-            <button className="icon-button secondary" onClick={assessLead}>
-              <Sparkles size={16} aria-hidden="true" />
-              触发研判
-            </button>
-            {createdId ? (
-              <button className="ghost-button" onClick={() => onNavigate("customer360", createdId)}>
-                打开客户 360 <ArrowRight size={13} aria-hidden="true" />
-              </button>
-            ) : null}
-          </div>
-          <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
-        </div>
+      <section className={`advisor-workbench-grid ${activePanel ? "has-open-panel" : ""}`}>
+        <aside className="advisor-action-rail advisor-left-rail" aria-label="顾问快捷操作">
+          <button className={activePanel === "create" ? "active" : ""} onClick={() => setActivePanel("create")} title="快速录入">
+            <UserPlus size={19} aria-hidden="true" />
+            <span>录入</span>
+          </button>
+          <button className={activePanel === "insight" ? "active" : ""} onClick={() => setActivePanel("insight")} title="研判结果">
+            <Sparkles size={19} aria-hidden="true" />
+            <span>研判</span>
+          </button>
+          <button onClick={load} title="刷新队列">
+            <RefreshCw size={19} aria-hidden="true" />
+            <span>刷新</span>
+          </button>
+          <button onClick={() => setStatusFilter("high_potential")} title="只看高潜">
+            <Filter size={19} aria-hidden="true" />
+            <span>高潜</span>
+          </button>
+        </aside>
 
         <div className="panel-block advisor-queue-panel">
           <div className="section-title advisor-queue-title">
@@ -269,11 +271,74 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
           {!rows.length && <div className="empty-state">当前筛选无匹配客户。</div>}
         </div>
 
-        <aside className="advisor-side-stack">
-          <div className="panel-block advisor-insight-panel">
+        <aside className="advisor-action-rail advisor-right-rail" aria-label="顾问详情操作">
+          <button className={activePanel === "insight" ? "active" : ""} onClick={() => setActivePanel("insight")} title="研判与推荐">
+            <ClipboardList size={19} aria-hidden="true" />
+            <span>推荐</span>
+          </button>
+          <button className={activePanel === "today" ? "active" : ""} onClick={() => setActivePanel("today")} title="今日推进">
+            <PhoneCall size={19} aria-hidden="true" />
+            <span>推进</span>
+          </button>
+          <button className={activePanel === "tasks" ? "active" : ""} onClick={() => setActivePanel("tasks")} title="下一步任务">
+            <ListTodo size={19} aria-hidden="true" />
+            <span>任务</span>
+          </button>
+          <button onClick={() => spotlightLead && onNavigate("customer360", spotlightLead.id)} title="客户 360">
+            <Users size={19} aria-hidden="true" />
+            <span>360</span>
+          </button>
+        </aside>
+
+        {activePanel === "create" ? (
+          <aside className="panel-block advisor-drawer advisor-drawer-left" aria-label="快速录入与研判">
+            <div className="section-title">
+              <h3>快速录入与研判</h3>
+              <button className="tiny-button" onClick={() => setActivePanel(null)} aria-label="收起录入面板">
+                <X size={14} aria-hidden="true" />
+                收起
+              </button>
+            </div>
+            <div className="form-grid compact">
+              <label className="stacked-input">
+                <span>客户姓名</span>
+                <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="例如：王晴" />
+              </label>
+              <label className="stacked-input">
+                <span>联系方式</span>
+                <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机 / 微信 / 邮箱" />
+              </label>
+            </div>
+            <label className="stacked-input">
+              <span>客户背景资料</span>
+              <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={4} />
+            </label>
+            <div className="inline-actions">
+              <button className="icon-button" onClick={createLead}>
+                保存线索
+              </button>
+              <button className="icon-button secondary" onClick={assessLead}>
+                <Sparkles size={16} aria-hidden="true" />
+                触发研判
+              </button>
+              {createdId ? (
+                <button className="ghost-button" onClick={() => onNavigate("customer360", createdId)}>
+                  打开客户 360 <ArrowRight size={13} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+            <span className={message.includes("失败") ? "status-pill warning" : "status-pill success"}>{message}</span>
+          </aside>
+        ) : null}
+
+        {activePanel === "insight" ? (
+          <aside className="panel-block advisor-drawer advisor-drawer-right" aria-label="研判与推荐">
             <div className="section-title">
               <h3>研判与推荐</h3>
-              <ClipboardList size={18} aria-hidden="true" />
+              <button className="tiny-button" onClick={() => setActivePanel(null)} aria-label="收起研判面板">
+                <X size={14} aria-hidden="true" />
+                收起
+              </button>
             </div>
             {assessment ? (
               <dl className="detail-list">
@@ -297,12 +362,17 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
                 <span>优先补齐预算、目标国家和入学时间后触发画像研判。</span>
               </div>
             )}
-          </div>
+          </aside>
+        ) : null}
 
-          <div className="panel-block advisor-today-panel">
+        {activePanel === "today" ? (
+          <aside className="panel-block advisor-drawer advisor-drawer-right" aria-label="今日推进">
             <div className="section-title">
               <h3>今日推进</h3>
-              <PhoneCall size={18} aria-hidden="true" />
+              <button className="tiny-button" onClick={() => setActivePanel(null)} aria-label="收起今日推进面板">
+                <X size={14} aria-hidden="true" />
+                收起
+              </button>
             </div>
             <div className="advisor-action-list">
               {todayActions.map((lead) => (
@@ -313,12 +383,17 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
                 </button>
               ))}
             </div>
-          </div>
+          </aside>
+        ) : null}
 
-          <div className="panel-block advisor-next-panel">
+        {activePanel === "tasks" ? (
+          <aside className="panel-block advisor-drawer advisor-drawer-right" aria-label="下一步任务">
             <div className="section-title">
               <h3>下一步任务</h3>
-              <Sparkles size={18} aria-hidden="true" />
+              <button className="tiny-button" onClick={() => setActivePanel(null)} aria-label="收起任务面板">
+                <X size={14} aria-hidden="true" />
+                收起
+              </button>
             </div>
             <div className="advisor-task-checklist">
               <span>补齐资料字段</span>
@@ -331,8 +406,8 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
                 </button>
               ) : null}
             </div>
-          </div>
-        </aside>
+          </aside>
+        ) : null}
       </section>
     </div>
   );

@@ -2817,30 +2817,78 @@ textarea {
 
 .advisor-workbench-grid {
   display: grid;
-  grid-template-columns: minmax(230px, 0.72fr) minmax(420px, 1.45fr) minmax(250px, 0.83fr);
+  position: relative;
+  grid-template-columns: 72px minmax(0, 1fr) 72px;
   gap: 14px;
   align-items: start;
 }
 
-.advisor-create-panel,
-.advisor-insight-panel,
 .advisor-queue-panel,
-.advisor-today-panel,
-.advisor-next-panel {
+.advisor-drawer {
   background: #ffffff;
 }
 
-.advisor-create-panel,
-.advisor-side-stack {
-  position: sticky;
-  top: 14px;
+.advisor-queue-panel {
+  min-width: 0;
 }
 
-.advisor-create-panel textarea {
+.advisor-action-rail {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #d8e4ef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(30, 60, 90, 0.07);
+}
+
+.advisor-action-rail button {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-height: 62px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4c5d70;
+}
+
+.advisor-action-rail button:hover,
+.advisor-action-rail button.active {
+  border-color: #b8d9f4;
+  background: #eaf5ff;
+  color: #1268c4;
+}
+
+.advisor-action-rail span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.advisor-drawer {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  width: min(390px, calc(100% - 104px));
+  max-height: calc(100vh - 142px);
+  overflow: auto;
+  box-shadow: 0 24px 58px rgba(30, 60, 90, 0.18);
+}
+
+.advisor-drawer-left {
+  left: 86px;
+}
+
+.advisor-drawer-right {
+  right: 86px;
+}
+
+.advisor-drawer textarea {
   min-height: 132px;
 }
 
-.advisor-create-panel .status-pill {
+.advisor-drawer .status-pill {
   margin-top: 2px;
   max-width: 100%;
   white-space: normal;
@@ -3031,13 +3079,11 @@ textarea {
 
 @media (max-width: 1180px) {
   .advisor-workbench-grid {
-    grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
+    grid-template-columns: 66px minmax(0, 1fr) 66px;
   }
 
-  .advisor-side-stack {
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    position: static;
+  .advisor-drawer {
+    width: min(360px, calc(100% - 96px));
   }
 }
 
@@ -3047,8 +3093,37 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .advisor-create-panel {
+  .advisor-workbench-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advisor-action-rail {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .advisor-action-rail button {
+    min-width: 68px;
+  }
+
+  .advisor-left-rail {
+    order: 1;
+  }
+
+  .advisor-right-rail {
+    order: 2;
+  }
+
+  .advisor-queue-panel {
+    order: 3;
+  }
+
+  .advisor-drawer {
     position: static;
+    order: 4;
+    width: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .advisor-lead-card {
@@ -3068,8 +3143,7 @@ textarea {
 
 @media (max-width: 680px) {
   .advisor-command-strip,
-  .advisor-stage-line,
-  .advisor-side-stack {
+  .advisor-stage-line {
     grid-template-columns: 1fr;
   }
 
