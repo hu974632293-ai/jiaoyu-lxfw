@@ -583,8 +583,8 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
           )}
         </div> : null}
 
-        {hasEmployeeSidePanel ? <aside className="side-stack employee-side-panel">
-          {showOrg ? <section className="panel-block">
+        {hasEmployeeSidePanel ? <aside className={`side-stack employee-side-panel ${initialView === "guide" ? "employee-guide-workspace" : ""}`}>
+          {showOrg ? <section className="panel-block employee-org-panel">
             <div className="section-title">
               <h3>组织架构</h3>
               <Building2 size={18} aria-hidden="true" />
@@ -594,7 +594,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
               <input value={orgKeyword} onChange={(event) => setOrgKeyword(event.target.value)} placeholder="部门、职责或联系人" />
             </label>
             <button className="tiny-button" onClick={refresh}>搜索部门</button>
-            <div className="source-list">
+            <div className="source-list compact-scroll-list">
               {orgUnits.length ? orgUnits.map((item) => (
                 <article key={item.id}>
                   <strong>{item.unit_name}</strong>
@@ -605,7 +605,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
             </div>
           </section> : null}
 
-          {showGuide ? <section className="panel-block">
+          {showGuide ? <section className="panel-block employee-guide-panel">
             <div className="section-title">
               <h3>新人指南</h3>
               <span className="status-pill">内部</span>
@@ -614,10 +614,12 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
               <article><strong>客户录入</strong><span>先建线索，再补资料和跟进。</span></article>
               <article><strong>日报口径</strong><span>进展、风险、明日动作必须明确。</span></article>
               <article><strong>受控查询</strong><span>只允许白名单只读统计。</span></article>
+              <article><strong>组织协作</strong><span>先查部门职责，再联系对应负责人，避免跨部门重复询问。</span></article>
+              <article><strong>状态更新</strong><span>客户状态变更要写清原因，便于顾问继续跟进。</span></article>
             </div>
           </section> : null}
 
-          {showOrg || showGuide ? <section className="panel-block">
+          {showOrg || showGuide ? <section className="panel-block employee-directory-panel">
             <div className="section-title">
               <h3>通讯录</h3>
               <span className="status-pill">{directoryContacts.length} 人</span>
@@ -627,7 +629,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
               <input value={directoryKeyword} onChange={(event) => setDirectoryKeyword(event.target.value)} placeholder="姓名、职责或部门" />
             </label>
             <button className="tiny-button" onClick={refresh}>搜索联系人</button>
-            <div className="source-list">
+            <div className="source-list compact-scroll-list">
               {directoryContacts.length ? directoryContacts.map((item) => (
                 <article className={selectedContact?.id === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openDirectoryContact(item.id)}>
                   <strong>{item.display_name}</strong>

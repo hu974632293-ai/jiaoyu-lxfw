@@ -20,6 +20,7 @@ import TeacherAcademicWorkflowPage from "./TeacherAcademicWorkflowPage";
 import TeacherFeedbackWorkflowPage from "./TeacherFeedbackWorkflowPage";
 import TeacherGradeWorkflowPage from "./TeacherGradeWorkflowPage";
 import TeacherLeaveApprovalWorkflowPage from "./TeacherLeaveApprovalWorkflowPage";
+import TeacherPsychWorkflowPage from "./TeacherPsychWorkflowPage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
@@ -54,7 +55,7 @@ const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponen
   teacherStudentService: TeacherStudentServicePage,
   teacherLeaveApproval: TeacherLeaveApprovalWorkflowPage,
   teacherFeedback: TeacherFeedbackWorkflowPage,
-  teacherPsych: TeacherStudentServicePage,
+  teacherPsych: TeacherPsychWorkflowPage,
   teacherAcademic: TeacherAcademicWorkflowPage,
   teacherGrades: TeacherGradeWorkflowPage,
   studentService: StudentServicePage,

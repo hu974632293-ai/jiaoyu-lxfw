@@ -608,7 +608,7 @@ export default function TeacherStudentServicePage() {
             <h3>{selected.name} 待办队列</h3>
             <span className="status-pill">{selected.status}</span>
           </div>
-          <div className="teacher-workbench-grid">
+          <div className="teacher-queue-grid">
             <section className="panel-block">
               <div className="section-title">
                 <h3>请假队列</h3>
@@ -738,7 +738,7 @@ export default function TeacherStudentServicePage() {
               {grades.map((item) => (
                 <button
                   className={item.id === selectedGrade?.id ? "active" : ""}
-                  key="grade-record"
+                  key={item.id}
                   onClick={() => {
                     setSelectedGradeId(item.id);
                     setGradeForm({

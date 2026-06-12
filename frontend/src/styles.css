@@ -1048,7 +1048,20 @@ td span {
 }
 
 .teacher-workbench-grid {
-  grid-template-columns: 240px minmax(0, 1fr) minmax(280px, 0.72fr);
+  grid-template-columns: 220px minmax(300px, 1fr) minmax(300px, 1fr) minmax(260px, 0.72fr);
+}
+
+.teacher-queue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.teacher-queue-grid .select-list,
+.teacher-roster-panel .select-list,
+.teacher-focus-panel .select-list {
+  max-height: clamp(240px, calc(100vh - 470px), 440px);
+  overflow: auto;
 }
 
 .growth-overview-grid {
@@ -1329,6 +1342,14 @@ td span {
   grid-template-columns: minmax(420px, 0.95fr) minmax(360px, 1.05fr);
   gap: 12px;
   align-items: start;
+}
+
+.teacher-psych-layout {
+  grid-template-columns: minmax(260px, 0.72fr) minmax(380px, 1fr) minmax(300px, 0.78fr);
+}
+
+.teacher-psych-focus-panel {
+  min-height: 236px;
 }
 
 .workflow-list {
@@ -2177,6 +2198,27 @@ textarea {
 .side-stack {
   display: grid;
   gap: 14px;
+}
+
+.employee-guide-workspace {
+  grid-template-columns: minmax(360px, 0.82fr) minmax(420px, 1fr);
+  align-items: start;
+}
+
+.employee-guide-panel,
+.employee-directory-panel,
+.employee-org-panel {
+  align-content: start;
+}
+
+.employee-guide-panel {
+  min-height: clamp(320px, calc(100vh - 390px), 560px);
+}
+
+.compact-scroll-list {
+  max-height: clamp(260px, calc(100vh - 470px), 520px);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .risk-box {
@@ -3887,7 +3929,13 @@ textarea {
   .workflow-detail-grid,
   .workflow-action-layout,
   .workflow-student-layout,
-  .workflow-teacher-layout {
+  .workflow-teacher-layout,
+  .teacher-workbench-grid,
+  .employee-guide-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-queue-grid {
     grid-template-columns: 1fr;
   }
 }
