@@ -262,6 +262,9 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
   const showRiskQueue = initialView === "overview" || initialView === "risk" || initialView === "psych" || initialView === "feedback";
   const showDailySummary = initialView === "overview" || initialView === "daily";
   const showReportList = initialView !== "risk";
+  const hasManagementSidePanel = showRiskQueue || showDailySummary;
+  const managementSectionCount = Number(showReportPanel) + Number(hasManagementSidePanel);
+  const managementLayoutClass = managementSectionCount > 1 ? "management-layout" : "management-layout management-layout-single";
 
   return (
     <div className="page-stack">
@@ -297,7 +300,7 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
         ))}
       </section> : null}
 
-      <section className="management-layout">
+      <section className={managementLayoutClass}>
         {showReportPanel ? <div className="panel-block">
           <div className="section-title">
             <h3>管理报告</h3>
@@ -317,7 +320,7 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
           </div>
         </div> : null}
 
-        {showRiskQueue || showDailySummary ? <aside className="side-stack">
+        {hasManagementSidePanel ? <aside className="side-stack">
           {showRiskQueue ? <section className="panel-block">
             <div className="section-title">
               <h3>风险队列</h3>
