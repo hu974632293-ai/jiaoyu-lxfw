@@ -14,6 +14,10 @@ const requiredPages = [
   ["teacherFeedback", "TeacherFeedbackWorkflowPage"],
 ];
 const studentPages = new Set(["StudentLeaveWorkflowPage", "StudentFeedbackWorkflowPage"]);
+const gradePages = [
+  ["teacherGrades", "TeacherGradeWorkflowPage"],
+  ["studentGradeQuery", "StudentGradeWorkflowPage"],
+];
 
 for (const [pageKey, componentName] of requiredPages) {
   const componentSource = readFileSync(join(srcRoot, "pages", `${componentName}.tsx`), "utf8");
@@ -79,4 +83,35 @@ for (const [pageKey, componentName] of requiredPages) {
       `${componentName} 应使用同屏业务处理布局`,
     );
   }
+}
+
+for (const [pageKey, componentName] of gradePages) {
+  const componentPath = join(srcRoot, "pages", `${componentName}.tsx`);
+  assert.ok(existsSync(componentPath), `${componentName}.tsx 应存在`);
+  const componentSource = readFileSync(componentPath, "utf8");
+  assert.match(
+    shellSource,
+    new RegExp(`${pageKey}:\\s*${componentName}`),
+    `${pageKey} 应映射到独立成绩业务组件 ${componentName}`,
+  );
+  assert.doesNotMatch(
+    componentSource,
+    /TeacherStudentServicePage|StudentServicePage/,
+    `${componentName} 不应继续复用混合学生服务大页`,
+  );
+  assert.match(
+    componentSource,
+    /className="workflow-action-layout"|className="workflow-student-layout"/,
+    `${componentName} 应使用独立业务页布局`,
+  );
+  assert.match(
+    componentSource,
+    /className="select-list workflow-list workflow-scroll-list"/,
+    `${componentName} 成绩列表应使用受控滚动列表`,
+  );
+  assert.match(
+    componentSource,
+    /className="panel-block workflow-history-panel"/,
+    `${componentName} 应包含反馈或修改记录面板`,
+  );
 }

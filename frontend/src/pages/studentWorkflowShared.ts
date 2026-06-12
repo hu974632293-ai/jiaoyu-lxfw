@@ -52,6 +52,17 @@ export type FeedbackDetail = {
   timeline: TimelineItem[];
 };
 
+export type StudentGrade = {
+  id: number;
+  student_id: number;
+  course_name: string;
+  score: number | null;
+  exam_time: string | null;
+  teacher_feedback: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export function formatWorkflowDate(value: string | null) {
   if (!value) return "未设置";
   return value.replace("T", " ").slice(0, 16);

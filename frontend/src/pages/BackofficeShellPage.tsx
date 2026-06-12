@@ -9,11 +9,13 @@ import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
 import RoleWorkspacePage from "./RoleWorkspacePage";
 import StudentFeedbackWorkflowPage from "./StudentFeedbackWorkflowPage";
+import StudentGradeWorkflowPage from "./StudentGradeWorkflowPage";
 import StudentLeaveWorkflowPage from "./StudentLeaveWorkflowPage";
 import StudentServicePage from "./StudentServicePage";
 import SystemDemoPage from "./SystemDemoPage";
 import SystemGovernancePage from "./SystemGovernancePage";
 import TeacherFeedbackWorkflowPage from "./TeacherFeedbackWorkflowPage";
+import TeacherGradeWorkflowPage from "./TeacherGradeWorkflowPage";
 import TeacherLeaveApprovalWorkflowPage from "./TeacherLeaveApprovalWorkflowPage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
@@ -75,11 +77,11 @@ const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponen
   teacherFeedback: TeacherFeedbackWorkflowPage,
   teacherPsych: TeacherStudentServicePage,
   teacherAcademic: TeacherStudentServicePage,
-  teacherGrades: TeacherStudentServicePage,
+  teacherGrades: TeacherGradeWorkflowPage,
   studentService: StudentServicePage,
   studentLeaveRequest: StudentLeaveWorkflowPage,
   studentFeedbackSubmit: StudentFeedbackWorkflowPage,
-  studentGradeQuery: StudentServicePage,
+  studentGradeQuery: StudentGradeWorkflowPage,
   studentApplicationProgress: StudentServicePage,
   studentExamNodes: StudentServicePage,
   studentLifeSupport: StudentServicePage,
