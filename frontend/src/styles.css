@@ -1211,8 +1211,16 @@ td span {
   min-width: 0;
 }
 
-.workflow-detail-column .timeline {
-  max-height: 300px;
+.workflow-history-panel {
+  display: flex;
+  flex-direction: column;
+  height: clamp(260px, calc(100vh - 470px), 430px);
+  min-height: 0;
+}
+
+.workflow-history-list {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding-right: 2px;
 }

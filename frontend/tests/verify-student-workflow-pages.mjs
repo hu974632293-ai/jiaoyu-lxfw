@@ -36,6 +36,16 @@ for (const [pageKey, componentName] of requiredPages) {
     /className="workflow-detail-column"/,
     `${componentName} 应包含同屏详情记录列`,
   );
+  assert.match(
+    componentSource,
+    /className="timeline workflow-history-list"/,
+    `${componentName} 处理记录应使用受控滚动列表`,
+  );
+  assert.match(
+    componentSource,
+    /className="panel-block workflow-history-panel"/,
+    `${componentName} 处理记录卡片应使用稳定高度面板`,
+  );
   if (studentPages.has(componentName)) {
     assert.match(
       componentSource,

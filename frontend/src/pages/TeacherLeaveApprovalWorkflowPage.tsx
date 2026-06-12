@@ -215,12 +215,12 @@ export default function TeacherLeaveApprovalWorkflowPage() {
               </div>
             </section>
 
-            <section className="panel-block">
+            <section className="panel-block workflow-history-panel">
               <div className="section-title">
                 <h3>审批历史</h3>
                 <span>{timeline.length} 条</span>
               </div>
-              <div className="timeline">
+              <div className="timeline workflow-history-list">
                 {timeline.map((item) => (
                   <article key={item.id}>
                     <span>{formatWorkflowDate(item.created_at)}</span>
