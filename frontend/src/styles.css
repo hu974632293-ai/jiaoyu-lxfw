@@ -2337,6 +2337,12 @@ textarea {
   align-items: start;
 }
 
+.employee-org-workspace,
+.employee-workbench-grid-single > .side-stack.employee-org-workspace {
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
+  align-items: start;
+}
+
 .employee-guide-panel,
 .employee-directory-panel,
 .employee-org-panel {
@@ -2350,6 +2356,15 @@ textarea {
 .compact-scroll-list {
   max-height: clamp(260px, calc(100vh - 470px), 520px);
   overflow: auto;
+  padding-right: 2px;
+}
+
+.employee-org-scroll-list,
+.employee-directory-scroll-list {
+  height: clamp(220px, calc(100vh - 520px), 360px);
+  min-height: 220px;
+  overflow: auto;
+  align-content: start;
   padding-right: 2px;
 }
 
@@ -2516,6 +2531,11 @@ textarea {
   .customer-advice-panel {
     position: static;
   }
+
+  .employee-guide-workspace,
+  .employee-org-workspace {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 680px) {
@@ -2540,6 +2560,13 @@ textarea {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .employee-org-scroll-list,
+  .employee-directory-scroll-list {
+    height: auto;
+    max-height: 320px;
+    min-height: 0;
   }
 
   .growth-metric-grid,

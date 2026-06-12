@@ -583,7 +583,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
           )}
         </div> : null}
 
-        {hasEmployeeSidePanel ? <aside className={`side-stack employee-side-panel ${initialView === "guide" ? "employee-guide-workspace" : ""}`}>
+        {hasEmployeeSidePanel ? <aside className={`side-stack employee-side-panel ${initialView === "guide" ? "employee-guide-workspace" : ""} ${initialView === "org" ? "employee-org-workspace" : ""}`}>
           {showOrg ? <section className="panel-block employee-org-panel">
             <div className="section-title">
               <h3>组织架构</h3>
@@ -594,7 +594,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
               <input value={orgKeyword} onChange={(event) => setOrgKeyword(event.target.value)} placeholder="部门、职责或联系人" />
             </label>
             <button className="tiny-button" onClick={refresh}>搜索部门</button>
-            <div className="source-list compact-scroll-list">
+            <div className="source-list employee-org-scroll-list">
               {orgUnits.length ? orgUnits.map((item) => (
                 <article key={item.id}>
                   <strong>{item.unit_name}</strong>
@@ -629,7 +629,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
               <input value={directoryKeyword} onChange={(event) => setDirectoryKeyword(event.target.value)} placeholder="姓名、职责或部门" />
             </label>
             <button className="tiny-button" onClick={refresh}>搜索联系人</button>
-            <div className="source-list compact-scroll-list">
+            <div className="source-list employee-directory-scroll-list">
               {directoryContacts.length ? directoryContacts.map((item) => (
                 <article className={selectedContact?.id === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openDirectoryContact(item.id)}>
                   <strong>{item.display_name}</strong>
