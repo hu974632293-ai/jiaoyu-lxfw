@@ -63,6 +63,26 @@ export type StudentGrade = {
   updated_at: string | null;
 };
 
+export type AcademicEvent = {
+  id: number;
+  student_id: number;
+  event_name: string;
+  event_type: string;
+  due_time: string | null;
+  status: string;
+  created_at: string | null;
+};
+
+export type ApplicationProgress = {
+  id: number;
+  student_id: number;
+  stage: string;
+  status: string;
+  description: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export function formatWorkflowDate(value: string | null) {
   if (!value) return "未设置";
   return value.replace("T", " ").slice(0, 16);
