@@ -8,9 +8,13 @@ import ManagementDashboardPage from "./ManagementDashboardPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
 import RoleWorkspacePage from "./RoleWorkspacePage";
+import StudentFeedbackWorkflowPage from "./StudentFeedbackWorkflowPage";
+import StudentLeaveWorkflowPage from "./StudentLeaveWorkflowPage";
 import StudentServicePage from "./StudentServicePage";
 import SystemDemoPage from "./SystemDemoPage";
 import SystemGovernancePage from "./SystemGovernancePage";
+import TeacherFeedbackWorkflowPage from "./TeacherFeedbackWorkflowPage";
+import TeacherLeaveApprovalWorkflowPage from "./TeacherLeaveApprovalWorkflowPage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
@@ -67,14 +71,14 @@ const roleShellSummaries: Record<RoleKey, { title: string; items: string[]; foot
 const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
   employeeWorkspace: EmployeeWorkspacePage,
   teacherStudentService: TeacherStudentServicePage,
-  teacherLeaveApproval: TeacherStudentServicePage,
-  teacherFeedback: TeacherStudentServicePage,
+  teacherLeaveApproval: TeacherLeaveApprovalWorkflowPage,
+  teacherFeedback: TeacherFeedbackWorkflowPage,
   teacherPsych: TeacherStudentServicePage,
   teacherAcademic: TeacherStudentServicePage,
   teacherGrades: TeacherStudentServicePage,
   studentService: StudentServicePage,
-  studentLeaveRequest: StudentServicePage,
-  studentFeedbackSubmit: StudentServicePage,
+  studentLeaveRequest: StudentLeaveWorkflowPage,
+  studentFeedbackSubmit: StudentFeedbackWorkflowPage,
   studentGradeQuery: StudentServicePage,
   studentApplicationProgress: StudentServicePage,
   studentExamNodes: StudentServicePage,
