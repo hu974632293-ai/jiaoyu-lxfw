@@ -1,0 +1,1286 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>角色权限结构可点击预览</title>
+  <style>
+    :root {
+      --ink: #18212f;
+      --muted: #667085;
+      --line: #d9e1ea;
+      --soft: #f4f7fb;
+      --panel: #ffffff;
+      --brand: #2f6f73;
+      --brand-strong: #174f54;
+      --accent: #bb7a33;
+      --danger: #b42318;
+      --warning: #a15c07;
+      --success: #087443;
+      --shadow: 0 18px 45px rgba(24, 33, 47, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, rgba(47, 111, 115, 0.14), transparent 32%),
+        linear-gradient(180deg, #f7f9fc 0%, #eef3f7 100%);
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+    }
+
+    .login-screen {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(280px, 0.92fr) minmax(360px, 1.08fr);
+      gap: 36px;
+      align-items: center;
+      padding: 48px clamp(22px, 5vw, 72px);
+    }
+
+    .login-copy {
+      display: grid;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--brand);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    .login-copy h1 {
+      margin-bottom: 8px;
+      font-size: clamp(34px, 4vw, 58px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .login-copy p {
+      color: var(--muted);
+      line-height: 1.8;
+      max-width: 620px;
+    }
+
+    .flow-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .flow-strip span,
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      color: #334155;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .login-panel {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(217, 225, 234, 0.9);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .account-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .account-card,
+    .nav-item,
+    .feature-card,
+    .row-button,
+    .ghost-button,
+    .primary-button,
+    .tiny-button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 12px;
+      transition: 0.18s ease;
+    }
+
+    .account-card {
+      min-height: 118px;
+      padding: 16px;
+      text-align: left;
+      display: grid;
+      gap: 10px;
+    }
+
+    .account-card:hover,
+    .nav-item:hover,
+    .feature-card:hover,
+    .row-button:hover,
+    .ghost-button:hover,
+    .tiny-button:hover {
+      border-color: rgba(47, 111, 115, 0.55);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(24, 33, 47, 0.08);
+    }
+
+    .account-card strong,
+    .feature-card strong,
+    .row-button strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .account-card small,
+    .feature-card span,
+    .row-button span,
+    .muted {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .account-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      display: inline-grid;
+      place-items: center;
+      background: #e7f1ef;
+      color: var(--brand-strong);
+      font-weight: 800;
+    }
+
+    .workspace {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(14px);
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark,
+    .account-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--brand);
+      color: white;
+      font-weight: 800;
+    }
+
+    .brand-block h1 {
+      margin: 0 0 2px;
+      font-size: 19px;
+    }
+
+    .brand-block p,
+    .identity-card small {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .identity-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 220px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 9px 12px;
+      background: #fff;
+    }
+
+    .identity-card strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .ghost-button,
+    .primary-button,
+    .tiny-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 9px 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .primary-button {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: white;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 286px minmax(0, 1fr);
+      gap: 0;
+      min-height: calc(100vh - 75px);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #fbfcfe;
+      padding: 18px 14px;
+      overflow: auto;
+    }
+
+    .sidebar-section {
+      margin-bottom: 18px;
+    }
+
+    .sidebar-section h3 {
+      margin: 0 8px 8px;
+      color: #516071;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .sidebar-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-item {
+      width: 100%;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: start;
+      text-align: left;
+    }
+
+    .nav-item.active {
+      border-color: var(--brand);
+      background: #eaf4f1;
+      box-shadow: inset 3px 0 0 var(--brand);
+    }
+
+    .nav-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: #edf2f7;
+      color: #344054;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .nav-item.active .nav-icon {
+      background: var(--brand);
+      color: white;
+    }
+
+    .nav-item strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .nav-item small {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .content {
+      padding: 22px clamp(18px, 3vw, 34px) 34px;
+      overflow: auto;
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .notice {
+      border: 1px solid #f6d7a7;
+      background: #fff8eb;
+      color: #7a4605;
+      border-radius: 13px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      display: none;
+      line-height: 1.6;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    .page-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .page-heading h2 {
+      margin-bottom: 8px;
+      font-size: clamp(25px, 3vw, 36px);
+      letter-spacing: 0;
+    }
+
+    .page-heading p {
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 760px;
+    }
+
+    .metric-grid,
+    .feature-grid,
+    .detail-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .metric-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .metric-card,
+    .panel,
+    .matrix-panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.93);
+      box-shadow: 0 10px 28px rgba(24, 33, 47, 0.06);
+    }
+
+    .metric-card {
+      padding: 16px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .metric-card span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric-card strong {
+      font-size: 30px;
+    }
+
+    .metric-card em {
+      color: var(--success);
+      font-size: 13px;
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .metric-card.warning em {
+      color: var(--warning);
+    }
+
+    .metric-card.danger em {
+      color: var(--danger);
+    }
+
+    .feature-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .feature-card {
+      min-height: 112px;
+      padding: 16px;
+      text-align: left;
+    }
+
+    .detail-grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+    }
+
+    .panel,
+    .matrix-panel {
+      padding: 16px;
+    }
+
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .panel-title h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .row-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row-button {
+      width: 100%;
+      display: grid;
+      gap: 4px;
+      text-align: left;
+      padding: 13px;
+    }
+
+    .row-button.active {
+      border-color: var(--brand);
+      background: #f0f7f5;
+    }
+
+    .detail-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+    }
+
+    .detail-list div {
+      border-bottom: 1px solid #edf1f5;
+      padding-bottom: 10px;
+    }
+
+    .detail-list dt {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .detail-list dd {
+      margin: 4px 0 0;
+      line-height: 1.6;
+    }
+
+    .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      min-height: 40px;
+      padding: 8px 11px;
+      background: white;
+      min-width: 190px;
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    .matrix th,
+    .matrix td {
+      border-bottom: 1px solid #e8edf2;
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .matrix th {
+      color: #475467;
+      background: #f5f8fb;
+      font-size: 12px;
+    }
+
+    .check {
+      color: var(--success);
+      font-weight: 900;
+    }
+
+    .deny {
+      color: #98a2b3;
+      font-weight: 900;
+    }
+
+    .drawer {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: min(420px, calc(100vw - 36px));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: none;
+      z-index: 10;
+    }
+
+    .drawer.show {
+      display: block;
+    }
+
+    .drawer h3 {
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 980px) {
+      .login-screen,
+      .shell,
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .sidebar-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric-grid,
+      .feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .login-screen,
+      .content,
+      .topbar {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .topbar,
+      .page-heading {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .account-grid,
+      .sidebar-nav,
+      .metric-grid,
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app"></div>
+
+  <script>
+    const accounts = {
+      admin: {
+        name: "系统管理员",
+        role: "管理员",
+        title: "系统治理管理员",
+        scope: "全部后台界面权限",
+        defaultPage: "adminOverview",
+        badge: "管"
+      },
+      manager: {
+        name: "王管理者",
+        role: "管理者",
+        title: "经营管理者",
+        scope: "经营管理后台 + 员工工作台",
+        defaultPage: "managerOverview",
+        badge: "经"
+      },
+      consultant: {
+        name: "李顾问",
+        role: "顾问",
+        title: "客户增长顾问",
+        scope: "客户增长 + 员工工作台",
+        defaultPage: "consultantOverview",
+        badge: "顾"
+      },
+      employee: {
+        name: "张员工",
+        role: "员工",
+        title: "运营员工",
+        scope: "员工工作台",
+        defaultPage: "employeeOverview",
+        badge: "员"
+      },
+      teacher: {
+        name: "周老师",
+        role: "老师",
+        title: "学生服务老师",
+        scope: "学生服务工作台 + 员工工作台",
+        defaultPage: "teacherOverview",
+        badge: "师"
+      },
+      student: {
+        name: "陈同学",
+        role: "学生",
+        title: "学生用户",
+        scope: "学生服务台",
+        defaultPage: "studentOverview",
+        badge: "学"
+      }
+    };
+
+    const navItems = {
+      consultantOverview: { label: "客户增长总览", desc: "高潜客户、待办、最近跟进", group: "客户增长", icon: "CG" },
+      consultantNewLead: { label: "新建线索", desc: "手动录入客户资料并进入研判", group: "客户增长", icon: "NL" },
+      consultantLeadQueue: { label: "线索队列", desc: "搜索、筛选和进入客户详情", group: "客户增长", icon: "LQ" },
+      consultantFunnel: { label: "漏斗阶段", desc: "按阶段查看客户推进状态", group: "客户增长", icon: "FN" },
+      consultantCustomer360: { label: "客户 360", desc: "客户画像、跟进和推荐项目", group: "客户增长", icon: "C3" },
+      consultantTasks: { label: "跟进任务", desc: "今日待办、提醒和处理记录", group: "客户增长", icon: "TK" },
+      consultantEvents: { label: "活动邀约", desc: "讲座邀约、报名名单和转化", group: "客户增长", icon: "EV" },
+      employeeOverview: { label: "员工工作台总览", desc: "客户快捷操作、日报和组织查询", group: "员工通用", icon: "EW" },
+      employeeQuickEntry: { label: "快捷录入", desc: "低成本录入客户和状态", group: "员工通用", icon: "QE" },
+      employeeReports: { label: "日报/周报", desc: "提交日报并查看汇总", group: "员工通用", icon: "DR" },
+      employeeOrg: { label: "组织架构", desc: "部门、职责和联系人查询", group: "员工通用", icon: "OR" },
+      employeeCustomerQuery: { label: "客户查询", desc: "受控查询客户状态和统计", group: "员工通用", icon: "CQ" },
+      employeeGuide: { label: "新人指南", desc: "制度、流程和操作指引", group: "员工通用", icon: "GD" },
+      teacherOverview: { label: "学生服务工作台总览", desc: "请假、反馈、心理辅助和学业进度", group: "学生服务处理", icon: "TS" },
+      teacherLeaveApproval: { label: "请假审批", desc: "查看申请、审批和记录", group: "学生服务处理", icon: "LA" },
+      teacherFeedback: { label: "反馈处理", desc: "处理投诉建议和服务工单", group: "学生服务处理", icon: "FB" },
+      teacherPsych: { label: "心理预警", desc: "辅助识别、跟进和记录", group: "学生服务处理", icon: "PS" },
+      teacherAcademic: { label: "学业/进度", desc: "考务节点和申请进度查看", group: "学生服务处理", icon: "AC" },
+      teacherGrades: { label: "成绩录入", desc: "登记成绩并保留修改记录", group: "学生服务处理", icon: "GR" },
+      studentOverview: { label: "学生服务台总览", desc: "请假、反馈、成绩、进度和支持", group: "学生自助", icon: "SS" },
+      studentLeaveRequest: { label: "请假申请", desc: "提交请假并查看处理状态", group: "学生自助", icon: "LR" },
+      studentFeedbackSubmit: { label: "反馈提交", desc: "提交投诉建议和补充说明", group: "学生自助", icon: "FS" },
+      studentGradeQuery: { label: "成绩查询", desc: "查看成绩和老师反馈", group: "学生自助", icon: "GQ" },
+      studentApplicationProgress: { label: "申请进度", desc: "查看阶段、材料和下一步", group: "学生自助", icon: "AP" },
+      studentExamNodes: { label: "考务节点", desc: "考试、材料和提醒节点", group: "学生自助", icon: "EN" },
+      studentLifeSupport: { label: "生活支持", desc: "住宿、出行和紧急支持", group: "学生自助", icon: "LS" },
+      managerOverview: { label: "经营管理总览", desc: "经营指标、报告和风险队列", group: "经营管理", icon: "MO" },
+      managerGrowthDashboard: { label: "增长总览", desc: "线索、成交、流失和转化", group: "经营管理", icon: "GD" },
+      managerDailySummary: { label: "日报汇总", desc: "团队日报和周报汇总", group: "经营管理", icon: "DS" },
+      managerPsychWeekly: { label: "心理周报", desc: "学生心理辅助风险周报", group: "经营管理", icon: "PW" },
+      managerFeedbackWeekly: { label: "投诉周报", desc: "投诉处理和未决风险", group: "经营管理", icon: "FW" },
+      managerRiskQueue: { label: "风险队列", desc: "高优先级经营和服务风险", group: "经营管理", icon: "RQ" },
+      adminOverview: { label: "系统治理总览", desc: "用户、角色、权限、审计和系统状态", group: "系统治理", icon: "SO" },
+      adminUsers: { label: "用户", desc: "账号、状态和角色绑定", group: "系统治理", icon: "US" },
+      adminRoles: { label: "角色", desc: "角色定义和使用范围", group: "系统治理", icon: "RL" },
+      adminPermissions: { label: "权限", desc: "权限点、菜单和接口边界", group: "系统治理", icon: "PM" },
+      adminAudit: { label: "审计", desc: "关键操作和处理留痕", group: "系统治理", icon: "AU" },
+      adminNotifications: { label: "通知", desc: "通知、待办和已读状态", group: "系统治理", icon: "NT" },
+      adminKnowledgeSources: { label: "知识来源", desc: "知识来源、同步和问答边界", group: "系统治理", icon: "KS" },
+      adminSystemStatus: { label: "系统状态", desc: "接口、初始化和系统控制", group: "系统治理", icon: "ST" },
+      operations: { label: "运营资源", desc: "项目、活动和知识库维护", group: "扩展后台", icon: "OP" },
+      reports: { label: "报告中心", desc: "经营、日报、心理和投诉报告", group: "扩展后台", icon: "RP" }
+    };
+
+    const rolePages = {
+      admin: Object.keys(navItems),
+      manager: [
+        "managerOverview",
+        "managerGrowthDashboard",
+        "managerDailySummary",
+        "managerPsychWeekly",
+        "managerFeedbackWeekly",
+        "managerRiskQueue",
+        "employeeOverview",
+        "employeeQuickEntry",
+        "employeeReports",
+        "employeeOrg",
+        "employeeCustomerQuery",
+        "employeeGuide",
+        "reports"
+      ],
+      consultant: [
+        "consultantOverview",
+        "consultantNewLead",
+        "consultantLeadQueue",
+        "consultantFunnel",
+        "consultantCustomer360",
+        "consultantTasks",
+        "consultantEvents",
+        "employeeOverview",
+        "employeeQuickEntry",
+        "employeeReports",
+        "employeeOrg",
+        "employeeCustomerQuery",
+        "employeeGuide"
+      ],
+      employee: [
+        "employeeOverview",
+        "employeeQuickEntry",
+        "employeeReports",
+        "employeeOrg",
+        "employeeCustomerQuery",
+        "employeeGuide"
+      ],
+      teacher: [
+        "teacherOverview",
+        "teacherLeaveApproval",
+        "teacherFeedback",
+        "teacherPsych",
+        "teacherAcademic",
+        "teacherGrades",
+        "employeeOverview",
+        "employeeQuickEntry",
+        "employeeReports",
+        "employeeOrg",
+        "employeeCustomerQuery",
+        "employeeGuide"
+      ],
+      student: [
+        "studentOverview",
+        "studentLeaveRequest",
+        "studentFeedbackSubmit",
+        "studentGradeQuery",
+        "studentApplicationProgress",
+        "studentExamNodes",
+        "studentLifeSupport"
+      ]
+    };
+
+    const workspaceCopy = {
+      admin: {
+        title: "系统治理总览",
+        subtitle: "管理员可进入全部后台界面；系统控制、权限、审计等治理入口只在此身份展示。",
+        metrics: [
+          ["后台模块", "34", "全部可访问", "success"],
+          ["权限风险", "0", "越权会拦截", "success"],
+          ["待处理通知", "3", "治理事项", "warning"]
+        ],
+        rows: [
+          ["系统管理员", "启用", "负责用户、角色、权限、审计、知识来源和系统状态。"],
+          ["权限矩阵", "待确认", "确认后进入正式实现，普通业务角色不显示治理入口。"],
+          ["系统状态", "可查看", "只允许管理员执行初始化、接口状态和系统维护动作。"]
+        ]
+      },
+      manager: {
+        title: "经营管理后台",
+        subtitle: "管理者优先查看经营指标、日报汇总和风险队列，同时继承员工通用能力。",
+        metrics: [
+          ["新增线索", "12", "今日", "success"],
+          ["待决风险", "5", "需关注", "danger"],
+          ["员工入口", "5", "已继承", "success"]
+        ],
+        rows: [
+          ["客户经营分析", "已更新", "查看新增、成交、流失、高潜客户和跟进建议。"],
+          ["日报周汇总", "待确认", "查看团队进展、风险和待协调事项。"],
+          ["风险队列", "高优先级", "投诉超时、心理辅助和客户流失风险需要分派负责人。"]
+        ]
+      },
+      consultant: {
+        title: "客户增长工作台",
+        subtitle: "顾问处理线索、画像、客户 360、跟进任务和活动邀约，同时继承员工工作台。",
+        metrics: [
+          ["高潜客户", "8", "3 个今日回访", "warning"],
+          ["待跟进", "27", "6 个临近超时", "danger"],
+          ["员工入口", "5", "已继承", "success"]
+        ],
+        rows: [
+          ["王晴", "高潜跟进", "新加坡国际本科，家长关注费用和升学路径。"],
+          ["刘欣", "咨询中", "德国双元制方向，关注带薪实习和语言要求。"],
+          ["陈浩", "暂缓", "预算暂不匹配，需要长期培育。"]
+        ]
+      },
+      employee: {
+        title: "员工工作台",
+        subtitle: "员工只做内部通用工作：快捷录入、日报、组织查询、客户只读查询和新人指南。",
+        metrics: [
+          ["今日日报", "4", "2 条待补充", "warning"],
+          ["客户操作", "9", "录入和状态更新", "success"],
+          ["组织查询", "12", "本周访问", "success"]
+        ],
+        rows: [
+          ["客户快捷录入", "待提交", "录入客户姓名、联系方式、意向项目和下一步。"],
+          ["日报汇总", "草稿", "整理今日进展、风险和明日动作。"],
+          ["新人指南", "可查询", "制度、流程和常见操作路径。"]
+        ]
+      },
+      teacher: {
+        title: "学生服务工作台",
+        subtitle: "老师处理请假、反馈、心理辅助预警、学业进度和成绩录入，同时继承员工工作台。",
+        metrics: [
+          ["请假审批", "5", "待处理", "warning"],
+          ["反馈工单", "9", "2 个高优先级", "danger"],
+          ["员工入口", "5", "已继承", "success"]
+        ],
+        rows: [
+          ["陈雨请假申请", "待审批", "申请 06-12 至 06-13 请假，原因：家庭事务。"],
+          ["林可反馈工单", "处理中", "宿舍网络不稳定，已进入生活支持队列。"],
+          ["赵宁辅助预警", "待回访", "连续表达焦虑和睡眠差，仅用于辅助识别。"]
+        ]
+      },
+      student: {
+        title: "学生服务台",
+        subtitle: "学生只能访问自己的自助服务入口，不显示任何内部员工、老师、管理者或管理员页面。",
+        metrics: [
+          ["我的事项", "4", "进行中", "warning"],
+          ["申请阶段", "3", "材料补充", "success"],
+          ["考务提醒", "2", "本周节点", "warning"]
+        ],
+        rows: [
+          ["请假申请", "待老师审批", "可提交请假原因、时间和补充说明。"],
+          ["申请进度", "材料补充", "文书初稿完成，推荐信待上传。"],
+          ["生活支持", "可咨询", "住宿、交通、医疗和紧急联系人支持。"]
+        ]
+      }
+    };
+
+    let state = readUrlState();
+    let selectedRow = 0;
+    let notice = "";
+
+    function readUrlState() {
+      const params = new URLSearchParams(window.location.search);
+      const account = accounts[params.get("account")] ? params.get("account") : null;
+      const page = params.get("page") || null;
+      return { mode: account ? "backoffice" : "login", account, page };
+    }
+
+    function writeUrl() {
+      if (state.mode === "login") {
+        window.history.pushState(null, "", window.location.pathname);
+        return;
+      }
+      const params = new URLSearchParams();
+      params.set("account", state.account);
+      params.set("page", state.page);
+      params.set("leadId", "1");
+      window.history.pushState(null, "", `${window.location.pathname}?${params.toString()}`);
+    }
+
+    function login(accountKey) {
+      state = {
+        mode: "backoffice",
+        account: accountKey,
+        page: accounts[accountKey].defaultPage
+      };
+      notice = "";
+      selectedRow = 0;
+      writeUrl();
+      render();
+    }
+
+    function logout() {
+      state = { mode: "login", account: null, page: null };
+      notice = "";
+      writeUrl();
+      render();
+    }
+
+    function canAccess(accountKey, pageKey) {
+      return rolePages[accountKey].includes(pageKey);
+    }
+
+    function navigate(pageKey, options = {}) {
+      const accountKey = state.account;
+      if (!canAccess(accountKey, pageKey)) {
+        const allowedPage = accounts[accountKey].defaultPage;
+        notice = `已拦截越权访问：${accounts[accountKey].role}不能访问“${navItems[pageKey]?.label || pageKey}”，已回到“${navItems[allowedPage].label}”。`;
+        state.page = allowedPage;
+      } else {
+        state.page = pageKey;
+        notice = options.notice || "";
+      }
+      selectedRow = 0;
+      writeUrl();
+      render();
+    }
+
+    function applyUrlGuard() {
+      if (state.mode !== "backoffice" || !state.account) {
+        return;
+      }
+      const defaultPage = accounts[state.account].defaultPage;
+      if (!state.page || !navItems[state.page]) {
+        state.page = defaultPage;
+        notice = "URL 中的页面不存在，已回到当前账号默认入口。";
+      } else if (!canAccess(state.account, state.page)) {
+        const denied = state.page;
+        state.page = defaultPage;
+        notice = `刷新恢复时发现越权页面“${navItems[denied].label}”，已按当前账号权限回到默认入口。`;
+      }
+    }
+
+    function renderLogin() {
+      return `
+        <main class="login-screen">
+          <section class="login-copy">
+            <p class="eyebrow">角色权限结构预览</p>
+            <h1>先看账号怎么进，再决定代码怎么落。</h1>
+            <p>这是一个独立可点击预览页，用来确认阶段 2 完成后的登录入口、默认工作台、侧边栏显示、顶部身份和 URL 越权反馈。它不连接后端，也不会改变正式业务页面。</p>
+            <div class="flow-strip">
+              <span>公开官网</span>
+              <span>登录入口</span>
+              <span>按账号进入后台</span>
+              <span>权限过滤菜单</span>
+              <span>越权拦截</span>
+            </div>
+          </section>
+          <section class="login-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">固定测试账号</p>
+                <h2>选择账号进入预览</h2>
+              </div>
+              <span class="pill">账号绑定角色</span>
+            </div>
+            <div class="account-grid">
+              ${Object.entries(accounts).map(([key, account]) => `
+                <button class="account-card" onclick="login('${key}')">
+                  <span class="account-badge">${account.badge}</span>
+                  <span>
+                    <strong>${account.name} / ${account.role}</strong>
+                    <small>${account.scope}<br />默认入口：${navItems[account.defaultPage].label}</small>
+                  </span>
+                </button>
+              `).join("")}
+            </div>
+            <p class="muted" style="margin:16px 0 0;">建议正式实现时，普通账号不再提供后台角色下拉切换；权限以登录账号为准。</p>
+          </section>
+        </main>
+      `;
+    }
+
+    function groupVisiblePages(accountKey) {
+      return rolePages[accountKey].reduce((groups, key) => {
+        const item = navItems[key];
+        if (!groups[item.group]) {
+          groups[item.group] = [];
+        }
+        groups[item.group].push(key);
+        return groups;
+      }, {});
+    }
+
+    function renderSidebar(accountKey) {
+      const grouped = groupVisiblePages(accountKey);
+      return Object.entries(grouped).map(([group, keys]) => `
+        <div class="sidebar-section">
+          <h3>${group}</h3>
+          <nav class="sidebar-nav">
+            ${keys.map((key) => {
+              const item = navItems[key];
+              const active = key === state.page ? "active" : "";
+              return `
+                <button class="nav-item ${active}" onclick="navigate('${key}')">
+                  <span class="nav-icon">${item.icon}</span>
+                  <span>
+                    <strong>${item.label}</strong>
+                    <small>${item.desc}</small>
+                  </span>
+                </button>
+              `;
+            }).join("")}
+          </nav>
+        </div>
+      `).join("");
+    }
+
+    function renderMetrics(copy) {
+      return `
+        <section class="metric-grid">
+          ${copy.metrics.map(([label, value, note, tone]) => `
+            <article class="metric-card ${tone}">
+              <span>${label}</span>
+              <strong>${value}</strong>
+              <em>${note}</em>
+            </article>
+          `).join("")}
+        </section>
+      `;
+    }
+
+    function renderFeatures(accountKey) {
+      const featurePages = rolePages[accountKey].filter((key) => key !== accounts[accountKey].defaultPage);
+      return `
+        <section class="panel">
+          <div class="panel-title">
+            <h3>功能入口</h3>
+            <span class="pill">与侧边栏一致</span>
+          </div>
+          <div class="feature-grid">
+            ${featurePages.map((key) => `
+              <button class="feature-card" onclick="navigate('${key}')">
+                <strong>${navItems[key].label}</strong>
+                <span>${navItems[key].desc}</span>
+              </button>
+            `).join("")}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderRows(copy) {
+      const selected = copy.rows[selectedRow] || copy.rows[0];
+      return `
+        <section class="detail-grid">
+          <div class="panel">
+            <div class="panel-title">
+              <h3>最近记录</h3>
+              <span>${copy.rows.length} 条</span>
+            </div>
+            <div class="row-list">
+              ${copy.rows.map((row, index) => `
+                <button class="row-button ${index === selectedRow ? "active" : ""}" onclick="selectRow(${index})">
+                  <strong>${row[0]}</strong>
+                  <span>${row[2]}</span>
+                  <small>${row[1]}</small>
+                </button>
+              `).join("")}
+            </div>
+          </div>
+          <aside class="panel">
+            <div class="panel-title">
+              <h3>详情与处理</h3>
+              <span class="pill">${selected[1]}</span>
+            </div>
+            <dl class="detail-list">
+              <div><dt>对象</dt><dd>${selected[0]}</dd></div>
+              <div><dt>当前状态</dt><dd>${selected[1]}</dd></div>
+              <div><dt>业务说明</dt><dd>${selected[2]}</dd></div>
+              <div><dt>权限解释</dt><dd>如果当前账号无权访问该模块，菜单不会出现；手动改 URL 也会被拦截。</dd></div>
+            </dl>
+            <div class="inline-actions">
+              <button class="tiny-button" onclick="showDrawer('已记录处理动作。正式实现时这里会调用对应业务页面或接口。')">记录处理</button>
+              <button class="tiny-button" onclick="showDrawer('筛选、列表、详情和状态反馈需要在正式页面中保持可用。')">查看验收点</button>
+            </div>
+          </aside>
+        </section>
+      `;
+    }
+
+    function renderMatrix() {
+      const modules = [
+        ["客户增长", ["admin", "consultant"]],
+        ["员工通用", ["admin", "manager", "consultant", "employee", "teacher"]],
+        ["老师学生服务", ["admin", "teacher"]],
+        ["学生服务台", ["admin", "student"]],
+        ["经营管理", ["admin", "manager"]],
+        ["系统治理", ["admin"]],
+        ["报告中心", ["admin", "manager"]]
+      ];
+      const roles = ["admin", "manager", "consultant", "employee", "teacher", "student"];
+      return `
+        <section class="matrix-panel">
+          <div class="panel-title">
+            <h3>权限矩阵速览</h3>
+            <span class="pill">阶段 1 已确认</span>
+          </div>
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th>模块</th>
+                ${roles.map((role) => `<th>${accounts[role].role}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${modules.map(([module, allowed]) => `
+                <tr>
+                  <td><strong>${module}</strong></td>
+                  ${roles.map((role) => `<td class="${allowed.includes(role) ? "check" : "deny"}">${allowed.includes(role) ? "可见" : "不显示"}</td>`).join("")}
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </section>
+      `;
+    }
+
+    function renderContent(accountKey) {
+      const account = accounts[accountKey];
+      const copy = workspaceCopy[accountKey];
+      const current = navItems[state.page] || navItems[account.defaultPage];
+      const isOverview = state.page === account.defaultPage || state.page.endsWith("Overview");
+      return `
+        <div class="status-strip">
+          <span class="pill">当前账号：${account.name}</span>
+          <span class="pill">主角色：${account.role}</span>
+          <span class="pill">当前模块：${current.label}</span>
+          <span class="pill">URL 恢复：account=${accountKey}&page=${state.page}&leadId=1</span>
+        </div>
+        <div class="notice ${notice ? "show" : ""}">${notice}</div>
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">${account.role} / ${current.group}</p>
+            <h2>${isOverview ? copy.title : current.label}</h2>
+            <p>${isOverview ? copy.subtitle : current.desc + "。本预览只展示该模块进入后的结构感，正式实现会复用现有业务页面和数据流。"}</p>
+          </div>
+          <div class="inline-actions">
+            <button class="ghost-button" onclick="simulateDenied()">模拟 URL 越权</button>
+            <button class="ghost-button" onclick="window.location.reload()">刷新恢复</button>
+            <button class="primary-button" onclick="showDrawer('当前账号菜单、总览卡片和 URL 权限规则已经联动。')">查看说明</button>
+          </div>
+        </section>
+        ${renderMetrics(copy)}
+        ${renderFeatures(accountKey)}
+        ${renderRows(copy)}
+        <div style="height:18px"></div>
+        ${renderMatrix()}
+      `;
+    }
+
+    function renderWorkspace() {
+      applyUrlGuard();
+      const account = accounts[state.account];
+      return `
+        <main class="workspace">
+          <header class="topbar">
+            <div class="brand-block">
+              <span class="brand-mark">${account.badge}</span>
+              <div>
+                <h1>${state.account === "student" ? "学生服务台" : "教育服务运营后台"}</h1>
+                <p>${state.account === "student" ? "轻量自助服务入口" : "按账号权限进入对应业务后台"}</p>
+              </div>
+            </div>
+            <div class="top-actions">
+              <div class="identity-card">
+                <span class="account-avatar">${account.name.slice(0, 1)}</span>
+                <span>
+                  <strong>${account.name} / ${account.role}</strong>
+                  <small>${account.title}，${account.scope}</small>
+                </span>
+              </div>
+              <button class="ghost-button" onclick="logout()">返回登录</button>
+            </div>
+          </header>
+          <section class="shell">
+            <aside class="sidebar">
+              ${renderSidebar(state.account)}
+            </aside>
+            <section class="content">
+              ${renderContent(state.account)}
+            </section>
+          </section>
+        </main>
+        <aside id="drawer" class="drawer">
+          <div class="panel-title">
+            <h3>操作反馈</h3>
+            <button class="tiny-button" onclick="hideDrawer()">关闭</button>
+          </div>
+          <p id="drawerText" class="muted"></p>
+        </aside>
+      `;
+    }
+
+    function selectRow(index) {
+      selectedRow = index;
+      render();
+    }
+
+    function showDrawer(text) {
+      const drawer = document.getElementById("drawer");
+      const drawerText = document.getElementById("drawerText");
+      if (!drawer || !drawerText) return;
+      drawerText.textContent = text;
+      drawer.classList.add("show");
+    }
+
+    function hideDrawer() {
+      const drawer = document.getElementById("drawer");
+      if (drawer) drawer.classList.remove("show");
+    }
+
+    function simulateDenied() {
+      const deniedByRole = {
+        admin: "studentOverview",
+        manager: "adminUsers",
+        consultant: "teacherLeaveApproval",
+        employee: "managerRiskQueue",
+        teacher: "adminPermissions",
+        student: "employeeReports"
+      };
+      navigate(deniedByRole[state.account], { notice: "" });
+    }
+
+    function render() {
+      const app = document.getElementById("app");
+      app.innerHTML = state.mode === "login" ? renderLogin() : renderWorkspace();
+    }
+
+    window.addEventListener("popstate", () => {
+      state = readUrlState();
+      notice = "";
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
