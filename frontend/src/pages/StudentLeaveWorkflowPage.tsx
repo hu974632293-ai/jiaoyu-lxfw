@@ -32,16 +32,16 @@ export default function StudentLeaveWorkflowPage() {
     detail: "填写请假原因后提交给老师审批，处理结果会在本页回显。",
   });
 
-  const studentOptions = students.length
-    ? students.map((item) => ({
-        id: item.id,
-        name: item.student_name,
-        project: item.enrollment_project,
-        status: item.status,
-        risk: item.risk_level,
-      }))
-    : studentRows;
-  const selectedStudent = studentOptions.find((item) => item.id === selectedStudentId) ?? studentOptions[0];
+  const currentStudent = students.find((item) => item.id === selectedStudentId) ?? students[0];
+  const selectedStudent = currentStudent
+    ? {
+        id: currentStudent.id,
+        name: currentStudent.student_name,
+        project: currentStudent.enrollment_project,
+        status: currentStudent.status,
+        risk: currentStudent.risk_level,
+      }
+    : (studentRows.find((item) => item.id === selectedStudentId) ?? studentRows[0]);
   const selectedLeave = leaves.find((item) => item.id === selectedLeaveId) ?? leaves[0] ?? null;
 
   useEffect(() => {
@@ -265,23 +265,7 @@ export default function StudentLeaveWorkflowPage() {
         <article><span>当前状态</span><strong>{selectedLeave?.status ?? "未选择"}</strong><em>刷新后保留</em></article>
       </section>
 
-      <section className="workflow-action-layout">
-        <aside className="panel-block">
-          <div className="section-title">
-            <h3>学生</h3>
-            <span>{studentOptions.length} 人</span>
-          </div>
-          <div className="select-list">
-            {studentOptions.map((item) => (
-              <button className={item.id === selectedStudent.id ? "active" : ""} key={item.id} onClick={() => setSelectedStudentId(item.id)}>
-                <strong>{item.name}</strong>
-                <span>{item.project}</span>
-                <em>{item.status}</em>
-              </button>
-            ))}
-          </div>
-        </aside>
-
+      <section className="workflow-student-layout">
         <div className="workflow-main-column">
           <section className="panel-block">
             <div className="section-title">

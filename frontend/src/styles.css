@@ -1193,6 +1193,13 @@ td span {
   align-items: start;
 }
 
+.workflow-student-layout {
+  display: grid;
+  grid-template-columns: minmax(520px, 1fr) minmax(360px, 0.78fr);
+  gap: 12px;
+  align-items: start;
+}
+
 .workflow-main-column,
 .workflow-detail-column {
   display: grid;
@@ -3607,6 +3614,7 @@ textarea {
   .workflow-two-column,
   .workflow-detail-grid,
   .workflow-action-layout,
+  .workflow-student-layout,
   .workflow-teacher-layout {
     grid-template-columns: 1fr;
   }

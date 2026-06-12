@@ -13,6 +13,7 @@ const requiredPages = [
   ["teacherLeaveApproval", "TeacherLeaveApprovalWorkflowPage"],
   ["teacherFeedback", "TeacherFeedbackWorkflowPage"],
 ];
+const studentPages = new Set(["StudentLeaveWorkflowPage", "StudentFeedbackWorkflowPage"]);
 
 for (const [pageKey, componentName] of requiredPages) {
   const componentSource = readFileSync(join(srcRoot, "pages", `${componentName}.tsx`), "utf8");
@@ -32,12 +33,30 @@ for (const [pageKey, componentName] of requiredPages) {
   );
   assert.match(
     componentSource,
-    /className="workflow-action-layout"/,
-    `${componentName} 应使用同屏业务处理布局`,
-  );
-  assert.match(
-    componentSource,
     /className="workflow-detail-column"/,
     `${componentName} 应包含同屏详情记录列`,
   );
+  if (studentPages.has(componentName)) {
+    assert.match(
+      componentSource,
+      /className="workflow-student-layout"/,
+      `${componentName} 学生端应使用本人事项两列布局`,
+    );
+    assert.doesNotMatch(
+      componentSource,
+      /<h3>学生<\/h3>/,
+      `${componentName} 学生端不应渲染学生选择列`,
+    );
+    assert.doesNotMatch(
+      componentSource,
+      /studentOptions\.map/,
+      `${componentName} 学生端不应遍历学生列表作为页面功能`,
+    );
+  } else {
+    assert.match(
+      componentSource,
+      /className="workflow-action-layout"/,
+      `${componentName} 应使用同屏业务处理布局`,
+    );
+  }
 }
