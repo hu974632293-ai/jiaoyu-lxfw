@@ -217,3 +217,113 @@ def test_demo_seed_covers_final_business_domains():
         "knowledge_sources",
     ]:
         assert data[key] > 0
+
+
+def test_demo_seed_builds_realistic_business_volume_idempotently():
+    from app.models.crm import CrmFollowUp, CrmTask
+    from app.models.event import EventRegistration
+    from app.models.enterprise import EmployeeDailyReport, EmployeeProfile
+    from app.models.lead import CrmLead, Customer
+    from app.models.report import ReportSnapshot
+    from app.models.student import (
+        StudentAcademicEvent,
+        StudentAcademicNode,
+        StudentApplicationProgress,
+        StudentFeedbackTicket,
+        StudentGrade,
+        StudentLeaveApproval,
+        StudentProfile,
+        StudentPsychAlert,
+    )
+
+    response = client.post("/api/demo/seed")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 0
+    data = payload["data"]
+    assert data["customers"] >= 24
+    assert data["leads"] >= 48
+    assert data["employees"] >= 8
+    assert data["students"] >= 10
+    assert data["events"] >= 6
+    assert data["reports"] >= 4
+
+    with SessionLocal() as db:
+        before_counts = {
+            "demo_crm_leads": db.query(CrmLead).filter(CrmLead.source_channel == "真实业务演示").count(),
+            "demo_customers": db.query(Customer).filter(Customer.source_channel == "真实业务演示").count(),
+            "demo_students": db.query(StudentProfile)
+            .filter(StudentProfile.contact_info.like("%@student.demo"))
+            .count(),
+            "demo_employees": db.query(EmployeeProfile)
+            .filter(EmployeeProfile.employee_no.like("EMP-DEMO-%"))
+            .count(),
+            "demo_followups": db.query(CrmFollowUp).count(),
+            "demo_tasks": db.query(CrmTask).count(),
+            "demo_registrations": db.query(EventRegistration)
+            .filter(EventRegistration.source_channel == "官网活动报名")
+            .count(),
+            "demo_daily_reports": db.query(EmployeeDailyReport).count(),
+            "demo_leave_approvals": db.query(StudentLeaveApproval).count(),
+            "demo_feedback": db.query(StudentFeedbackTicket).count(),
+            "demo_grades": db.query(StudentGrade).count(),
+            "demo_academic_events": db.query(StudentAcademicEvent).count(),
+            "demo_academic_nodes": db.query(StudentAcademicNode).count(),
+            "demo_progress": db.query(StudentApplicationProgress).count(),
+            "demo_psych_alerts": db.query(StudentPsychAlert).count(),
+            "demo_reports": db.query(ReportSnapshot)
+            .filter(ReportSnapshot.generation_mode == "realistic_demo")
+            .count(),
+        }
+
+    assert before_counts["demo_crm_leads"] >= 24
+    assert before_counts["demo_customers"] >= 24
+    assert before_counts["demo_students"] >= 10
+    assert before_counts["demo_employees"] >= 8
+    assert before_counts["demo_followups"] >= 24
+    assert before_counts["demo_tasks"] >= 16
+    assert before_counts["demo_registrations"] >= 18
+    assert before_counts["demo_daily_reports"] >= 16
+    assert before_counts["demo_leave_approvals"] >= 10
+    assert before_counts["demo_feedback"] >= 10
+    assert before_counts["demo_grades"] >= 30
+    assert before_counts["demo_academic_events"] >= 20
+    assert before_counts["demo_academic_nodes"] >= 20
+    assert before_counts["demo_progress"] >= 30
+    assert before_counts["demo_psych_alerts"] >= 6
+    assert before_counts["demo_reports"] >= 4
+
+    second_response = client.post("/api/demo/seed")
+    assert second_response.status_code == 200
+    assert second_response.json()["code"] == 0
+
+    with SessionLocal() as db:
+        after_counts = {
+            "demo_crm_leads": db.query(CrmLead).filter(CrmLead.source_channel == "真实业务演示").count(),
+            "demo_customers": db.query(Customer).filter(Customer.source_channel == "真实业务演示").count(),
+            "demo_students": db.query(StudentProfile)
+            .filter(StudentProfile.contact_info.like("%@student.demo"))
+            .count(),
+            "demo_employees": db.query(EmployeeProfile)
+            .filter(EmployeeProfile.employee_no.like("EMP-DEMO-%"))
+            .count(),
+            "demo_followups": db.query(CrmFollowUp).count(),
+            "demo_tasks": db.query(CrmTask).count(),
+            "demo_registrations": db.query(EventRegistration)
+            .filter(EventRegistration.source_channel == "官网活动报名")
+            .count(),
+            "demo_daily_reports": db.query(EmployeeDailyReport).count(),
+            "demo_leave_approvals": db.query(StudentLeaveApproval).count(),
+            "demo_feedback": db.query(StudentFeedbackTicket).count(),
+            "demo_grades": db.query(StudentGrade).count(),
+            "demo_academic_events": db.query(StudentAcademicEvent).count(),
+            "demo_academic_nodes": db.query(StudentAcademicNode).count(),
+            "demo_progress": db.query(StudentApplicationProgress).count(),
+            "demo_psych_alerts": db.query(StudentPsychAlert).count(),
+            "demo_reports": db.query(ReportSnapshot)
+            .filter(ReportSnapshot.generation_mode == "realistic_demo")
+            .count(),
+        }
+
+    assert after_counts == before_counts
