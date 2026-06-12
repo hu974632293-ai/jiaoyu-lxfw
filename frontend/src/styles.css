@@ -1037,6 +1037,10 @@ td span {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.admin-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .panel-block {
   padding: 14px;
 }
@@ -1998,7 +2002,11 @@ textarea {
 }
 
 .role-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.permission-list {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .permission-list code {
@@ -3861,7 +3869,40 @@ textarea {
 }
 
 .student-soft-layout {
-  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.student-soft-layout .side-stack {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.student-chat-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.student-chat-panel .section-title {
+  grid-column: 1 / -1;
+}
+
+.student-chat-panel .message-list {
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.student-chat-panel .composer {
+  margin-top: 0;
+  display: grid;
+  align-content: stretch;
+  align-items: stretch;
+}
+
+.student-chat-panel .composer textarea {
+  min-height: 196px;
 }
 
 .student-chat-panel .message {
@@ -3893,8 +3934,13 @@ textarea {
   .advisor-workbench-grid,
   .student-hero,
   .student-soft-layout,
+  .student-chat-panel,
   .student-workspace-grid {
     grid-template-columns: 1fr;
+  }
+
+  .student-chat-panel .composer textarea {
+    min-height: 120px;
   }
 
   .public-conversion-strip,

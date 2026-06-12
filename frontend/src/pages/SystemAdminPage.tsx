@@ -263,6 +263,8 @@ export default function SystemAdminPage({ role, initialView = "overview" }: Syst
   const showPermissions = showOverview || initialView === "permissions";
   const showAudit = showOverview || initialView === "audit";
   const showNotifications = showOverview || initialView === "notifications";
+  const userRoleGridClass = showUsers && showRoles ? "admin-grid" : "admin-grid admin-grid-single";
+  const permissionNotificationGridClass = showPermissions && showNotifications ? "admin-grid" : "admin-grid admin-grid-single";
 
   return (
     <div className="page-stack">
@@ -285,7 +287,7 @@ export default function SystemAdminPage({ role, initialView = "overview" }: Syst
       <OperationFeedback feedback={operationFeedback} />
 
       {(showUsers || showRoles) && (
-        <section className="admin-grid">
+        <section className={userRoleGridClass}>
           {showUsers && (
             <div className="panel-block table-panel">
               <div className="section-title">
@@ -340,7 +342,7 @@ export default function SystemAdminPage({ role, initialView = "overview" }: Syst
       )}
 
       {(showPermissions || showNotifications) && (
-        <section className="admin-grid">
+        <section className={permissionNotificationGridClass}>
           {showPermissions && (
             <div className="panel-block">
               <div className="section-title">
