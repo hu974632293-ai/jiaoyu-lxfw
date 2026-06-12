@@ -147,6 +147,21 @@ export default function BackofficeShellPage({
     if (activePage === "consultantEvents") {
       return <Customer360Page selectedLeadId={selectedLeadId} initialTab="events" onNavigate={onNavigate} />;
     }
+    if (activePage === "employeeQuickEntry") {
+      return <EmployeeWorkspacePage initialView="quickEntry" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "employeeReports") {
+      return <EmployeeWorkspacePage initialView="reports" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "employeeOrg") {
+      return <EmployeeWorkspacePage initialView="org" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "employeeCustomerQuery") {
+      return <EmployeeWorkspacePage initialView="customerQuery" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "employeeGuide") {
+      return <EmployeeWorkspacePage initialView="guide" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
     if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
     }

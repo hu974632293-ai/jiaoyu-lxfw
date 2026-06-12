@@ -59,6 +59,14 @@ type Nl2SqlResult = {
   status: "success" | "blocked";
   result: Record<string, unknown>;
 };
+type LeadCreated = { id: number };
+type LeadVoiceDraft = {
+  customer_name: string;
+  contact_info?: string;
+  background_info: string;
+  source_channel: string;
+  owner_id?: number | null;
+};
 type DailyReportVoiceDraft = {
   content: string;
   structured_summary: {
@@ -74,14 +82,57 @@ type VoiceDraftResponse<TDraft> = {
 };
 
 const customerDraft = "录入客户：王晨，高三，想去新加坡读本科，家长关注预算和就业前景。";
-const statusDraft = "更新客户王晨状态为高潜，今天 17:30 回访家长。";
+const statusDraft = "把客户 1 状态更新为 high_potential，原因：员工确认高潜";
 
-export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
+type EmployeeWorkspaceView = "overview" | "quickEntry" | "reports" | "org" | "customerQuery" | "guide";
+
+type EmployeeWorkspacePageProps = PageProps & {
+  initialView?: EmployeeWorkspaceView;
+};
+
+const viewCopy: Record<EmployeeWorkspaceView, { eyebrow: string; title: string; subtitle: string }> = {
+  overview: {
+    eyebrow: "员工工作台",
+    title: "客户快捷操作、日报和内部查询",
+    subtitle: "低成本处理客户录入、状态查询、日报和组织支持。",
+  },
+  quickEntry: {
+    eyebrow: "客户快捷录入",
+    title: "先生成客户草稿，确认后进入客户队列",
+    subtitle: "口述或粘贴客户资料，核对姓名、联系方式和背景后再保存。",
+  },
+  reports: {
+    eyebrow: "日报/周报",
+    title: "提交日报并查看团队汇总",
+    subtitle: "支持口述日报草稿、日期/员工/部门筛选和日报详情。",
+  },
+  org: {
+    eyebrow: "组织查询",
+    title: "查询部门职责和联系人",
+    subtitle: "按部门、职责或联系人搜索，查看受控内部联系方式。",
+  },
+  customerQuery: {
+    eyebrow: "客户查询",
+    title: "受控查询客户状态和轻量更新",
+    subtitle: "只返回允许范围内的客户统计，写入类查询会被阻断。",
+  },
+  guide: {
+    eyebrow: "新人指南",
+    title: "查看制度流程和常用协作路径",
+    subtitle: "围绕客户录入、日报口径、组织协作和查询边界提供指引。",
+  },
+};
+
+export default function EmployeeWorkspacePage({ onNavigate, initialView = "overview" }: EmployeeWorkspacePageProps) {
   const [message, setMessage] = useState("员工工作台待操作");
+  const [leadVoiceText, setLeadVoiceText] = useState(customerDraft);
+  const [leadDraft, setLeadDraft] = useState<LeadVoiceDraft | null>(null);
   const [dailyContent, setDailyContent] = useState("今天跟进 8 个客户，2 个高潜进入活动邀约，风险是德国项目材料不齐，明天补齐材料清单。");
   const [dailyVoiceText, setDailyVoiceText] = useState("今天跟进 6 个客户，风险是德国项目材料不齐，明天补齐材料清单。");
   const [dailyDraft, setDailyDraft] = useState<DailyReportVoiceDraft | null>(null);
   const [dailyFilters, setDailyFilters] = useState({ startDate: "", endDate: "", employee: "", department: "" });
+  const [summaryType, setSummaryType] = useState<"daily" | "weekly">("daily");
+  const [summaryWeekStart, setSummaryWeekStart] = useState("");
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
@@ -107,8 +158,9 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
 
   function buildDailySummaryPath() {
     return buildPath("/api/enterprise-assistant/daily-reports/summary", {
-      summary_type: "daily",
-      date: dailyFilters.endDate || dailyFilters.startDate,
+      summary_type: summaryType,
+      date: summaryType === "daily" ? dailyFilters.endDate || dailyFilters.startDate : "",
+      week_start: summaryType === "weekly" ? summaryWeekStart : "",
       department: dailyFilters.department,
     });
   }
@@ -158,6 +210,49 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
       next?.();
     } catch (error) {
       setMessage(error instanceof Error ? `员工指令失败：${error.message}` : "员工指令失败");
+    }
+  }
+
+  async function buildLeadVoiceDraft() {
+    if (!leadVoiceText.trim()) {
+      setMessage("请先输入客户资料");
+      return;
+    }
+    setMessage("正在生成客户草稿...");
+    try {
+      const data = await apiRequest<VoiceDraftResponse<LeadVoiceDraft>>("/api/enterprise-assistant/voice-drafts", {
+        method: "POST",
+        body: JSON.stringify({ target_type: "lead", transcript: leadVoiceText, actor_username: "admin" }),
+      });
+      setLeadDraft(data.draft);
+      setMessage("客户草稿已生成，请确认后保存");
+    } catch (error) {
+      setMessage(error instanceof Error ? `客户草稿生成失败：${error.message}` : "客户草稿生成失败");
+    }
+  }
+
+  async function confirmLeadDraft() {
+    if (!leadDraft) {
+      setMessage("请先生成客户草稿");
+      return;
+    }
+    setMessage("正在保存客户线索...");
+    try {
+      const data = await apiRequest<LeadCreated>("/api/leads", {
+        method: "POST",
+        body: JSON.stringify(leadDraft),
+      });
+      setMessage(`客户线索已保存：#${data.id}`);
+      setLeadDraft(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? `客户线索保存失败：${error.message}` : "客户线索保存失败");
+    }
+  }
+
+  function startLeadVoiceInput() {
+    const started = startSpeechToText(setLeadVoiceText, (errorMessage) => setMessage(errorMessage));
+    if (started) {
+      setMessage("正在听取客户资料，完成后请确认文本并生成草稿");
     }
   }
 
@@ -242,21 +337,30 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
   }
 
   const latestReport = selectedReport ?? dailyReports[0];
+  const copy = viewCopy[initialView];
+  const showQuickEntry = initialView === "overview" || initialView === "quickEntry";
+  const showReports = initialView === "overview" || initialView === "reports";
+  const showOrg = initialView === "overview" || initialView === "org";
+  const showGuide = initialView === "overview" || initialView === "guide";
+  const showCustomerQuery = initialView === "overview" || initialView === "customerQuery";
+  const queryCount = typeof queryResult?.result.count === "number" ? queryResult.result.count : null;
+  const queryReason = typeof queryResult?.result.reason === "string" ? queryResult.result.reason : "";
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">员工工作台</p>
-          <h2>客户快捷操作、日报和内部查询</h2>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h2>{copy.title}</h2>
+          <p>{copy.subtitle}</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={refresh}>
             <RefreshCw size={16} aria-hidden="true" />
             刷新
           </button>
-          <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>
-            客户增长
+          <button className="icon-button" onClick={() => onNavigate("employeeCustomerQuery")}>
+            客户查询
           </button>
         </div>
       </section>
@@ -283,36 +387,93 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
         </article>
       </section>
 
-      <section className="role-action-grid" aria-label="员工快捷入口">
-        <button className="role-action-card" onClick={() => runCommand(customerDraft, () => onNavigate("customerGrowth"))}>
-          <UserPlus size={20} aria-hidden="true" />
-          <strong>录入客户</strong>
-          <span>写入客户线索</span>
-        </button>
-        <button className="role-action-card" onClick={runControlledQuery}>
-          <Search size={20} aria-hidden="true" />
-          <strong>查询客户</strong>
-          <span>白名单统计</span>
-        </button>
-        <button className="role-action-card" onClick={() => runCommand(statusDraft, () => onNavigate("customerGrowth"))}>
-          <ClipboardCheck size={20} aria-hidden="true" />
-          <strong>更新状态</strong>
-          <span>同步跟进状态</span>
-        </button>
-        <button className="role-action-card" onClick={submitDailyReport}>
-          <Database size={20} aria-hidden="true" />
-          <strong>提交日报</strong>
-          <span>生成结构化摘要</span>
-        </button>
-      </section>
+      {initialView === "overview" ? (
+        <section className="role-action-grid" aria-label="员工快捷入口">
+          <button className="role-action-card" onClick={buildLeadVoiceDraft}>
+            <UserPlus size={20} aria-hidden="true" />
+            <strong>录入客户</strong>
+            <span>先生成草稿</span>
+          </button>
+          <button className="role-action-card" onClick={runControlledQuery}>
+            <Search size={20} aria-hidden="true" />
+            <strong>查询客户</strong>
+            <span>白名单统计</span>
+          </button>
+          <button className="role-action-card" onClick={() => runCommand(statusDraft)}>
+            <ClipboardCheck size={20} aria-hidden="true" />
+            <strong>更新状态</strong>
+            <span>同步跟进状态</span>
+          </button>
+          <button className="role-action-card" onClick={submitDailyReport}>
+            <Database size={20} aria-hidden="true" />
+            <strong>提交日报</strong>
+            <span>生成结构化摘要</span>
+          </button>
+        </section>
+      ) : null}
 
-      <section className="role-workbench-grid employee-workbench-grid">
-        <div className="panel-block employee-daily-panel">
+      {showQuickEntry ? (
+        <section className="panel-block">
+          <div className="section-title">
+            <h3>客户快捷录入</h3>
+            <span className="status-pill">确认后保存</span>
+          </div>
+          <label className="stacked-input">
+            <span>客户资料</span>
+            <textarea value={leadVoiceText} onChange={(event) => setLeadVoiceText(event.target.value)} rows={4} />
+          </label>
+          <div className="inline-actions">
+            <button className="tiny-button" onClick={startLeadVoiceInput}>
+              <Mic size={14} aria-hidden="true" />
+              开始语音输入
+            </button>
+            <button className="tiny-button" onClick={buildLeadVoiceDraft}>生成客户草稿</button>
+            <button className="tiny-button" onClick={confirmLeadDraft} disabled={!leadDraft}>确认保存</button>
+          </div>
+          {leadDraft ? (
+            <dl className="detail-list">
+              <div>
+                <dt>客户姓名</dt>
+                <dd>{leadDraft.customer_name || "待补充"}</dd>
+              </div>
+              <div>
+                <dt>联系方式</dt>
+                <dd>{leadDraft.contact_info || "待补充"}</dd>
+              </div>
+              <div>
+                <dt>背景资料</dt>
+                <dd>{leadDraft.background_info}</dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="empty-state">生成草稿后可在这里核对客户资料。</div>
+          )}
+        </section>
+      ) : null}
+
+      {showReports || showOrg || showGuide || showCustomerQuery ? <section className="role-workbench-grid employee-workbench-grid">
+        {showReports ? <div className="panel-block employee-daily-panel">
           <div className="section-title">
             <h3>日报</h3>
             <span className="status-pill">{dailySummary?.report_count ?? 0} 条</span>
           </div>
           <div className="form-grid compact-form-grid">
+            <label className="stacked-input">
+              <span>汇总类型</span>
+              <select value={summaryType} onChange={(event) => setSummaryType(event.target.value as "daily" | "weekly")}>
+                <option value="daily">日报</option>
+                <option value="weekly">周报</option>
+              </select>
+            </label>
+            <label className="stacked-input">
+              <span>周起始日</span>
+              <input
+                type="date"
+                value={summaryWeekStart}
+                onChange={(event) => setSummaryWeekStart(event.target.value)}
+                disabled={summaryType !== "weekly"}
+              />
+            </label>
             <label className="stacked-input">
               <span>开始日期</span>
               <input
@@ -416,10 +577,10 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
           ) : (
             <div className="empty-state">暂无日报。</div>
           )}
-        </div>
+        </div> : null}
 
-        <aside className="side-stack employee-side-panel">
-          <section className="panel-block">
+        {showOrg || showGuide || showCustomerQuery ? <aside className="side-stack employee-side-panel">
+          {showOrg ? <section className="panel-block">
             <div className="section-title">
               <h3>组织架构</h3>
               <Building2 size={18} aria-hidden="true" />
@@ -438,9 +599,9 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
                 </article>
               )) : <div className="empty-state">暂无组织架构。</div>}
             </div>
-          </section>
+          </section> : null}
 
-          <section className="panel-block">
+          {showGuide ? <section className="panel-block">
             <div className="section-title">
               <h3>新人指南</h3>
               <span className="status-pill">内部</span>
@@ -450,9 +611,9 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
               <article><strong>日报口径</strong><span>进展、风险、明日动作必须明确。</span></article>
               <article><strong>受控查询</strong><span>只允许白名单只读统计。</span></article>
             </div>
-          </section>
+          </section> : null}
 
-          <section className="panel-block">
+          {showOrg || showGuide ? <section className="panel-block">
             <div className="section-title">
               <h3>通讯录</h3>
               <span className="status-pill">{directoryContacts.length} 人</span>
@@ -483,17 +644,34 @@ export default function EmployeeWorkspacePage({ onNavigate }: PageProps) {
                 </div>
               </dl>
             ) : null}
-          </section>
+          </section> : null}
 
-          <section className="panel-block">
+          {showCustomerQuery ? <section className="panel-block">
             <div className="section-title">
               <h3>查询客户</h3>
               <span className="status-pill">{queryResult?.status ?? "待查询"}</span>
             </div>
-            <pre>{queryResult ? JSON.stringify(queryResult.result, null, 2) : "暂无查询结果"}</pre>
-          </section>
-        </aside>
-      </section>
+            <div className="inline-actions">
+              <button className="tiny-button" onClick={runControlledQuery}>查询高潜客户数量</button>
+              <button className="tiny-button" onClick={() => runCommand(statusDraft)}>更新示例客户状态</button>
+            </div>
+            {queryResult ? (
+              <dl className="detail-list">
+                <div>
+                  <dt>查询状态</dt>
+                  <dd>{queryResult.status === "blocked" ? "已阻断" : "已返回"}</dd>
+                </div>
+                <div>
+                  <dt>结果</dt>
+                  <dd>{queryCount !== null ? `${queryCount} 条` : queryReason || "暂无明细"}</dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="empty-state">点击查询后显示允许范围内的统计结果。</div>
+            )}
+          </section> : null}
+        </aside> : null}
+      </section> : null}
     </div>
   );
 }
