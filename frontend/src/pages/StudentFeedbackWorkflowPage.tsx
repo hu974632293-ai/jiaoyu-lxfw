@@ -219,7 +219,7 @@ export default function StudentFeedbackWorkflowPage() {
         <article><span>当前状态</span><strong>{selectedTicket?.status ?? "未选择"}</strong><em>刷新后保留</em></article>
       </section>
 
-      <section className="workflow-three-column">
+      <section className="workflow-action-layout">
         <aside className="panel-block">
           <div className="section-title">
             <h3>学生</h3>
@@ -236,91 +236,93 @@ export default function StudentFeedbackWorkflowPage() {
           </div>
         </aside>
 
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>反馈表单</h3>
-            <MessageSquareWarning size={18} aria-hidden="true" />
-          </div>
-          <div className="compact-form-grid">
-            <label>
-              <span>类型</span>
-              <select value={category} onChange={(event) => setCategory(event.target.value)}>
-                <option value="投诉建议">投诉建议</option>
-                <option value="住宿">住宿</option>
-                <option value="课程">课程</option>
-                <option value="申请服务">申请服务</option>
-              </select>
-            </label>
-            <label>
-              <span>内容</span>
-              <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={6} />
-            </label>
-          </div>
-          <div className="inline-actions">
-            <button onClick={() => void submitFeedback()} disabled={isBusy}>
-              <Send size={15} aria-hidden="true" />
-              {pendingAction === "create" ? "正在提交" : "提交新反馈"}
-            </button>
-            <button className="ghost-button" onClick={() => void replyFeedback()} disabled={isBusy || !selectedTicket || selectedTicket.status === "已归档"}>
-              补充当前工单
-            </button>
-          </div>
-        </section>
-
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>我的反馈</h3>
-            <span>{tickets.length} 条</span>
-          </div>
-          <div className="select-list workflow-list">
-            {tickets.map((item) => (
-              <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
-                <strong>#{item.id} {item.category} / {item.status}</strong>
-                <span>{item.summary || item.content}</span>
-                <em>{item.resolution || "等待处理"}</em>
-              </button>
-            ))}
-            {!tickets.length ? <div className="empty-state">暂无反馈记录，可从中间表单提交。</div> : null}
-          </div>
-        </section>
-      </section>
-
-      <section className="workflow-detail-grid">
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>工单详情</h3>
-            <span className="status-pill">{selectedTicket?.status ?? "未选择"}</span>
-          </div>
-          {selectedTicket ? (
-            <div className="workflow-detail-card">
-              <strong>工单 #{selectedTicket.id}</strong>
-              <span>{selectedTicket.content}</span>
-              <p>摘要：{selectedTicket.summary || "暂无摘要"}</p>
-              <p>处理结果：{selectedTicket.resolution || "等待老师处理"}</p>
+        <div className="workflow-main-column">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>反馈表单</h3>
+              <MessageSquareWarning size={18} aria-hidden="true" />
             </div>
-          ) : (
-            <div className="empty-state">请选择一条反馈工单。</div>
-          )}
-        </section>
+            <div className="compact-form-grid">
+              <label>
+                <span>类型</span>
+                <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                  <option value="投诉建议">投诉建议</option>
+                  <option value="住宿">住宿</option>
+                  <option value="课程">课程</option>
+                  <option value="申请服务">申请服务</option>
+                </select>
+              </label>
+              <label>
+                <span>内容</span>
+                <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={5} />
+              </label>
+            </div>
+            <div className="inline-actions">
+              <button onClick={() => void submitFeedback()} disabled={isBusy}>
+                <Send size={15} aria-hidden="true" />
+                {pendingAction === "create" ? "正在提交" : "提交新反馈"}
+              </button>
+              <button className="ghost-button" onClick={() => void replyFeedback()} disabled={isBusy || !selectedTicket || selectedTicket.status === "已归档"}>
+                补充当前工单
+              </button>
+            </div>
+          </section>
 
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>处理记录</h3>
-            <span>{timeline.length} 条</span>
-          </div>
-          <div className="timeline">
-            {timeline.map((item) => (
-              <article key={item.id}>
-                <span>{formatWorkflowDate(item.created_at)}</span>
-                <div>
-                  <strong>{item.action}</strong>
-                  <p>{timelineText(item)}</p>
-                </div>
-              </article>
-            ))}
-            {!timeline.length ? <div className="empty-state">提交或选择工单后查看时间线。</div> : null}
-          </div>
-        </section>
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>我的反馈</h3>
+              <span>{tickets.length} 条</span>
+            </div>
+            <div className="select-list workflow-list">
+              {tickets.map((item) => (
+                <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
+                  <strong>#{item.id} {item.category} / {item.status}</strong>
+                  <span>{item.summary || item.content}</span>
+                  <em>{item.resolution || "等待处理"}</em>
+                </button>
+              ))}
+              {!tickets.length ? <div className="empty-state">暂无反馈记录，可从中间表单提交。</div> : null}
+            </div>
+          </section>
+        </div>
+
+        <div className="workflow-detail-column">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>工单详情</h3>
+              <span className="status-pill">{selectedTicket?.status ?? "未选择"}</span>
+            </div>
+            {selectedTicket ? (
+              <div className="workflow-detail-card">
+                <strong>工单 #{selectedTicket.id}</strong>
+                <span>{selectedTicket.content}</span>
+                <p>摘要：{selectedTicket.summary || "暂无摘要"}</p>
+                <p>处理结果：{selectedTicket.resolution || "等待老师处理"}</p>
+              </div>
+            ) : (
+              <div className="empty-state">请选择一条反馈工单。</div>
+            )}
+          </section>
+
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>处理记录</h3>
+              <span>{timeline.length} 条</span>
+            </div>
+            <div className="timeline">
+              {timeline.map((item) => (
+                <article key={item.id}>
+                  <span>{formatWorkflowDate(item.created_at)}</span>
+                  <div>
+                    <strong>{item.action}</strong>
+                    <p>{timelineText(item)}</p>
+                  </div>
+                </article>
+              ))}
+              {!timeline.length ? <div className="empty-state">提交或选择工单后查看时间线。</div> : null}
+            </div>
+          </section>
+        </div>
       </section>
     </div>
   );

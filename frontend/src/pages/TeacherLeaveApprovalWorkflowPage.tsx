@@ -156,80 +156,84 @@ export default function TeacherLeaveApprovalWorkflowPage() {
         <article><span>当前申请</span><strong>{selectedLeave ? `#${selectedLeave.id}` : "无"}</strong><em>{selectedLeave?.status ?? "未选择"}</em></article>
       </section>
 
-      <section className="workflow-two-column">
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>请假队列</h3>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="待审批">待审批</option>
-              <option value="已同意">已同意</option>
-              <option value="已驳回">已驳回</option>
-              <option value="已撤销">已撤销</option>
-              <option value="全部">全部</option>
-            </select>
-          </div>
-          <div className="select-list workflow-list">
-            {visibleLeaves.map((item) => (
-              <button className={item.id === selectedLeave?.id ? "active" : ""} key={item.id} onClick={() => setSelectedLeaveId(item.id)}>
-                <strong>#{item.id} 学生 #{item.student_id} / {item.status}</strong>
-                <span>{item.reason}</span>
-                <em>{formatWorkflowDate(item.start_time)} - {formatWorkflowDate(item.end_time)}</em>
-              </button>
-            ))}
-            {!visibleLeaves.length ? <div className="empty-state">当前筛选下暂无请假申请。</div> : null}
-          </div>
-        </section>
-
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>审批面板</h3>
-            <CalendarCheck size={18} aria-hidden="true" />
-          </div>
-          {selectedLeave ? (
-            <div className="workflow-detail-card">
-              <strong>请假 #{selectedLeave.id}</strong>
-              <span>{selectedLeave.reason}</span>
-              <p>时间：{formatWorkflowDate(selectedLeave.start_time)} - {formatWorkflowDate(selectedLeave.end_time)}</p>
-              <p>当前状态：{selectedLeave.status}</p>
+      <section className="workflow-action-layout">
+        <div className="workflow-teacher-layout">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>请假队列</h3>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="待审批">待审批</option>
+                <option value="已同意">已同意</option>
+                <option value="已驳回">已驳回</option>
+                <option value="已撤销">已撤销</option>
+                <option value="全部">全部</option>
+              </select>
             </div>
-          ) : (
-            <div className="empty-state">请选择请假申请。</div>
-          )}
-          <div className="compact-form-grid">
-            <label>
-              <span>审批意见</span>
-              <textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={4} />
-            </label>
-          </div>
-          <div className="inline-actions">
-            <button onClick={() => void approveLeave("已同意")} disabled={isBusy || !selectedLeave}>
-              <CheckCircle2 size={15} aria-hidden="true" />
-              {pendingAction === "approve" ? "正在同意" : "同意请假"}
-            </button>
-            <button className="ghost-button" onClick={() => void approveLeave("已驳回")} disabled={isBusy || !selectedLeave}>
-              <XCircle size={15} aria-hidden="true" />
-              {pendingAction === "reject" ? "正在驳回" : "驳回请假"}
-            </button>
-          </div>
-        </section>
-      </section>
+            <div className="select-list workflow-list">
+              {visibleLeaves.map((item) => (
+                <button className={item.id === selectedLeave?.id ? "active" : ""} key={item.id} onClick={() => setSelectedLeaveId(item.id)}>
+                  <strong>#{item.id} 学生 #{item.student_id} / {item.status}</strong>
+                  <span>{item.reason}</span>
+                  <em>{formatWorkflowDate(item.start_time)} - {formatWorkflowDate(item.end_time)}</em>
+                </button>
+              ))}
+              {!visibleLeaves.length ? <div className="empty-state">当前筛选下暂无请假申请。</div> : null}
+            </div>
+          </section>
 
-      <section className="panel-block">
-        <div className="section-title">
-          <h3>审批历史</h3>
-          <span>{timeline.length} 条</span>
-        </div>
-        <div className="timeline">
-          {timeline.map((item) => (
-            <article key={item.id}>
-              <span>{formatWorkflowDate(item.created_at)}</span>
-              <div>
-                <strong>{item.action}</strong>
-                <p>{timelineText(item)}</p>
+          <div className="workflow-detail-column">
+            <section className="panel-block">
+              <div className="section-title">
+                <h3>审批面板</h3>
+                <CalendarCheck size={18} aria-hidden="true" />
               </div>
-            </article>
-          ))}
-          {!timeline.length ? <div className="empty-state">选择请假申请后查看审批历史。</div> : null}
+              {selectedLeave ? (
+                <div className="workflow-detail-card">
+                  <strong>请假 #{selectedLeave.id}</strong>
+                  <span>{selectedLeave.reason}</span>
+                  <p>时间：{formatWorkflowDate(selectedLeave.start_time)} - {formatWorkflowDate(selectedLeave.end_time)}</p>
+                  <p>当前状态：{selectedLeave.status}</p>
+                </div>
+              ) : (
+                <div className="empty-state">请选择请假申请。</div>
+              )}
+              <div className="compact-form-grid">
+                <label>
+                  <span>审批意见</span>
+                  <textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={4} />
+                </label>
+              </div>
+              <div className="inline-actions">
+                <button onClick={() => void approveLeave("已同意")} disabled={isBusy || !selectedLeave}>
+                  <CheckCircle2 size={15} aria-hidden="true" />
+                  {pendingAction === "approve" ? "正在同意" : "同意请假"}
+                </button>
+                <button className="ghost-button" onClick={() => void approveLeave("已驳回")} disabled={isBusy || !selectedLeave}>
+                  <XCircle size={15} aria-hidden="true" />
+                  {pendingAction === "reject" ? "正在驳回" : "驳回请假"}
+                </button>
+              </div>
+            </section>
+
+            <section className="panel-block">
+              <div className="section-title">
+                <h3>审批历史</h3>
+                <span>{timeline.length} 条</span>
+              </div>
+              <div className="timeline">
+                {timeline.map((item) => (
+                  <article key={item.id}>
+                    <span>{formatWorkflowDate(item.created_at)}</span>
+                    <div>
+                      <strong>{item.action}</strong>
+                      <p>{timelineText(item)}</p>
+                    </div>
+                  </article>
+                ))}
+                {!timeline.length ? <div className="empty-state">选择请假申请后查看审批历史。</div> : null}
+              </div>
+            </section>
+          </div>
         </div>
       </section>
     </div>

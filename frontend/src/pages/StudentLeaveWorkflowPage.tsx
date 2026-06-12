@@ -265,7 +265,7 @@ export default function StudentLeaveWorkflowPage() {
         <article><span>当前状态</span><strong>{selectedLeave?.status ?? "未选择"}</strong><em>刷新后保留</em></article>
       </section>
 
-      <section className="workflow-three-column">
+      <section className="workflow-action-layout">
         <aside className="panel-block">
           <div className="section-title">
             <h3>学生</h3>
@@ -282,90 +282,92 @@ export default function StudentLeaveWorkflowPage() {
           </div>
         </aside>
 
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>请假表单</h3>
-            <CalendarDays size={18} aria-hidden="true" />
-          </div>
-          <div className="compact-form-grid">
-            <label>
-              <span>请假原因</span>
-              <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={6} />
-            </label>
-            <label>
-              <span>请假时间</span>
-              <input value="2026-06-20 09:00 - 18:00" readOnly />
-            </label>
-          </div>
-          <div className="inline-actions">
-            <button onClick={() => void submitLeave()} disabled={isBusy}>
-              {pendingAction === "create" ? "正在提交" : "提交新请假"}
-            </button>
-            <button className="ghost-button" onClick={() => void updateLeave()} disabled={isBusy || !canEdit}>
-              <FileText size={15} aria-hidden="true" />
-              补充当前申请
-            </button>
-            <button className="ghost-button" onClick={() => void cancelLeave()} disabled={isBusy || !canCancel}>
-              <Undo2 size={15} aria-hidden="true" />
-              撤销当前申请
-            </button>
-          </div>
-        </section>
-
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>我的请假</h3>
-            <span>{leaves.length} 条</span>
-          </div>
-          <div className="select-list workflow-list">
-            {leaves.map((item) => (
-              <button className={item.id === selectedLeave?.id ? "active" : ""} key={item.id} onClick={() => setSelectedLeaveId(item.id)}>
-                <strong>#{item.id} {item.status}</strong>
-                <span>{item.reason}</span>
-                <em>{formatWorkflowDate(item.start_time)} - {formatWorkflowDate(item.end_time)}</em>
-              </button>
-            ))}
-            {!leaves.length ? <div className="empty-state">暂无请假记录，可从中间表单提交。</div> : null}
-          </div>
-        </section>
-      </section>
-
-      <section className="workflow-detail-grid">
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>请假详情</h3>
-            <span className="status-pill">{selectedLeave?.status ?? "未选择"}</span>
-          </div>
-          {selectedLeave ? (
-            <div className="workflow-detail-card">
-              <strong>请假 #{selectedLeave.id}</strong>
-              <span>{selectedLeave.reason}</span>
-              <p>时间：{formatWorkflowDate(selectedLeave.start_time)} - {formatWorkflowDate(selectedLeave.end_time)}</p>
-              <p>审批时间：{formatWorkflowDate(selectedLeave.approved_at)}</p>
+        <div className="workflow-main-column">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>请假表单</h3>
+              <CalendarDays size={18} aria-hidden="true" />
             </div>
-          ) : (
-            <div className="empty-state">请选择一条请假记录。</div>
-          )}
-        </section>
+            <div className="compact-form-grid">
+              <label>
+                <span>请假原因</span>
+                <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={5} />
+              </label>
+              <label>
+                <span>请假时间</span>
+                <input value="2026-06-20 09:00 - 18:00" readOnly />
+              </label>
+            </div>
+            <div className="inline-actions">
+              <button onClick={() => void submitLeave()} disabled={isBusy}>
+                {pendingAction === "create" ? "正在提交" : "提交新请假"}
+              </button>
+              <button className="ghost-button" onClick={() => void updateLeave()} disabled={isBusy || !canEdit}>
+                <FileText size={15} aria-hidden="true" />
+                补充当前申请
+              </button>
+              <button className="ghost-button" onClick={() => void cancelLeave()} disabled={isBusy || !canCancel}>
+                <Undo2 size={15} aria-hidden="true" />
+                撤销当前申请
+              </button>
+            </div>
+          </section>
 
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>处理记录</h3>
-            <span>{timeline.length} 条</span>
-          </div>
-          <div className="timeline">
-            {timeline.map((item) => (
-              <article key={item.id}>
-                <span>{formatWorkflowDate(item.created_at)}</span>
-                <div>
-                  <strong>{item.action}</strong>
-                  <p>{timelineText(item)}</p>
-                </div>
-              </article>
-            ))}
-            {!timeline.length ? <div className="empty-state">提交或选择记录后查看时间线。</div> : null}
-          </div>
-        </section>
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>我的请假</h3>
+              <span>{leaves.length} 条</span>
+            </div>
+            <div className="select-list workflow-list">
+              {leaves.map((item) => (
+                <button className={item.id === selectedLeave?.id ? "active" : ""} key={item.id} onClick={() => setSelectedLeaveId(item.id)}>
+                  <strong>#{item.id} {item.status}</strong>
+                  <span>{item.reason}</span>
+                  <em>{formatWorkflowDate(item.start_time)} - {formatWorkflowDate(item.end_time)}</em>
+                </button>
+              ))}
+              {!leaves.length ? <div className="empty-state">暂无请假记录，可从中间表单提交。</div> : null}
+            </div>
+          </section>
+        </div>
+
+        <div className="workflow-detail-column">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>请假详情</h3>
+              <span className="status-pill">{selectedLeave?.status ?? "未选择"}</span>
+            </div>
+            {selectedLeave ? (
+              <div className="workflow-detail-card">
+                <strong>请假 #{selectedLeave.id}</strong>
+                <span>{selectedLeave.reason}</span>
+                <p>时间：{formatWorkflowDate(selectedLeave.start_time)} - {formatWorkflowDate(selectedLeave.end_time)}</p>
+                <p>审批时间：{formatWorkflowDate(selectedLeave.approved_at)}</p>
+              </div>
+            ) : (
+              <div className="empty-state">请选择一条请假记录。</div>
+            )}
+          </section>
+
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>处理记录</h3>
+              <span>{timeline.length} 条</span>
+            </div>
+            <div className="timeline">
+              {timeline.map((item) => (
+                <article key={item.id}>
+                  <span>{formatWorkflowDate(item.created_at)}</span>
+                  <div>
+                    <strong>{item.action}</strong>
+                    <p>{timelineText(item)}</p>
+                  </div>
+                </article>
+              ))}
+              {!timeline.length ? <div className="empty-state">提交或选择记录后查看时间线。</div> : null}
+            </div>
+          </section>
+        </div>
       </section>
     </div>
   );

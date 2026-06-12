@@ -183,84 +183,88 @@ export default function TeacherFeedbackWorkflowPage() {
         <article><span>当前工单</span><strong>{selectedTicket ? `#${selectedTicket.id}` : "无"}</strong><em>{selectedTicket?.status ?? "未选择"}</em></article>
       </section>
 
-      <section className="workflow-two-column">
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>反馈队列</h3>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="待处理">待处理</option>
-              <option value="处理中">处理中</option>
-              <option value="已处理">已处理</option>
-              <option value="已关闭">已关闭</option>
-              <option value="已归档">已归档</option>
-              <option value="全部">全部</option>
-            </select>
-          </div>
-          <div className="select-list workflow-list">
-            {visibleTickets.map((item) => (
-              <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
-                <strong>#{item.id} 学生 #{item.student_id} / {item.status}</strong>
-                <span>{item.summary || item.content}</span>
-                <em>{item.resolution || "等待处理"}</em>
-              </button>
-            ))}
-            {!visibleTickets.length ? <div className="empty-state">当前筛选下暂无反馈工单。</div> : null}
-          </div>
-        </section>
-
-        <section className="panel-block">
-          <div className="section-title">
-            <h3>处理面板</h3>
-            <MessageSquare size={18} aria-hidden="true" />
-          </div>
-          {selectedTicket ? (
-            <div className="workflow-detail-card">
-              <strong>工单 #{selectedTicket.id}</strong>
-              <span>{selectedTicket.content}</span>
-              <p>摘要：{selectedTicket.summary || "暂无摘要"}</p>
-              <p>当前处理：{selectedTicket.resolution || "等待老师处理"}</p>
+      <section className="workflow-action-layout">
+        <div className="workflow-teacher-layout">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>反馈队列</h3>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="待处理">待处理</option>
+                <option value="处理中">处理中</option>
+                <option value="已处理">已处理</option>
+                <option value="已关闭">已关闭</option>
+                <option value="已归档">已归档</option>
+                <option value="全部">全部</option>
+              </select>
             </div>
-          ) : (
-            <div className="empty-state">请选择反馈工单。</div>
-          )}
-          <div className="compact-form-grid">
-            <label>
-              <span>处理结果</span>
-              <textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={4} />
-            </label>
-          </div>
-          <div className="inline-actions">
-            <button onClick={() => void handleTicket()} disabled={isBusy || !selectedTicket}>
-              <CheckCircle2 size={15} aria-hidden="true" />
-              {pendingAction === "handle" ? "正在处理" : "记录处理"}
-            </button>
-            <button className="ghost-button" onClick={() => void changeTicketStatus("close")} disabled={isBusy || !selectedTicket}>
-              关闭工单
-            </button>
-            <button className="ghost-button" onClick={() => void changeTicketStatus("archive")} disabled={isBusy || !selectedTicket}>
-              <Archive size={15} aria-hidden="true" />
-              归档
-            </button>
-          </div>
-        </section>
-      </section>
+            <div className="select-list workflow-list">
+              {visibleTickets.map((item) => (
+                <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
+                  <strong>#{item.id} 学生 #{item.student_id} / {item.status}</strong>
+                  <span>{item.summary || item.content}</span>
+                  <em>{item.resolution || "等待处理"}</em>
+                </button>
+              ))}
+              {!visibleTickets.length ? <div className="empty-state">当前筛选下暂无反馈工单。</div> : null}
+            </div>
+          </section>
 
-      <section className="panel-block">
-        <div className="section-title">
-          <h3>处理历史</h3>
-          <span>{timeline.length} 条</span>
-        </div>
-        <div className="timeline">
-          {timeline.map((item) => (
-            <article key={item.id}>
-              <span>{formatWorkflowDate(item.created_at)}</span>
-              <div>
-                <strong>{item.action}</strong>
-                <p>{timelineText(item)}</p>
+          <div className="workflow-detail-column">
+            <section className="panel-block">
+              <div className="section-title">
+                <h3>处理面板</h3>
+                <MessageSquare size={18} aria-hidden="true" />
               </div>
-            </article>
-          ))}
-          {!timeline.length ? <div className="empty-state">选择反馈工单后查看处理历史。</div> : null}
+              {selectedTicket ? (
+                <div className="workflow-detail-card">
+                  <strong>工单 #{selectedTicket.id}</strong>
+                  <span>{selectedTicket.content}</span>
+                  <p>摘要：{selectedTicket.summary || "暂无摘要"}</p>
+                  <p>当前处理：{selectedTicket.resolution || "等待老师处理"}</p>
+                </div>
+              ) : (
+                <div className="empty-state">请选择反馈工单。</div>
+              )}
+              <div className="compact-form-grid">
+                <label>
+                  <span>处理结果</span>
+                  <textarea value={resolution} onChange={(event) => setResolution(event.target.value)} rows={4} />
+                </label>
+              </div>
+              <div className="inline-actions">
+                <button onClick={() => void handleTicket()} disabled={isBusy || !selectedTicket}>
+                  <CheckCircle2 size={15} aria-hidden="true" />
+                  {pendingAction === "handle" ? "正在处理" : "记录处理"}
+                </button>
+                <button className="ghost-button" onClick={() => void changeTicketStatus("close")} disabled={isBusy || !selectedTicket}>
+                  关闭工单
+                </button>
+                <button className="ghost-button" onClick={() => void changeTicketStatus("archive")} disabled={isBusy || !selectedTicket}>
+                  <Archive size={15} aria-hidden="true" />
+                  归档
+                </button>
+              </div>
+            </section>
+
+            <section className="panel-block">
+              <div className="section-title">
+                <h3>处理历史</h3>
+                <span>{timeline.length} 条</span>
+              </div>
+              <div className="timeline">
+                {timeline.map((item) => (
+                  <article key={item.id}>
+                    <span>{formatWorkflowDate(item.created_at)}</span>
+                    <div>
+                      <strong>{item.action}</strong>
+                      <p>{timelineText(item)}</p>
+                    </div>
+                  </article>
+                ))}
+                {!timeline.length ? <div className="empty-state">选择反馈工单后查看处理历史。</div> : null}
+              </div>
+            </section>
+          </div>
         </div>
       </section>
     </div>

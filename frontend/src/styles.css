@@ -1186,6 +1186,38 @@ td span {
   grid-template-columns: minmax(360px, 0.95fr) minmax(360px, 1.05fr);
 }
 
+.workflow-action-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(340px, 1fr) minmax(320px, 0.9fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.workflow-main-column,
+.workflow-detail-column {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.workflow-detail-column .panel-block {
+  min-width: 0;
+}
+
+.workflow-detail-column .timeline {
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.workflow-teacher-layout {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(360px, 1.05fr);
+  gap: 12px;
+  align-items: start;
+}
+
 .workflow-list {
   max-height: 430px;
   overflow: auto;
@@ -3573,7 +3605,9 @@ textarea {
 
   .workflow-three-column,
   .workflow-two-column,
-  .workflow-detail-grid {
+  .workflow-detail-grid,
+  .workflow-action-layout,
+  .workflow-teacher-layout {
     grid-template-columns: 1fr;
   }
 }

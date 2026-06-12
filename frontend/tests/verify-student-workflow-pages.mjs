@@ -15,6 +15,7 @@ const requiredPages = [
 ];
 
 for (const [pageKey, componentName] of requiredPages) {
+  const componentSource = readFileSync(join(srcRoot, "pages", `${componentName}.tsx`), "utf8");
   assert.match(
     shellSource,
     new RegExp(`${pageKey}:\\s*${componentName}`),
@@ -23,5 +24,20 @@ for (const [pageKey, componentName] of requiredPages) {
   assert.ok(
     existsSync(join(srcRoot, "pages", `${componentName}.tsx`)),
     `${componentName}.tsx 应存在`,
+  );
+  assert.doesNotMatch(
+    componentSource,
+    /className="workflow-detail-grid"/,
+    `${componentName} 不应把详情和处理记录放在底部独立区域`,
+  );
+  assert.match(
+    componentSource,
+    /className="workflow-action-layout"/,
+    `${componentName} 应使用同屏业务处理布局`,
+  );
+  assert.match(
+    componentSource,
+    /className="workflow-detail-column"/,
+    `${componentName} 应包含同屏详情记录列`,
   );
 }
