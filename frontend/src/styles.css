@@ -2340,13 +2340,19 @@ textarea {
 .employee-org-workspace,
 .employee-workbench-grid-single > .side-stack.employee-org-workspace {
   grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
-  align-items: start;
+  align-items: stretch;
 }
 
 .employee-guide-panel,
 .employee-directory-panel,
 .employee-org-panel {
   align-content: start;
+}
+
+.employee-org-panel {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  min-height: 0;
 }
 
 .employee-guide-panel {
@@ -2359,7 +2365,15 @@ textarea {
   padding-right: 2px;
 }
 
-.employee-org-scroll-list,
+.employee-org-scroll-list {
+  height: auto;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  align-self: stretch;
+  padding-right: 2px;
+}
+
 .employee-directory-scroll-list {
   height: clamp(220px, calc(100vh - 520px), 360px);
   min-height: 220px;
