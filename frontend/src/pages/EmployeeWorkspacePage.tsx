@@ -345,6 +345,10 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
   const showCustomerQuery = initialView === "overview" || initialView === "customerQuery";
   const queryCount = typeof queryResult?.result.count === "number" ? queryResult.result.count : null;
   const queryReason = typeof queryResult?.result.reason === "string" ? queryResult.result.reason : "";
+  const hasEmployeeSidePanel = showOrg || showGuide || showCustomerQuery;
+  const employeeSectionCount = Number(showReports) + Number(hasEmployeeSidePanel);
+  const employeeWorkbenchClass =
+    employeeSectionCount > 1 ? "role-workbench-grid employee-workbench-grid" : "role-workbench-grid employee-workbench-grid employee-workbench-grid-single";
 
   return (
     <div className="page-stack">
@@ -451,7 +455,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
         </section>
       ) : null}
 
-      {showReports || showOrg || showGuide || showCustomerQuery ? <section className="role-workbench-grid employee-workbench-grid">
+      {showReports || hasEmployeeSidePanel ? <section className={employeeWorkbenchClass}>
         {showReports ? <div className="panel-block employee-daily-panel">
           <div className="section-title">
             <h3>日报</h3>
@@ -579,7 +583,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
           )}
         </div> : null}
 
-        {showOrg || showGuide || showCustomerQuery ? <aside className="side-stack employee-side-panel">
+        {hasEmployeeSidePanel ? <aside className="side-stack employee-side-panel">
           {showOrg ? <section className="panel-block">
             <div className="section-title">
               <h3>组织架构</h3>

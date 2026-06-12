@@ -1005,6 +1005,14 @@ td span {
   grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
 }
 
+.employee-workbench-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.employee-workbench-grid-single > .side-stack {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
 .teacher-workbench-grid {
   grid-template-columns: 240px minmax(0, 1fr) minmax(280px, 0.72fr);
 }
@@ -3382,6 +3390,8 @@ textarea {
 
 .advisor-queue-panel {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .advisor-action-rail {
@@ -3502,6 +3512,13 @@ textarea {
 .advisor-task-checklist {
   display: grid;
   gap: 10px;
+}
+
+.advisor-lead-list {
+  max-height: clamp(360px, calc(100vh - 470px), 620px);
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .advisor-lead-card {
