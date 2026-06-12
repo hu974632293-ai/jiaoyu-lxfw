@@ -1701,6 +1701,55 @@ td span {
   line-height: 1.5;
 }
 
+.management-report-page {
+  gap: 12px;
+}
+
+.management-report-toolbar {
+  align-items: stretch;
+}
+
+.management-report-toolbar .operation-feedback {
+  flex: 1;
+}
+
+.management-filter-strip {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(180px, 0.9fr) minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.management-report-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(340px, 1.1fr) minmax(280px, 0.8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.report-workspace-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.report-workspace-panel .report-row-list,
+.management-summary-panel .compact-summary-list,
+.report-workspace-panel .compact-report-list {
+  max-height: clamp(260px, calc(100vh - 430px), 520px);
+  overflow: auto;
+}
+
+.management-summary-panel .detail-list {
+  margin-bottom: 12px;
+}
+
+.compact-summary-list {
+  display: grid;
+  gap: 10px;
+}
+
 .report-business-list {
   display: grid;
   gap: 10px;
@@ -2232,6 +2281,8 @@ textarea {
   .assistant-layout,
   .student-layout,
   .management-layout,
+  .management-report-workspace,
+  .management-filter-strip,
   .operations-command-grid,
   .knowledge-layout,
   .report-layout,

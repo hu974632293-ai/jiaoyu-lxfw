@@ -270,6 +270,185 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
   const managementLayoutClass = managementSectionCount > 1 ? "management-layout" : "management-layout management-layout-single";
   const reportDetailEntries = Object.entries(activeReport?.content ?? {});
   const visibleReportEntries = isFullReportOpen ? reportDetailEntries : reportDetailEntries.slice(0, 6);
+  const isFocusedReportView = initialView === "daily" || initialView === "psych" || initialView === "feedback";
+  const primaryReportType = visibleReportTypes[0];
+  const primaryReportLabel = primaryReportType ? reportLabels[primaryReportType.key] ?? primaryReportType.title : "报告";
+
+  if (isFocusedReportView && primaryReportType) {
+    return (
+      <div className="page-stack management-report-page">
+        <section className="page-heading">
+          <div>
+            <p className="eyebrow">{copy.eyebrow}</p>
+            <h2>{copy.title}</h2>
+            <p>{copy.subtitle}</p>
+          </div>
+          <div className="heading-actions">
+            <button className="icon-button secondary" onClick={() => refresh()} disabled={hasPendingOperation}>
+              <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
+              {isRefreshing ? "正在刷新" : "刷新数据"}
+            </button>
+            <button className="icon-button" onClick={() => generateReport(primaryReportType.key)} disabled={hasPendingOperation}>
+              {isGenerating ? "生成中" : `生成${primaryReportLabel}`}
+            </button>
+          </div>
+        </section>
+
+        <section className="toolbar management-report-toolbar">
+          <OperationFeedback feedback={operationFeedback} />
+          <span className="status-pill">最近报告：{reports.length} 份</span>
+          <span className="status-pill">日报：{dailySummary?.report_count ?? 0} 条</span>
+        </section>
+
+        {initialView === "daily" ? (
+          <section className="panel-block management-filter-strip" aria-label="日报汇总筛选">
+            <label className="stacked-input">
+              <span>周期</span>
+              <select
+                value={dailySummaryFilters.summaryType}
+                onChange={(event) =>
+                  setDailySummaryFilters((current) => ({
+                    ...current,
+                    summaryType: event.target.value as "daily" | "weekly",
+                  }))
+                }
+              >
+                <option value="daily">日汇总</option>
+                <option value="weekly">周汇总</option>
+              </select>
+            </label>
+            {dailySummaryFilters.summaryType === "daily" ? (
+              <label className="stacked-input">
+                <span>日期</span>
+                <input
+                  type="date"
+                  value={dailySummaryFilters.date}
+                  onChange={(event) => setDailySummaryFilters((current) => ({ ...current, date: event.target.value }))}
+                />
+              </label>
+            ) : (
+              <label className="stacked-input">
+                <span>周起始</span>
+                <input
+                  type="date"
+                  value={dailySummaryFilters.weekStart}
+                  onChange={(event) => setDailySummaryFilters((current) => ({ ...current, weekStart: event.target.value }))}
+                />
+              </label>
+            )}
+            <label className="stacked-input">
+              <span>部门</span>
+              <input
+                value={dailySummaryFilters.department}
+                onChange={(event) => setDailySummaryFilters((current) => ({ ...current, department: event.target.value }))}
+                placeholder="如：升学规划部"
+              />
+            </label>
+            <button className="icon-button" onClick={() => refresh()} disabled={hasPendingOperation}>查看汇总</button>
+          </section>
+        ) : null}
+
+        <section className="management-report-workspace">
+          <div className="panel-block report-workspace-panel">
+            <div className="section-title">
+              <h3>最近报告</h3>
+              <span>{reports.length} 份</span>
+            </div>
+            <div className="report-row-list">
+              {reports.slice(0, 8).map((item) => (
+                <button className={highlightReportId === item.id ? "report-row is-highlighted" : "report-row"} key={item.id} onClick={() => openReport(item.id)}>
+                  <span className="report-row-main">
+                    <strong>{item.title}</strong>
+                    <small>{reportLabels[item.report_type] ?? item.report_type}</small>
+                  </span>
+                  <span className="report-row-status">已生成</span>
+                  <span className="report-row-action">查看详情</span>
+                </button>
+              ))}
+              {!reports.length && <div className="empty-state">暂无报告，点击生成后会出现在这里。</div>}
+            </div>
+          </div>
+
+          <div className="panel-block report-workspace-panel">
+            <div className="section-title">
+              <h3>{activeReport?.title ?? "当前报告详情"}</h3>
+              <BarChart3 size={18} aria-hidden="true" />
+            </div>
+            {activeReport ? (
+              <div className="report-detail-panel">
+                <div className="report-business-list compact-report-list">
+                  {visibleReportEntries.map(([key, value]) => (
+                    <article key={key}>
+                      <span>{formatReportKey(key)}</span>
+                      <strong>{formatReportValue(value)}</strong>
+                    </article>
+                  ))}
+                </div>
+                {reportDetailEntries.length > 6 ? (
+                  <button className="report-detail-action" type="button" onClick={() => setIsFullReportOpen((current) => !current)}>
+                    {isFullReportOpen ? "收起完整报告" : "查看完整报告"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="empty-state">点击左侧报告行或生成报告后展示详情。</div>
+            )}
+          </div>
+
+          <div className="panel-block report-workspace-panel management-summary-panel">
+            <div className="section-title">
+              <h3>{initialView === "daily" ? "日报汇总" : "风险摘要"}</h3>
+              {initialView === "daily" ? <ClipboardList size={18} aria-hidden="true" /> : <AlertTriangle size={18} aria-hidden="true" />}
+            </div>
+            {initialView === "daily" ? (
+              <>
+                <dl className="detail-list">
+                  <div>
+                    <dt>周期</dt>
+                    <dd>{dailySummary?.summary_type === "weekly" ? "周汇总" : "日汇总"} / {dailySummary?.period_start || "不限"} 至 {dailySummary?.period_end || "不限"}</dd>
+                  </div>
+                  <div>
+                    <dt>状态</dt>
+                    <dd>{formatDailySummaryStatus(dailySummary?.status)}</dd>
+                  </div>
+                  <div>
+                    <dt>进展</dt>
+                    <dd>{dailySummary?.progress_text || "暂无"}</dd>
+                  </div>
+                  <div>
+                    <dt>风险</dt>
+                    <dd>{dailySummary?.risks_text || "暂无"}</dd>
+                  </div>
+                </dl>
+                <div className="source-list compact-summary-list">
+                  {(dailySummary?.departments ?? []).slice(0, 4).map((item) => (
+                    <article key={item.department}>
+                      <strong>{item.department}</strong>
+                      <span>{item.report_count} 条日报</span>
+                      <em>部门汇总</em>
+                    </article>
+                  ))}
+                  {dailySummary && !dailySummary.departments.length ? <div className="empty-state">当前筛选下暂无部门汇总。</div> : null}
+                </div>
+              </>
+            ) : (
+              <div className="task-list compact-summary-list">
+                {riskQueue.map((item) => (
+                  <article className="task-row" key={item.title}>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.meta}</span>
+                    </div>
+                    <em>{item.level}</em>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack">
@@ -508,6 +687,15 @@ function formatReportKey(value: string): string {
     unresolved_count: "未关闭事项",
   };
   return labels[value] ?? value.replace(/_/g, " ");
+}
+
+function formatDailySummaryStatus(value?: string): string {
+  const labels: Record<string, string> = {
+    summary_ready: "已汇总",
+    ready: "已汇总",
+    empty: "暂无数据",
+  };
+  return labels[value ?? ""] ?? value ?? "暂无";
 }
 
 function formatReportValue(value: unknown): string {
