@@ -50,6 +50,44 @@ type NotificationItem = {
   status: string;
 };
 type SystemOperation = "load" | "audit" | null;
+export type AdminGovernanceView = "overview" | "users" | "roles" | "permissions" | "audit" | "notifications";
+
+type SystemAdminPageProps = PageProps & {
+  initialView?: AdminGovernanceView;
+};
+
+const viewMeta: Record<AdminGovernanceView, { eyebrow: string; title: string; desc: string }> = {
+  overview: {
+    eyebrow: "系统管理",
+    title: "角色权限、审计日志和通知中心",
+    desc: "管理员统一查看用户、角色、权限、审计和通知数据。",
+  },
+  users: {
+    eyebrow: "用户管理",
+    title: "用户列表、账号状态和角色绑定",
+    desc: "查看账号、姓名、角色绑定和当前状态。",
+  },
+  roles: {
+    eyebrow: "角色管理",
+    title: "角色定义、权限数量和使用范围",
+    desc: "查看系统角色、职责说明和已绑定权限数量。",
+  },
+  permissions: {
+    eyebrow: "权限管理",
+    title: "权限点、模块和接口边界",
+    desc: "查看权限编码、所属模块和权限说明。",
+  },
+  audit: {
+    eyebrow: "审计日志",
+    title: "关键操作筛选和详情",
+    desc: "查看治理操作留痕，并可写入一条审计记录验证链路。",
+  },
+  notifications: {
+    eyebrow: "通知管理",
+    title: "通知、待办和已读状态",
+    desc: "查看系统通知、接收人、内容和处理状态。",
+  },
+};
 
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -59,13 +97,13 @@ function formatOperationTime() {
   }).format(new Date());
 }
 
-export default function SystemAdminPage({ role }: PageProps) {
+export default function SystemAdminPage({ role, initialView = "overview" }: SystemAdminPageProps) {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [permissionItems, setPermissionItems] = useState<PermissionItem[]>([]);
   const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
   const [notificationItems, setNotificationItems] = useState<NotificationItem[]>([]);
-  const [message, setMessage] = useState("正在加载真实系统管理 API...");
+  const [message, setMessage] = useState("正在加载系统治理数据...");
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "pending",
     title: "正在加载系统治理数据",
@@ -76,7 +114,7 @@ export default function SystemAdminPage({ role }: PageProps) {
   const [highlightAudit, setHighlightAudit] = useState(false);
 
   async function load() {
-    setMessage("正在加载真实系统管理 API...");
+    setMessage("正在加载系统治理数据...");
     setPendingOperation("load");
     setOperationFeedback({
       phase: "pending",
@@ -97,7 +135,7 @@ export default function SystemAdminPage({ role }: PageProps) {
       setPermissionItems(permissionData);
       setAuditItems(auditData);
       setNotificationItems(notificationData);
-      setMessage("真实角色权限、审计和通知 API 已连接");
+      setMessage("系统治理数据已连接");
       setOperationFeedback({
         phase: "success",
         title: "系统治理数据已刷新",
@@ -111,11 +149,11 @@ export default function SystemAdminPage({ role }: PageProps) {
       setPermissionItems([]);
       setAuditItems([]);
       setNotificationItems([]);
-      setMessage(error instanceof Error ? `真实系统管理 API 失败：${error.message}` : "真实系统管理 API 失败");
+      setMessage(error instanceof Error ? `系统治理数据加载失败：${error.message}` : "系统治理数据加载失败");
       setOperationFeedback({
         phase: "error",
         title: "系统治理数据刷新失败",
-        detail: error instanceof Error ? `${error.message}。已保留页面兜底数据，可重试。` : "接口不可用。已保留页面兜底数据，可重试。",
+        detail: error instanceof Error ? `${error.message}。已保留页面备用数据，可重试。` : "当前未获取到最新数据，已保留页面备用数据，可重试。",
         target: "系统管理",
         timestamp: formatOperationTime(),
       });
@@ -129,7 +167,7 @@ export default function SystemAdminPage({ role }: PageProps) {
     setPendingOperation("audit");
     setOperationFeedback({
       phase: "pending",
-      title: "正在写入演示审计",
+      title: "正在写入治理审计",
       detail: "这是治理类写操作，会刷新审计列表。",
       target: role,
     });
@@ -148,7 +186,7 @@ export default function SystemAdminPage({ role }: PageProps) {
       setHighlightAudit(true);
       setOperationFeedback({
         phase: "success",
-        title: "演示审计已写入",
+        title: "治理审计已写入",
         detail: "审计列表已刷新，最新记录会高亮提示。",
         target: role,
         timestamp: formatOperationTime(),
@@ -158,7 +196,7 @@ export default function SystemAdminPage({ role }: PageProps) {
       setOperationFeedback({
         phase: "error",
         title: "审计写入失败",
-        detail: error instanceof Error ? `${error.message}。未写入审计记录，可重试。` : "接口不可用。未写入审计记录，可重试。",
+        detail: error instanceof Error ? `${error.message}。未写入审计记录，可重试。` : "当前未写入审计记录，可重试。",
         target: role,
         timestamp: formatOperationTime(),
       });
@@ -204,7 +242,7 @@ export default function SystemAdminPage({ role }: PageProps) {
         status: item.status,
         content: item.content,
       }))
-    : notifications.map((item) => ({ ...item, content: "前端 mock fallback" }));
+    : notifications.map((item) => ({ ...item, content: "待确认通知内容" }));
 
   const displayAuditRows = auditItems.length
     ? auditItems.map((item) => ({
@@ -218,14 +256,21 @@ export default function SystemAdminPage({ role }: PageProps) {
   const hasPendingOperation = pendingOperation !== null;
   const isLoading = pendingOperation === "load";
   const isWritingAudit = pendingOperation === "audit";
+  const meta = viewMeta[initialView];
+  const showOverview = initialView === "overview";
+  const showUsers = showOverview || initialView === "users";
+  const showRoles = showOverview || initialView === "roles";
+  const showPermissions = showOverview || initialView === "permissions";
+  const showAudit = showOverview || initialView === "audit";
+  const showNotifications = showOverview || initialView === "notifications";
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">系统管理</p>
-          <h2>角色权限、审计日志和通知中心</h2>
-          <p>本阶段不做真实登录认证；顶部角色切换用于演示入口差异，后端已提供权限模型和审计 API。</p>
+          <p className="eyebrow">{meta.eyebrow}</p>
+          <h2>{meta.title}</h2>
+          <p>{meta.desc}</p>
         </div>
         <div className="heading-actions">
           <span className="status-pill">当前角色：{role}</span>
@@ -239,122 +284,136 @@ export default function SystemAdminPage({ role }: PageProps) {
 
       <OperationFeedback feedback={operationFeedback} />
 
-      <section className="admin-grid">
-        <div className="panel-block table-panel">
+      {(showUsers || showRoles) && (
+        <section className="admin-grid">
+          {showUsers && (
+            <div className="panel-block table-panel">
+              <div className="section-title">
+                <h3>用户管理</h3>
+                <UserCog size={18} aria-hidden="true" />
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>账号</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayUsers.map((item) => (
+                    <tr key={item.account}>
+                      <td>{item.name}</td>
+                      <td>{item.account}</td>
+                      <td>{item.role}</td>
+                      <td>
+                        <span className="badge">{item.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {showRoles && (
+            <div className="panel-block">
+              <div className="section-title">
+                <h3>角色管理</h3>
+                <Shield size={18} aria-hidden="true" />
+              </div>
+              <div className="role-grid">
+                {displayRoles.map((item) => (
+                  <article key={item.key}>
+                    <strong>{item.label}</strong>
+                    <span>{item.focus}</span>
+                    <em>
+                      {item.key} / {item.count} 个权限
+                    </em>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {(showPermissions || showNotifications) && (
+        <section className="admin-grid">
+          {showPermissions && (
+            <div className="panel-block">
+              <div className="section-title">
+                <h3>权限点</h3>
+                <span>{displayPermissions.length} 个</span>
+              </div>
+              <div className="permission-list">
+                {displayPermissions.map((item) => (
+                  <article key={item.code}>
+                    <strong>{item.module}</strong>
+                    <code>{item.code}</code>
+                    <span>{item.desc}</span>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showNotifications && (
+            <div className="panel-block">
+              <div className="section-title">
+                <h3>通知中心</h3>
+                <Bell size={18} aria-hidden="true" />
+              </div>
+              <div className="log-list">
+                {displayNotifications.map((item) => (
+                  <article key={`${item.receiver}-${item.title}`}>
+                    <strong>{item.title}</strong>
+                    <span>
+                      {item.receiver} / {item.content}
+                    </span>
+                    <em>{item.status}</em>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {showAudit && (
+        <section className="panel-block table-panel">
           <div className="section-title">
-            <h3>用户管理</h3>
-            <UserCog size={18} aria-hidden="true" />
+            <h3>关键操作审计</h3>
+            <div className="heading-actions">
+              <button className="tiny-button" onClick={createAuditSample} disabled={hasPendingOperation}>{isWritingAudit ? "写入中" : "写入治理审计"}</button>
+              <History size={18} aria-hidden="true" />
+            </div>
           </div>
           <table>
             <thead>
               <tr>
-                <th>姓名</th>
-                <th>账号</th>
-                <th>角色</th>
-                <th>状态</th>
+                <th>操作人</th>
+                <th>动作</th>
+                <th>资源</th>
+                <th>详情</th>
+                <th>时间</th>
               </tr>
             </thead>
             <tbody>
-              {displayUsers.map((item) => (
-                <tr>
-                  <td>{item.name}</td>
-                  <td>{item.account}</td>
-                  <td>{item.role}</td>
-                  <td>
-                    <span className="badge">{item.status}</span>
-                  </td>
+              {displayAuditRows.map((item, index) => (
+                <tr className={highlightAudit && index === 0 ? "is-highlighted" : ""} key={`${item.operator}-${item.action}-${item.time}-${index}`}>
+                  <td>{item.operator}</td>
+                  <td>{item.action}</td>
+                  <td>{item.resource}</td>
+                  <td>{item.detail}</td>
+                  <td>{item.time}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-
-        <div className="panel-block">
-          <div className="section-title">
-            <h3>角色管理</h3>
-            <Shield size={18} aria-hidden="true" />
-          </div>
-          <div className="role-grid">
-            {displayRoles.map((item) => (
-              <article>
-                <strong>{item.label}</strong>
-                <span>{item.focus}</span>
-                <em>
-                  {item.key} / {item.count} 个权限
-                </em>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="admin-grid">
-        <div className="panel-block">
-          <div className="section-title">
-            <h3>权限点</h3>
-            <span>{displayPermissions.length} 个</span>
-          </div>
-          <div className="permission-list">
-            {displayPermissions.map((item) => (
-              <article>
-                <strong>{item.module}</strong>
-                <code>{item.code}</code>
-                <span>{item.desc}</span>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel-block">
-          <div className="section-title">
-            <h3>通知中心</h3>
-            <Bell size={18} aria-hidden="true" />
-          </div>
-          <div className="log-list">
-            {displayNotifications.map((item) => (
-              <article>
-                <strong>{item.title}</strong>
-                <span>
-                  {item.receiver} / {item.content}
-                </span>
-                <em>{item.status}</em>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="panel-block table-panel">
-        <div className="section-title">
-          <h3>关键操作审计</h3>
-          <div className="heading-actions">
-            <button className="tiny-button" onClick={createAuditSample} disabled={hasPendingOperation}>{isWritingAudit ? "写入中" : "写入演示审计"}</button>
-            <History size={18} aria-hidden="true" />
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>操作人</th>
-              <th>动作</th>
-              <th>资源</th>
-              <th>详情</th>
-              <th>时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayAuditRows.map((item, index) => (
-              <tr className={highlightAudit && index === 0 ? "is-highlighted" : ""}>
-                <td>{item.operator}</td>
-                <td>{item.action}</td>
-                <td>{item.resource}</td>
-                <td>{item.detail}</td>
-                <td>{item.time}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

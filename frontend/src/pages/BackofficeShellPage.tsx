@@ -177,6 +177,27 @@ export default function BackofficeShellPage({
     if (activePage === "managerRiskQueue") {
       return <ManagementDashboardPage initialView="risk" onNavigate={onNavigate} />;
     }
+    if (activePage === "adminUsers") {
+      return <SystemGovernancePage initialView="users" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "adminRoles") {
+      return <SystemGovernancePage initialView="roles" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "adminPermissions") {
+      return <SystemGovernancePage initialView="permissions" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "adminAudit") {
+      return <SystemGovernancePage initialView="audit" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "adminNotifications") {
+      return <SystemGovernancePage initialView="notifications" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "adminKnowledgeSources") {
+      return <SystemGovernancePage initialView="knowledgeSources" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
+    if (activePage === "adminSystemStatus") {
+      return <SystemGovernancePage initialView="systemStatus" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+    }
     if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
     }

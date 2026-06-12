@@ -1,16 +1,39 @@
 import { Database, ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 import type { PageProps } from "../App";
+import KnowledgePage from "./KnowledgePage";
 import SystemAdminPage from "./SystemAdminPage";
+import type { AdminGovernanceView } from "./SystemAdminPage";
 
-export default function SystemGovernancePage(props: PageProps) {
+type SystemGovernanceView = AdminGovernanceView | "knowledgeSources" | "systemStatus";
+
+type SystemGovernancePageProps = PageProps & {
+  initialView?: SystemGovernanceView;
+};
+
+export default function SystemGovernancePage(props: SystemGovernancePageProps) {
   const { onSeedDemo, seedStatus } = props;
+  const initialView = props.initialView ?? "overview";
+  const pageProps: PageProps = {
+    role: props.role,
+    onNavigate: props.onNavigate,
+    onSeedDemo: props.onSeedDemo,
+    seedStatus: props.seedStatus,
+  };
+
+  if (initialView === "knowledgeSources") {
+    return <KnowledgePage {...pageProps} />;
+  }
+
+  if (["users", "roles", "permissions", "audit", "notifications"].includes(initialView)) {
+    return <SystemAdminPage {...pageProps} initialView={initialView as AdminGovernanceView} />;
+  }
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">系统治理</p>
-          <h2>用户、角色、权限、审计、通知和系统控制</h2>
+          <p className="eyebrow">{initialView === "systemStatus" ? "系统状态" : "系统治理"}</p>
+          <h2>{initialView === "systemStatus" ? "OpenAPI、seed、接口状态和 AI 边界" : "用户、角色、权限、审计、通知和系统控制"}</h2>
         </div>
         <div className="heading-actions">
           <button className="icon-button" onClick={onSeedDemo}>
@@ -27,11 +50,11 @@ export default function SystemGovernancePage(props: PageProps) {
       <section className="governance-control-grid">
         <article className="panel-block">
           <div className="section-title">
-            <h3>基础数据</h3>
+            <h3>演示数据</h3>
             <Database size={18} aria-hidden="true" />
           </div>
           <span className={seedStatus.includes("成功") ? "status-pill success" : seedStatus.includes("失败") ? "status-pill danger" : "status-pill"}>{seedStatus}</span>
-          <p className="muted">初始化仅用于演示数据和验收环境，不替代生产迁移。</p>
+          <p className="muted">初始化会重建干净演示业务数据，管理员操作后通过治理记录追踪。</p>
         </article>
 
         <article className="panel-block">
@@ -63,7 +86,7 @@ export default function SystemGovernancePage(props: PageProps) {
         </article>
       </section>
 
-      <SystemAdminPage {...props} />
+      {initialView === "overview" ? <SystemAdminPage {...pageProps} /> : null}
     </div>
   );
 }
