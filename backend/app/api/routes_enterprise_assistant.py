@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.permissions import require_permission
 from app.core.response import ok
-from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest
+from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
 from app.services.enterprise_service import (
+    build_voice_draft,
     create_daily_report,
     daily_report_summary,
     get_daily_report,
@@ -34,6 +35,14 @@ def create_report(
     db: Session = Depends(get_db),
 ):
     return ok(create_daily_report(db, payload))
+
+
+@router.post("/voice-drafts")
+def voice_draft(
+    payload: VoiceDraftRequest,
+    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+):
+    return ok(build_voice_draft(payload))
 
 
 @router.get("/daily-reports")

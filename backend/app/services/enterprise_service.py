@@ -12,7 +12,7 @@ from app.models.event import EventLecture
 from app.models.lead import CrmLead
 from app.models.operation import AuditLog
 from app.models.user import SysUser
-from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest
+from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
 from app.services.lead_service import update_lead_status
 
 
@@ -72,6 +72,36 @@ def create_daily_report(db: Session, payload: DailyReportCreate) -> dict[str, An
     db.commit()
     db.refresh(report)
     return serialize_daily_report(report)
+
+
+def build_voice_draft(payload: VoiceDraftRequest) -> dict[str, Any]:
+    transcript = payload.transcript.strip()
+    if payload.target_type == "lead":
+        draft = {
+            "customer_name": _extract_customer_name(transcript),
+            "contact_info": _extract_phone(transcript),
+            "background_info": transcript,
+            "source_channel": "顾问录入",
+            "owner_id": 1,
+        }
+        confirmation_endpoint = "/api/leads"
+    else:
+        summary = _structure_daily_report(transcript)
+        draft = {
+            "content": transcript,
+            "actor_username": payload.actor_username,
+            "structured_summary": summary["structured_summary"],
+            "risks": summary["risks"],
+        }
+        confirmation_endpoint = "/api/enterprise-assistant/daily-reports"
+    return {
+        "target_type": payload.target_type,
+        "transcript": transcript,
+        "draft": draft,
+        "requires_confirmation": True,
+        "confirmation_endpoint": confirmation_endpoint,
+        "write_policy": "结构化结果仅作为草稿展示，必须由用户确认后再写入业务表。",
+    }
 
 
 def list_daily_reports(

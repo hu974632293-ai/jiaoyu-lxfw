@@ -7,6 +7,7 @@ from app.core.database import init_db
 from app.core.database import SessionLocal
 from app.main import app
 from app.models.enterprise import EmployeeDirectory, EmployeeProfile, OrganizationUnit, WorkDailyReport
+from app.models.lead import CrmLead
 from app.models.user import SysUser
 
 
@@ -219,6 +220,55 @@ def test_daily_report_filters_detail_summary_and_directory_api():
     assert directory_detail_payload["code"] == 0
     assert directory_detail_payload["data"]["display_name"] == "阶段六周老师"
     assert directory_detail_payload["data"]["responsibilities"] == "负责学生服务跟进"
+
+
+def test_voice_draft_structures_lead_and_daily_report_without_writing():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+    assert seed_response.json()["code"] == 0
+
+    with SessionLocal() as db:
+        lead_count_before = db.query(CrmLead).count()
+        report_count_before = db.query(WorkDailyReport).count()
+
+    lead_response = client.post(
+        "/api/enterprise-assistant/voice-drafts",
+        json={
+            "target_type": "lead",
+            "transcript": "客户：陈语，电话 13900008888，高三，想申请新加坡本科，家长关注预算和就业。",
+            "actor_username": "admin",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_payload = lead_response.json()
+    assert lead_payload["code"] == 0
+    assert lead_payload["data"]["target_type"] == "lead"
+    assert lead_payload["data"]["requires_confirmation"] is True
+    assert lead_payload["data"]["confirmation_endpoint"] == "/api/leads"
+    assert lead_payload["data"]["draft"]["customer_name"] == "陈语"
+    assert lead_payload["data"]["draft"]["contact_info"] == "13900008888"
+    assert "新加坡本科" in lead_payload["data"]["draft"]["background_info"]
+
+    daily_response = client.post(
+        "/api/enterprise-assistant/voice-drafts",
+        json={
+            "target_type": "daily_report",
+            "transcript": "今天跟进 6 个客户，风险是德国项目材料不齐，明天补齐材料清单。",
+            "actor_username": "admin",
+        },
+    )
+    assert daily_response.status_code == 200
+    daily_payload = daily_response.json()
+    assert daily_payload["code"] == 0
+    assert daily_payload["data"]["target_type"] == "daily_report"
+    assert daily_payload["data"]["confirmation_endpoint"] == "/api/enterprise-assistant/daily-reports"
+    assert daily_payload["data"]["draft"]["content"].startswith("今天跟进 6 个客户")
+    assert daily_payload["data"]["draft"]["structured_summary"]["progress"].startswith("今天跟进")
+    assert daily_payload["data"]["draft"]["risks"] == ["风险是德国项目材料不齐"]
+
+    with SessionLocal() as db:
+        assert db.query(CrmLead).count() == lead_count_before
+        assert db.query(WorkDailyReport).count() == report_count_before
 
 
 def _ensure_user(db, username: str, real_name: str) -> SysUser:

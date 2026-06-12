@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class EnterpriseChatRequest(BaseModel):
@@ -8,6 +10,12 @@ class EnterpriseChatRequest(BaseModel):
 
 class DailyReportCreate(BaseModel):
     content: str
+    actor_username: str | None = None
+
+
+class VoiceDraftRequest(BaseModel):
+    target_type: Literal["lead", "daily_report"]
+    transcript: str = Field(min_length=1)
     actor_username: str | None = None
 
 

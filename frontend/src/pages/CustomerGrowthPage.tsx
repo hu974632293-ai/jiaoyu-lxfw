@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Filter,
   ListTodo,
+  Mic,
   PhoneCall,
   RefreshCw,
   Search,
@@ -18,6 +19,7 @@ import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import { crmPrototypeRows, pipelineStages } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
+import { startSpeechToText } from "../utils/speech";
 
 type Lead = {
   id: number;
@@ -34,13 +36,25 @@ type AssessmentResult = {
   germany_score: number;
   missing_fields: string[];
 };
+type LeadVoiceDraft = {
+  customer_name: string;
+  contact_info?: string;
+  background_info: string;
+  source_channel: string;
+  owner_id?: number | null;
+};
+type VoiceDraftResponse<TDraft> = {
+  draft: TDraft;
+  requires_confirmation: boolean;
+  confirmation_endpoint: string;
+};
 
 type CustomerGrowthPageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
 };
 
 type AdvisorPanel = "create" | "insight" | "today" | "tasks" | null;
-type OperationKey = "load" | "createLead" | "assessLead" | null;
+type OperationKey = "load" | "createLead" | "assessLead" | "voiceDraft" | null;
 
 const statusMap: Record<string, string> = {
   new: "新线索",
@@ -82,6 +96,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [customerName, setCustomerName] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [sourceText, setSourceText] = useState("19 岁，高中毕业，希望新加坡升学，家长关注预算和就业前景。");
+  const [voiceTranscript, setVoiceTranscript] = useState("客户：陈语，电话 13900008888，高三，想申请新加坡本科，家长关注预算和就业。");
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [highlightLeadId, setHighlightLeadId] = useState<number | null>(null);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
@@ -222,6 +237,76 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
     }
   }
 
+  async function buildLeadVoiceDraft() {
+    const transcript = voiceTranscript.trim();
+    if (!transcript) {
+      setOperationFeedback({
+        phase: "error",
+        title: "口述内容为空",
+        detail: "请先输入客户口述内容，再生成待确认草稿。",
+        target: "口述录入",
+        timestamp: formatOperationTime(),
+      });
+      return;
+    }
+    setPendingOperation("voiceDraft");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在生成线索草稿",
+      detail: "系统会先整理为表单草稿，不会直接写入客户表。",
+      target: "口述录入",
+    });
+    try {
+      const data = await apiRequest<VoiceDraftResponse<LeadVoiceDraft>>("/api/enterprise-assistant/voice-drafts", {
+        method: "POST",
+        body: JSON.stringify({ target_type: "lead", transcript, actor_username: "admin" }),
+      });
+      setCustomerName(data.draft.customer_name);
+      setContactInfo(data.draft.contact_info ?? "");
+      setSourceText(data.draft.background_info);
+      setActivePanel("create");
+      setOperationFeedback({
+        phase: "success",
+        title: "线索草稿已生成",
+        detail: "请核对姓名、联系方式和背景资料，确认无误后再保存线索。",
+        target: data.confirmation_endpoint,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "线索草稿生成失败",
+        detail: error instanceof Error ? `${error.message}。口述内容已保留，可调整后重试。` : "口述内容已保留，可调整后重试。",
+        target: "口述录入",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  function startLeadVoiceInput() {
+    const started = startSpeechToText(
+      setVoiceTranscript,
+      (message) =>
+        setOperationFeedback({
+          phase: "error",
+          title: "语音输入不可用",
+          detail: message,
+          target: "口述录入",
+          timestamp: formatOperationTime(),
+        }),
+    );
+    if (started) {
+      setOperationFeedback({
+        phase: "pending",
+        title: "正在听取客户口述",
+        detail: "语音会先转成文本，请确认文本后再生成线索草稿。",
+        target: "口述录入",
+      });
+    }
+  }
+
   async function assessLead() {
     const rawInput = sourceText.trim();
     if (!rawInput) {
@@ -311,6 +396,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const isRefreshing = pendingOperation === "load";
   const isCreating = pendingOperation === "createLead";
   const isAssessing = pendingOperation === "assessLead";
+  const isDrafting = pendingOperation === "voiceDraft";
   const hasPendingOperation = pendingOperation !== null;
   const feedbackTargetId = operationFeedback.targetId;
   const feedbackAction = typeof feedbackTargetId === "number" ? (
@@ -471,6 +557,18 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
                 收起
               </button>
             </div>
+            <label className="stacked-input">
+              <span>口述客户资料</span>
+              <textarea value={voiceTranscript} onChange={(event) => setVoiceTranscript(event.target.value)} rows={3} />
+            </label>
+            <button className="tiny-button" onClick={startLeadVoiceInput} disabled={hasPendingOperation}>
+              <Mic size={14} aria-hidden="true" />
+              开始语音输入
+            </button>
+            <button className="tiny-button" onClick={buildLeadVoiceDraft} disabled={hasPendingOperation}>
+              <Mic className={isDrafting ? "spin-icon" : ""} size={14} aria-hidden="true" />
+              {isDrafting ? "正在生成草稿" : "生成线索草稿"}
+            </button>
             <div className="form-grid compact">
               <label className="stacked-input">
                 <span>客户姓名</span>
