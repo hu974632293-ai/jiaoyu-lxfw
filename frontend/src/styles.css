@@ -569,6 +569,19 @@ button:disabled {
   color: var(--muted);
 }
 
+.demo-role-switcher {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.demo-role-switcher span,
+.demo-role-switcher small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .readonly-identity {
   align-items: flex-start;
   flex-direction: column;

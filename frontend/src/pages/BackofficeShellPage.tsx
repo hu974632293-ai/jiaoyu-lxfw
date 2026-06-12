@@ -24,8 +24,9 @@ import TeacherPsychWorkflowPage from "./TeacherPsychWorkflowPage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
+import { canSwitchDemoRole, getAccountVisiblePages } from "../authRules";
 import type { LoginAccountProfile } from "../authRules";
-import { backofficeNavItems, roleVisiblePages } from "../navigation";
+import { backofficeNavItems } from "../navigation";
 import type { BackofficePageKey } from "../navigation";
 import type { PageProps } from "../App";
 
@@ -35,6 +36,7 @@ type BackofficeShellPageProps = {
   activePage: BackofficePageKey;
   selectedLeadId: number | null;
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
+  onRoleViewChange: (role: RoleKey) => void;
   onLogout: () => void;
   onSeedDemo: () => Promise<void>;
   seedStatus: string;
@@ -70,13 +72,15 @@ export default function BackofficeShellPage({
   activePage,
   selectedLeadId,
   onNavigate,
+  onRoleViewChange,
   onLogout,
   onSeedDemo,
   seedStatus,
   accessNotice,
 }: BackofficeShellPageProps) {
   const currentRole = roleOptions.find((item) => item.key === role) ?? roleOptions[0];
-  const visiblePages = roleVisiblePages[role];
+  const visiblePages = getAccountVisiblePages(accountProfile.key, role);
+  const canSwitchRoleView = canSwitchDemoRole(accountProfile.key);
   const storageKey = `jiaoyu-backoffice-sidebar-${role}`;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(role === "student");
   const visibleNavItems = visiblePages
@@ -200,6 +204,19 @@ export default function BackofficeShellPage({
           </div>
         </div>
         <div className="top-actions">
+          {canSwitchRoleView ? (
+            <div className="role-switcher demo-role-switcher" aria-label="演示视角">
+              <span>演示视角</span>
+              <select value={role} onChange={(event) => onRoleViewChange(event.target.value as RoleKey)}>
+                {roleOptions.map((item) => (
+                  <option value={item.key} key={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+              <small>{accountProfile.displayName}</small>
+            </div>
+          ) : null}
           <div className="role-switcher readonly-identity" aria-label="当前登录身份">
             <span>当前账号</span>
             <strong>{accountProfile.displayName} / {currentRole.label}</strong>

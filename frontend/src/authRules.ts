@@ -71,9 +71,19 @@ const allBackofficePages: BackofficePageKey[] = [
 ];
 
 const employeePages: BackofficePageKey[] = ["employeeQuickEntry", "employeeReports", "employeeOrg", "employeeCustomerQuery", "employeeGuide"];
+const adminGovernancePages: BackofficePageKey[] = [
+  "roleOverview",
+  "adminUsers",
+  "adminRoles",
+  "adminPermissions",
+  "adminAudit",
+  "adminNotifications",
+  "adminKnowledgeSources",
+  "adminSystemStatus",
+];
 
 export const roleVisiblePages: Record<RoleKey, BackofficePageKey[]> = {
-  admin: allBackofficePages,
+  admin: adminGovernancePages,
   manager: ["roleOverview", "managerGrowthDashboard", "managerDailySummary", "managerPsychWeekly", "managerFeedbackWeekly", "managerRiskQueue", ...employeePages, "reports"],
   consultant: ["roleOverview", "consultantNewLead", "consultantLeadQueue", "consultantFunnel", "consultantCustomer360", "consultantTasks", "consultantEvents", ...employeePages],
   employee: ["roleOverview", ...employeePages],
@@ -177,12 +187,20 @@ export function authenticateLogin(username: string, password: string): LoginAcco
   return Object.values(loginAccounts).find((account) => account.username === normalizedUsername && account.password === password) ?? null;
 }
 
-export function getAccountVisiblePages(accountKey: LoginAccountKey): BackofficePageKey[] {
-  return roleVisiblePages[loginAccounts[accountKey].role];
+export function canSwitchDemoRole(accountKey: LoginAccountKey): boolean {
+  return accountKey === "test";
+}
+
+export function canUseAccountRoleView(accountKey: LoginAccountKey, role: RoleKey): boolean {
+  return canSwitchDemoRole(accountKey) || loginAccounts[accountKey].role === role;
+}
+
+export function getAccountVisiblePages(accountKey: LoginAccountKey, role: RoleKey = loginAccounts[accountKey].role): BackofficePageKey[] {
+  return roleVisiblePages[canUseAccountRoleView(accountKey, role) ? role : loginAccounts[accountKey].role];
 }
 
 export function canAccessAccountPage(accountKey: LoginAccountKey, page: BackofficePageKey): boolean {
-  return getAccountVisiblePages(accountKey).includes(page);
+  return canSwitchDemoRole(accountKey) ? allBackofficePages.includes(page) : getAccountVisiblePages(accountKey).includes(page);
 }
 
 export function getAccountDefaultPage(accountKey: LoginAccountKey): BackofficePageKey {

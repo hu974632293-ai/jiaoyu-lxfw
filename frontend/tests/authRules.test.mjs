@@ -15,7 +15,7 @@ function loadAuthRules() {
   }).outputText;
   const module = { exports: {} };
   const require = () => {
-    throw new Error("authRules.ts 不应依赖运行时模块");
+    throw new Error("authRules.ts should not require runtime modules in this unit test");
   };
   new Function("module", "exports", "require", compiled)(module, module.exports, require);
   return module.exports;
@@ -23,33 +23,50 @@ function loadAuthRules() {
 
 const authRules = loadAuthRules();
 
-test("测试账号拥有全部后台页面权限", () => {
+test("test account can access every backoffice page needed by acceptance", () => {
   for (const page of ["adminUsers", "studentLeaveRequest", "teacherLeaveApproval", "consultantLeadQueue", "employeeReports", "managerRiskQueue"]) {
-    assert.equal(authRules.canAccessAccountPage("test", page), true, `${page} 应允许测试账号访问`);
+    assert.equal(authRules.canAccessAccountPage("test", page), true, `${page} should be available to the test account`);
   }
 });
 
-test("学生账号不能访问内部员工、老师、管理者或管理员页面", () => {
+test("admin account only exposes system governance pages", () => {
+  for (const page of ["adminUsers", "adminRoles", "adminPermissions", "adminAudit", "adminNotifications", "adminKnowledgeSources", "adminSystemStatus"]) {
+    assert.equal(authRules.canAccessAccountPage("admin", page), true, `${page} should be available to admin`);
+  }
+  for (const page of ["studentLeaveRequest", "teacherLeaveApproval", "consultantLeadQueue", "employeeReports", "managerRiskQueue"]) {
+    assert.equal(authRules.canAccessAccountPage("admin", page), false, `${page} should not be in the admin production view`);
+  }
+});
+
+test("test account can render menus by demo role view", () => {
+  assert.equal(authRules.canSwitchDemoRole("test"), true);
+  assert.equal(authRules.canSwitchDemoRole("admin"), false);
+  assert.deepEqual(authRules.getAccountVisiblePages("test", "student"), authRules.roleVisiblePages.student);
+  assert.deepEqual(authRules.getAccountVisiblePages("test", "consultant"), authRules.roleVisiblePages.consultant);
+  assert.deepEqual(authRules.getAccountVisiblePages("admin", "student"), authRules.roleVisiblePages.admin);
+});
+
+test("student account cannot access staff, teacher, manager, or admin pages", () => {
   assert.equal(authRules.canAccessAccountPage("student", "studentLeaveRequest"), true);
   for (const page of ["employeeReports", "teacherLeaveApproval", "managerRiskQueue", "adminPermissions"]) {
-    assert.equal(authRules.canAccessAccountPage("student", page), false, `${page} 应拒绝学生访问`);
+    assert.equal(authRules.canAccessAccountPage("student", page), false, `${page} should be denied for student`);
   }
 });
 
-test("管理者、顾问、老师继承员工工作台入口", () => {
+test("manager, consultant, and teacher inherit employee workspace entries", () => {
   for (const account of ["manager", "consultant", "teacher"]) {
-    assert.equal(authRules.canAccessAccountPage(account, "employeeReports"), true, `${account} 应允许访问员工日报`);
-    assert.equal(authRules.canAccessAccountPage(account, "employeeOrg"), true, `${account} 应允许访问组织架构`);
+    assert.equal(authRules.canAccessAccountPage(account, "employeeReports"), true, `${account} should access employee reports`);
+    assert.equal(authRules.canAccessAccountPage(account, "employeeOrg"), true, `${account} should access organization lookup`);
   }
 });
 
-test("登录快捷入口只填充账号，不直接决定权限", () => {
+test("login shortcuts fill accounts without directly deciding permission scope", () => {
   assert.equal(authRules.loginShortcuts.enterprise.accountKey, "consultant");
   assert.equal(authRules.loginShortcuts.student.accountKey, "student");
   assert.equal(authRules.loginShortcuts.test.accountKey, "test");
 });
 
-test("账号密码认证成功后返回账号绑定角色", () => {
+test("username and password authentication returns the account-bound role", () => {
   assert.equal(authRules.authenticateLogin("test", "test123")?.role, "admin");
   assert.equal(authRules.authenticateLogin("student", "student123")?.role, "student");
   assert.equal(authRules.authenticateLogin("test", "wrong"), null);
