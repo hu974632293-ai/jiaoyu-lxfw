@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, PanelRightClose, PanelRightOpen, Plus, RefreshCw } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, PanelRightClose, PanelRightOpen, Plus, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import {
   crmPrototypeRows,
   crmTimeline,
   customerAdviceItems,
-  eventPrototypeRows,
   mockReportSnapshots,
   projectRows,
 } from "../data/prototype";
@@ -27,14 +26,25 @@ type TimelineItem = {
   created_at: string | null;
   meta: Record<string, unknown>;
 };
+type EventSummary = {
+  id: number;
+  event_name: string;
+  event_type: string;
+  start_time: string | null;
+  location: string;
+  max_participants: number;
+  current_participants: number;
+  status: string;
+};
 
 type DisplayTimelineItem = { time: string; title: string; detail: string; taskId?: number; taskStatus?: string };
 type Customer360Tab = "overview" | "profile" | "recommendations" | "consulting" | "tasks" | "events" | "reports";
-type Customer360Operation = "refresh" | "status" | "followUp" | "createTask" | "completeTask" | null;
+type Customer360Operation = "refresh" | "status" | "followUp" | "createTask" | "completeTask" | "eventInvite" | null;
 
 type Customer360PageProps = {
   selectedLeadId: number | null;
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
+  initialTab?: Customer360Tab;
 };
 
 const statusMap: Record<string, string> = {
@@ -86,10 +96,10 @@ function normalizeTimeline(items: TimelineItem[]): DisplayTimelineItem[] {
   }));
 }
 
-export default function Customer360Page({ selectedLeadId, onNavigate }: Customer360PageProps) {
+export default function Customer360Page({ selectedLeadId, onNavigate, initialTab = "overview" }: Customer360PageProps) {
   const leadId = selectedLeadId ?? crmPrototypeRows[0].id;
   const [detail, setDetail] = useState<LeadDetail | null>(null);
-  const [tab, setTab] = useState<Customer360Tab>("overview");
+  const [tab, setTab] = useState<Customer360Tab>(initialTab);
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "pending",
     title: "正在加载客户 360",
@@ -102,9 +112,15 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
   const [followUpText, setFollowUpText] = useState("家长关注费用，希望周末参加说明会。");
   const [taskTitle, setTaskTitle] = useState("邀约客户参加周末说明会");
   const [timeline, setTimeline] = useState<DisplayTimelineItem[]>(crmTimeline.map((item) => ({ time: item.time, title: item.title, detail: item.detail })));
+  const [events, setEvents] = useState<EventSummary[]>([]);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Set<number>>(new Set());
 
   const selected = useMemo(() => crmPrototypeRows.find((item) => item.id === leadId) ?? crmPrototypeRows[0], [leadId]);
   const pendingTasks = timeline.filter((item) => item.taskId && item.title === "创建任务" && item.taskStatus !== "已完成");
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   async function loadDetail(nextLeadId = leadId) {
     try {
@@ -118,8 +134,25 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
     try {
       const data = await apiRequest<TimelineItem[]>(`/api/leads/${nextLeadId}/timeline`);
       setTimeline(data.length ? normalizeTimeline(data) : crmTimeline.map((item) => ({ time: item.time, title: item.title, detail: item.detail })));
+      setRegisteredEventIds(
+        new Set(
+          data
+            .filter((item) => item.type === "event_registration" && typeof item.meta.event_id === "number")
+            .map((item) => item.meta.event_id as number),
+        ),
+      );
     } catch {
       setTimeline(crmTimeline.map((item) => ({ time: item.time, title: item.title, detail: item.detail })));
+      setRegisteredEventIds(new Set());
+    }
+  }
+
+  async function loadEvents() {
+    try {
+      const data = await apiRequest<EventSummary[]>("/api/events");
+      setEvents(data);
+    } catch {
+      setEvents([]);
     }
   }
 
@@ -133,7 +166,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
         target: `客户 #${nextLeadId}`,
       });
     }
-    await Promise.all([loadDetail(nextLeadId), loadTimeline(nextLeadId)]);
+    await Promise.all([loadDetail(nextLeadId), loadTimeline(nextLeadId), loadEvents()]);
     if (!options.preserveFeedback) {
       setOperationFeedback({
         phase: "success",
@@ -173,7 +206,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       setOperationFeedback({
         phase: "error",
         title: "客户阶段更新失败",
-        detail: error instanceof Error ? `${error.message}。当前客户状态未改动，可重试。` : "接口不可用。当前客户状态未改动，可重试。",
+        detail: error instanceof Error ? `${error.message}。当前客户状态未改动，可重试。` : "服务暂不可用。当前客户状态未改动，可重试。",
         target: detail?.customer_name ?? selected.customer_name,
         timestamp: formatOperationTime(),
       });
@@ -224,7 +257,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       setOperationFeedback({
         phase: "error",
         title: "新增跟进失败",
-        detail: error instanceof Error ? `${error.message}。跟进内容已保留，可重试。` : "接口不可用。跟进内容已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。跟进内容已保留，可重试。` : "服务暂不可用。跟进内容已保留，可重试。",
         target: detail?.customer_name ?? selected.customer_name,
         timestamp: formatOperationTime(),
       });
@@ -270,7 +303,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       setOperationFeedback({
         phase: "error",
         title: "创建任务失败",
-        detail: error instanceof Error ? `${error.message}。任务标题已保留，可重试。` : "接口不可用。任务标题已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。任务标题已保留，可重试。` : "服务暂不可用。任务标题已保留，可重试。",
         target: detail?.customer_name ?? selected.customer_name,
         timestamp: formatOperationTime(),
       });
@@ -306,8 +339,52 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
       setOperationFeedback({
         phase: "error",
         title: "完成任务失败",
-        detail: error instanceof Error ? `${error.message}。任务状态未改动，可重试。` : "接口不可用。任务状态未改动，可重试。",
+        detail: error instanceof Error ? `${error.message}。任务状态未改动，可重试。` : "服务暂不可用。任务状态未改动，可重试。",
         target: `任务 #${taskId}`,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function inviteToEvent(eventId: number, eventName: string) {
+    setPendingOperation("eventInvite");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在邀约客户报名活动",
+      detail: `活动：${eventName}。`,
+      target: detail?.customer_name ?? selected.customer_name,
+    });
+    try {
+      await apiRequest(`/api/events/${eventId}/registrations`, {
+        method: "POST",
+        body: JSON.stringify({
+          lead_id: leadId,
+          subject_type: "lead",
+          subject_id: leadId,
+          subject_name: detail?.customer_name ?? selected.customer_name,
+          contact_info: detail?.contact_info ?? "",
+          source_channel: "CRM邀约",
+          operator_username: "admin",
+        }),
+      });
+      setHighlightArea("timeline");
+      setTab("events");
+      await refreshSelectedLead(leadId, { preserveFeedback: true });
+      setOperationFeedback({
+        phase: "success",
+        title: "活动邀约已记录",
+        detail: "客户报名状态已更新，并写入客户时间线。",
+        target: eventName,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "活动邀约失败",
+        detail: error instanceof Error ? `${error.message}。当前客户报名状态未改动，可重试。` : "活动邀约暂时无法完成，可重试。",
+        target: eventName,
         timestamp: formatOperationTime(),
       });
     } finally {
@@ -325,6 +402,7 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
   const isAddingFollowUp = pendingOperation === "followUp";
   const isCreatingTask = pendingOperation === "createTask";
   const isCompletingTask = pendingOperation === "completeTask";
+  const isInvitingEvent = pendingOperation === "eventInvite";
 
   function renderTabContent() {
     if (tab === "profile") {
@@ -401,12 +479,25 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
     if (tab === "events") {
       return (
         <div className="action-list">
-          {eventPrototypeRows.slice(0, 2).map((event) => (
-            <article key={event.name}>
-              <strong>{event.name}</strong>
-              <span>{event.time} / {event.status} / {event.signed}/{event.capacity}</span>
-            </article>
-          ))}
+          {events.map((event) => {
+            const isRegistered = registeredEventIds.has(event.id);
+            return (
+              <article key={event.id}>
+                <strong>{event.event_name}</strong>
+                <span>
+                  {formatTimelineTime(event.start_time)} / {event.event_type} / {event.current_participants}/{event.max_participants}
+                </span>
+                <div className="inline-actions">
+                  <span className={isRegistered ? "status-pill success" : "status-pill"}>{isRegistered ? "已报名" : event.status}</span>
+                  <button className="tiny-button" onClick={() => inviteToEvent(event.id, event.event_name)} disabled={hasPendingOperation || isRegistered}>
+                    <CalendarDays className={isInvitingEvent ? "spin-icon" : ""} size={14} aria-hidden="true" />
+                    {isRegistered ? "已邀约" : "邀约当前客户"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {!events.length ? <div className="empty-state">暂无可邀约活动，可在运营资源中创建活动后再邀约客户。</div> : null}
         </div>
       );
     }
@@ -457,8 +548,8 @@ export default function Customer360Page({ selectedLeadId, onNavigate }: Customer
             <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
             {isRefreshing ? "正在刷新" : "刷新客户 360"}
           </button>
-          <button className="ghost-button" onClick={() => onNavigate("customerGrowth")}>
-            返回客户增长
+          <button className="ghost-button" onClick={() => onNavigate("consultantLeadQueue")}>
+            返回线索队列
           </button>
         </div>
       </section>

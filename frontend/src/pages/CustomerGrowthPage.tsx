@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
-import { crmPrototypeRows, pipelineStages } from "../data/prototype";
+import { crmPrototypeRows } from "../data/prototype";
 import type { BackofficePageKey } from "../navigation";
 import { startSpeechToText } from "../utils/speech";
 
@@ -51,6 +51,8 @@ type VoiceDraftResponse<TDraft> = {
 
 type CustomerGrowthPageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
+  initialPanel?: AdvisorPanel;
+  initialStatusFilter?: string;
 };
 
 type AdvisorPanel = "create" | "insight" | "today" | "tasks" | null;
@@ -82,10 +84,10 @@ function formatOperationTime() {
   }).format(new Date());
 }
 
-export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPageProps) {
+export default function CustomerGrowthPage({ onNavigate, initialPanel = null, initialStatusFilter = "all" }: CustomerGrowthPageProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [keyword, setKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [operationFeedback, setOperationFeedback] = useState<OperationFeedbackState>({
     phase: "pending",
@@ -100,7 +102,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [highlightLeadId, setHighlightLeadId] = useState<number | null>(null);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
-  const [activePanel, setActivePanel] = useState<AdvisorPanel>(null);
+  const [activePanel, setActivePanel] = useState<AdvisorPanel>(initialPanel);
 
   const leadFilters = useMemo(
     () => ({
@@ -126,8 +128,16 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
     return query ? `/api/leads?${query}` : "/api/leads";
   }
 
+  useEffect(() => {
+    setActivePanel(initialPanel);
+  }, [initialPanel]);
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
+
   function handleFunnelClick(event: MouseEvent<HTMLDivElement>) {
-    const stageLabel = (event.target as HTMLElement).closest("article")?.querySelector("em")?.textContent;
+    const stageLabel = (event.target as HTMLElement).closest("article")?.getAttribute("data-stage");
     if (stageLabel) {
       setStatusFilter(funnelStatusMap[stageLabel] ?? "all");
     }
@@ -269,7 +279,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
         phase: "success",
         title: "线索草稿已生成",
         detail: "请核对姓名、联系方式和背景资料，确认无误后再保存线索。",
-        target: data.confirmation_endpoint,
+        target: "线索表单",
         timestamp: formatOperationTime(),
       });
     } catch (error) {
@@ -378,6 +388,17 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
     return queueRows;
   }, [queueRows]);
 
+  const funnelStages = useMemo(() => {
+    const countByStatus = (statuses: string[]) => queueRows.filter((item) => statuses.includes(item.status)).length;
+    return [
+      { label: "新线索", count: countByStatus(["new", "新增意向"]) },
+      { label: "已画像", count: countByStatus(["high_potential"]) },
+      { label: "咨询中", count: countByStatus(["consulting"]) },
+      { label: "活动邀约", count: countByStatus(["contacted"]) },
+      { label: "成交/流失", count: countByStatus(["converted", "lost", "已转化", "已成交", "流失", "暂缓/流失"]) },
+    ];
+  }, [queueRows]);
+
   const commandMetrics = useMemo(() => {
     const highPotentialCount = queueRows.filter((item) => item.status === "high_potential").length;
     const activeCount = queueRows.filter((item) => !["converted", "lost"].includes(item.status)).length;
@@ -400,7 +421,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
   const hasPendingOperation = pendingOperation !== null;
   const feedbackTargetId = operationFeedback.targetId;
   const feedbackAction = typeof feedbackTargetId === "number" ? (
-    <button className="tiny-button" onClick={() => onNavigate("customer360", feedbackTargetId)}>
+    <button className="tiny-button" onClick={() => onNavigate("consultantCustomer360", feedbackTargetId)}>
       打开客户 360 <ArrowRight size={13} aria-hidden="true" />
     </button>
   ) : null;
@@ -486,12 +507,11 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
               <option value="官网咨询">官网咨询</option>
               <option value="顾问录入">顾问录入</option>
               <option value="活动报名">活动报名</option>
-              <option value="演示数据">演示数据</option>
             </select>
           </div>
           <div className="advisor-stage-line" aria-label="客户增长阶段漏斗" onClick={handleFunnelClick}>
-            {pipelineStages.map((stage, index) => (
-              <article key={stage.label}>
+            {funnelStages.map((stage, index) => (
+              <article key={stage.label} data-stage={stage.label}>
                 <span>0{index + 1}</span>
                 <strong>{stage.count}</strong>
                 <em>{stage.label}</em>
@@ -503,7 +523,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
               <button
                 className={`advisor-lead-card ${highlightLeadId === lead.id ? "is-highlighted" : ""}`}
                 key={lead.id}
-                onClick={() => onNavigate("customer360", lead.id)}
+                onClick={() => onNavigate("consultantCustomer360", lead.id)}
               >
                 <span className="advisor-lead-rank">#{lead.id}</span>
                 <div className="advisor-lead-main">
@@ -542,7 +562,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
             <ListTodo size={19} aria-hidden="true" />
             <span>任务</span>
           </button>
-          <button onClick={() => spotlightLead && onNavigate("customer360", spotlightLead.id)} title="客户 360">
+          <button onClick={() => spotlightLead && onNavigate("consultantCustomer360", spotlightLead.id)} title="客户 360">
             <Users size={19} aria-hidden="true" />
             <span>360</span>
           </button>
@@ -592,7 +612,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
                 {isAssessing ? "正在研判" : "触发画像研判"}
               </button>
               {createdId ? (
-                <button className="ghost-button" onClick={() => onNavigate("customer360", createdId)}>
+                <button className="ghost-button" onClick={() => onNavigate("consultantCustomer360", createdId)}>
                   打开客户 360 <ArrowRight size={13} aria-hidden="true" />
                 </button>
               ) : null}
@@ -646,7 +666,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
             </div>
             <div className="advisor-action-list">
               {todayActions.map((lead) => (
-                <button key={lead.id} onClick={() => onNavigate("customer360", lead.id)}>
+                <button key={lead.id} onClick={() => onNavigate("consultantCustomer360", lead.id)}>
                   <span className="status-pill warning">{lead.statusLabel}</span>
                   <strong>{lead.customer_name}</strong>
                   <small>{lead.nextTask}</small>
@@ -670,7 +690,7 @@ export default function CustomerGrowthPage({ onNavigate }: CustomerGrowthPagePro
               <span>触发画像研判</span>
               <span>进入客户 360 记录跟进</span>
               {spotlightLead ? (
-                <button className="ghost-button" onClick={() => onNavigate("customer360", spotlightLead.id)}>
+                <button className="ghost-button" onClick={() => onNavigate("consultantCustomer360", spotlightLead.id)}>
                   处理 {spotlightLead.customer_name}
                   <ArrowRight size={13} aria-hidden="true" />
                 </button>

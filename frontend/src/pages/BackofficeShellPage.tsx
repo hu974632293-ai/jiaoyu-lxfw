@@ -129,6 +129,24 @@ export default function BackofficeShellPage({
   }
 
   function renderCurrentPage() {
+    if (activePage === "consultantNewLead") {
+      return <CustomerGrowthPage initialPanel="create" onNavigate={onNavigate} />;
+    }
+    if (activePage === "consultantLeadQueue") {
+      return <CustomerGrowthPage onNavigate={onNavigate} />;
+    }
+    if (activePage === "consultantFunnel") {
+      return <CustomerGrowthPage initialStatusFilter="high_potential" onNavigate={onNavigate} />;
+    }
+    if (activePage === "consultantCustomer360") {
+      return <Customer360Page selectedLeadId={selectedLeadId} onNavigate={onNavigate} />;
+    }
+    if (activePage === "consultantTasks") {
+      return <Customer360Page selectedLeadId={selectedLeadId} initialTab="tasks" onNavigate={onNavigate} />;
+    }
+    if (activePage === "consultantEvents") {
+      return <Customer360Page selectedLeadId={selectedLeadId} initialTab="events" onNavigate={onNavigate} />;
+    }
     if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
     }
