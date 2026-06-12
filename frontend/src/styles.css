@@ -1225,6 +1225,20 @@ td span {
   padding-right: 2px;
 }
 
+.workflow-list-panel {
+  display: flex;
+  flex-direction: column;
+  height: clamp(320px, calc(100vh - 390px), 560px);
+  min-height: 0;
+}
+
+.workflow-scroll-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
 .workflow-teacher-layout {
   grid-column: 1 / -1;
   display: grid;

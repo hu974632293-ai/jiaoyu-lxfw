@@ -46,6 +46,16 @@ for (const [pageKey, componentName] of requiredPages) {
     /className="panel-block workflow-history-panel"/,
     `${componentName} 处理记录卡片应使用稳定高度面板`,
   );
+  assert.match(
+    componentSource,
+    /className="panel-block workflow-list-panel"/,
+    `${componentName} 列表或队列卡片应使用稳定高度面板`,
+  );
+  assert.match(
+    componentSource,
+    /className="select-list workflow-list workflow-scroll-list"/,
+    `${componentName} 列表或队列内容应使用受控滚动列表`,
+  );
   if (studentPages.has(componentName)) {
     assert.match(
       componentSource,

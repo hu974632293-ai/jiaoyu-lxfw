@@ -185,7 +185,7 @@ export default function TeacherFeedbackWorkflowPage() {
 
       <section className="workflow-action-layout">
         <div className="workflow-teacher-layout">
-          <section className="panel-block">
+          <section className="panel-block workflow-list-panel">
             <div className="section-title">
               <h3>反馈队列</h3>
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
@@ -197,7 +197,7 @@ export default function TeacherFeedbackWorkflowPage() {
                 <option value="全部">全部</option>
               </select>
             </div>
-            <div className="select-list workflow-list">
+            <div className="select-list workflow-list workflow-scroll-list">
               {visibleTickets.map((item) => (
                 <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
                   <strong>#{item.id} 学生 #{item.student_id} / {item.status}</strong>

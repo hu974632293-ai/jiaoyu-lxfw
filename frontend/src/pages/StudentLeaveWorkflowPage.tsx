@@ -297,12 +297,12 @@ export default function StudentLeaveWorkflowPage() {
             </div>
           </section>
 
-          <section className="panel-block">
+          <section className="panel-block workflow-list-panel">
             <div className="section-title">
               <h3>我的请假</h3>
               <span>{leaves.length} 条</span>
             </div>
-            <div className="select-list workflow-list">
+            <div className="select-list workflow-list workflow-scroll-list">
               {leaves.map((item) => (
                 <button className={item.id === selectedLeave?.id ? "active" : ""} key={item.id} onClick={() => setSelectedLeaveId(item.id)}>
                   <strong>#{item.id} {item.status}</strong>

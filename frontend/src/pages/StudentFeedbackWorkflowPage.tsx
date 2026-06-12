@@ -252,12 +252,12 @@ export default function StudentFeedbackWorkflowPage() {
             </div>
           </section>
 
-          <section className="panel-block">
+          <section className="panel-block workflow-list-panel">
             <div className="section-title">
               <h3>我的反馈</h3>
               <span>{tickets.length} 条</span>
             </div>
-            <div className="select-list workflow-list">
+            <div className="select-list workflow-list workflow-scroll-list">
               {tickets.map((item) => (
                 <button className={item.id === selectedTicket?.id ? "active" : ""} key={item.id} onClick={() => setSelectedTicketId(item.id)}>
                   <strong>#{item.id} {item.category} / {item.status}</strong>
