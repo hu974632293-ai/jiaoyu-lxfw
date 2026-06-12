@@ -1075,6 +1075,44 @@ td span {
   gap: 12px;
 }
 
+.role-overview-feature-panel {
+  align-self: stretch;
+}
+
+.workspace-feature-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.workspace-feature-grid .role-action-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 4px 10px;
+  min-height: 86px;
+  padding: 12px;
+}
+
+.workspace-feature-grid .role-action-card svg {
+  grid-row: 1 / span 2;
+  margin-top: 2px;
+}
+
+.workspace-feature-grid .role-action-card strong {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.workspace-feature-grid .role-action-card span {
+  line-height: 1.45;
+}
+
+.role-overview-support-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
 .role-snapshot-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2061,6 +2099,7 @@ textarea {
   .split-layout,
   .split-layout.secondary,
   .role-workbench-grid,
+  .role-overview-support-grid,
   .growth-overview-grid,
   .public-hero,
   .public-two-column,

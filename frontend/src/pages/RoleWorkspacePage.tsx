@@ -173,61 +173,59 @@ export default function RoleWorkspacePage({ role, activePage, onNavigate, onSeed
           ))}
         </section>
 
-        <section className="split-layout secondary">
-          <div className="panel-block">
-            <div className="section-title">
-              <h3>功能入口</h3>
-              <ClipboardList size={18} aria-hidden="true" />
-            </div>
-            <div className="role-action-grid workspace-feature-grid">
-              {featurePages.map((page) => {
-                const item = getNavItem(page);
-                const Icon = item.icon;
-                return (
-                  <button className="role-action-card" key={page} onClick={() => onNavigate(page)}>
-                    <Icon size={20} aria-hidden="true" />
-                    <strong>{item.label}</strong>
-                    <span>{item.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
+        <section className="panel-block role-overview-feature-panel">
+          <div className="section-title">
+            <h3>功能入口</h3>
+            <ClipboardList size={18} aria-hidden="true" />
           </div>
+          <div className="role-action-grid workspace-feature-grid">
+            {featurePages.map((page) => {
+              const item = getNavItem(page);
+              const Icon = item.icon;
+              return (
+                <button className="role-action-card" key={page} onClick={() => onNavigate(page)}>
+                  <Icon size={20} aria-hidden="true" />
+                  <strong>{item.label}</strong>
+                  <span>{item.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-          <aside className="side-stack">
-            <section className="panel-block">
-              <div className="section-title">
-                <h3>今日待办</h3>
-                <span>{copy.todos.length} 项</span>
-              </div>
-              <div className="task-list">
-                {copy.todos.map((item) => (
-                  <article className="task-row" key={item}>
-                    <div>
-                      <strong>{item}</strong>
-                      <span>{copy.title}</span>
-                    </div>
-                    <em>待处理</em>
-                  </article>
-                ))}
-              </div>
-            </section>
+        <section className="role-overview-support-grid">
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>今日待办</h3>
+              <span>{copy.todos.length} 项</span>
+            </div>
+            <div className="task-list">
+              {copy.todos.map((item) => (
+                <article className="task-row" key={item}>
+                  <div>
+                    <strong>{item}</strong>
+                    <span>{copy.title}</span>
+                  </div>
+                  <em>待处理</em>
+                </article>
+              ))}
+            </div>
+          </section>
 
-            <section className="panel-block">
-              <div className="section-title">
-                <h3>最近记录</h3>
-                <span>{copy.records.length} 条</span>
-              </div>
-              <div className="guide-list">
-                {copy.records.map((item) => (
-                  <article key={item.id}>
-                    <strong>{item.title}</strong>
-                    <span>{item.status} / {item.next}</span>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </aside>
+          <section className="panel-block">
+            <div className="section-title">
+              <h3>最近记录</h3>
+              <span>{copy.records.length} 条</span>
+            </div>
+            <div className="guide-list">
+              {copy.records.map((item) => (
+                <article key={item.id}>
+                  <strong>{item.title}</strong>
+                  <span>{item.status} / {item.next}</span>
+                </article>
+              ))}
+            </div>
+          </section>
         </section>
       </div>
     );
