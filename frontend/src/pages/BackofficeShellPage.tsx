@@ -162,6 +162,21 @@ export default function BackofficeShellPage({
     if (activePage === "employeeGuide") {
       return <EmployeeWorkspacePage initialView="guide" role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
     }
+    if (activePage === "managerGrowthDashboard") {
+      return <ManagementDashboardPage initialView="growth" onNavigate={onNavigate} />;
+    }
+    if (activePage === "managerDailySummary") {
+      return <ManagementDashboardPage initialView="daily" onNavigate={onNavigate} />;
+    }
+    if (activePage === "managerPsychWeekly") {
+      return <ManagementDashboardPage initialView="psych" onNavigate={onNavigate} />;
+    }
+    if (activePage === "managerFeedbackWeekly") {
+      return <ManagementDashboardPage initialView="feedback" onNavigate={onNavigate} />;
+    }
+    if (activePage === "managerRiskQueue") {
+      return <ManagementDashboardPage initialView="risk" onNavigate={onNavigate} />;
+    }
     if (activePage === "growthOverview") {
       return <GrowthOverviewPage onNavigate={onNavigate} />;
     }

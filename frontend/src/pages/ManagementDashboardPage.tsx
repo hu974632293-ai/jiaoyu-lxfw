@@ -30,14 +30,55 @@ type DailySummary = {
 
 type ManagementDashboardPageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
+  initialView?: ManagementView;
 };
 type ManagementOperation = "refresh" | "generate" | "openReport" | null;
+type ManagementView = "overview" | "growth" | "daily" | "psych" | "feedback" | "risk";
 
 const reportLabels: Record<string, string> = {
   customer_operation: "客户经营报告",
   daily_summary: "员工日报汇总",
   student_psych_weekly: "学生心理健康周报",
   feedback_weekly: "投诉处理周报",
+};
+
+const viewCopy: Record<ManagementView, { eyebrow: string; title: string; subtitle: string; reportTypes: string[] }> = {
+  overview: {
+    eyebrow: "经营管理后台",
+    title: "增长总览、报告和风险队列",
+    subtitle: "集中查看经营指标、日报风险、学生支持风险和投诉处理。",
+    reportTypes: ["customer_operation", "daily_summary", "student_psych_weekly", "feedback_weekly"],
+  },
+  growth: {
+    eyebrow: "增长总览",
+    title: "查看线索、转化、流失和活动风险",
+    subtitle: "聚焦客户增长表现和经营建议，不展示系统治理入口。",
+    reportTypes: ["customer_operation"],
+  },
+  daily: {
+    eyebrow: "日报汇总",
+    title: "查看团队日报和周报汇总",
+    subtitle: "按日期、周起始日和部门筛选日报风险与进展。",
+    reportTypes: ["daily_summary"],
+  },
+  psych: {
+    eyebrow: "心理周报",
+    title: "查看心理辅助风险趋势和跟进状态",
+    subtitle: "心理预警仅为辅助识别，不替代专业心理诊断。",
+    reportTypes: ["student_psych_weekly"],
+  },
+  feedback: {
+    eyebrow: "投诉周报",
+    title: "查看投诉数量、分类和未关闭事项",
+    subtitle: "聚焦服务反馈、处理时效和未决风险。",
+    reportTypes: ["feedback_weekly"],
+  },
+  risk: {
+    eyebrow: "风险队列",
+    title: "统一查看经营和学生服务风险",
+    subtitle: "将高优先级客户、日报、心理和投诉风险集中呈现。",
+    reportTypes: ["customer_operation", "daily_summary", "student_psych_weekly", "feedback_weekly"],
+  },
 };
 
 function formatOperationTime() {
@@ -48,7 +89,7 @@ function formatOperationTime() {
   }).format(new Date());
 }
 
-export default function ManagementDashboardPage({ onNavigate }: ManagementDashboardPageProps) {
+export default function ManagementDashboardPage({ onNavigate, initialView = "overview" }: ManagementDashboardPageProps) {
   const [reports, setReports] = useState<ReportCreated[]>([]);
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(null);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
@@ -123,7 +164,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
         setOperationFeedback({
           phase: "error",
           title: "经营数据加载失败",
-          detail: error instanceof Error ? `${error.message}。可稍后重试，已保留页面兜底信息。` : "接口不可用。可稍后重试，已保留页面兜底信息。",
+          detail: error instanceof Error ? `${error.message}。可稍后重试，当前页面选择不会丢失。` : "服务暂不可用。可稍后重试，当前页面选择不会丢失。",
           target: "经营管理后台",
           timestamp: formatOperationTime(),
         });
@@ -170,7 +211,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
       setOperationFeedback({
         phase: "error",
         title: "报告生成失败",
-        detail: error instanceof Error ? `${error.message}。报告类型已保留，可重试。` : "接口不可用。报告类型已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。报告类型已保留，可重试。` : "服务暂不可用。报告类型已保留，可重试。",
         target: reportLabel,
         timestamp: formatOperationTime(),
       });
@@ -202,7 +243,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
       setOperationFeedback({
         phase: "error",
         title: "报告详情加载失败",
-        detail: error instanceof Error ? `${error.message}。列表选择已保留，可重试。` : "接口不可用。列表选择已保留，可重试。",
+        detail: error instanceof Error ? `${error.message}。列表选择已保留，可重试。` : "服务暂不可用。列表选择已保留，可重试。",
         target: `报告 #${reportId}`,
         timestamp: formatOperationTime(),
       });
@@ -214,21 +255,29 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
   const hasPendingOperation = pendingOperation !== null;
   const isRefreshing = pendingOperation === "refresh";
   const isGenerating = pendingOperation === "generate";
+  const copy = viewCopy[initialView];
+  const visibleReportTypes = reportTypes.filter((item) => copy.reportTypes.includes(item.key));
+  const showMetrics = initialView === "overview" || initialView === "growth";
+  const showReportPanel = initialView !== "risk";
+  const showRiskQueue = initialView === "overview" || initialView === "risk" || initialView === "psych" || initialView === "feedback";
+  const showDailySummary = initialView === "overview" || initialView === "daily";
+  const showReportList = initialView !== "risk";
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">经营管理后台</p>
-          <h2>增长总览、报告和风险队列</h2>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h2>{copy.title}</h2>
+          <p>{copy.subtitle}</p>
         </div>
         <div className="heading-actions">
           <button className="icon-button secondary" onClick={() => refresh()} disabled={hasPendingOperation}>
             <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
             {isRefreshing ? "正在刷新" : "刷新经营数据"}
           </button>
-          <button className="icon-button" onClick={() => onNavigate("customerGrowth")}>
-            客户增长
+          <button className="icon-button" onClick={() => onNavigate("managerRiskQueue")}>
+            风险队列
           </button>
         </div>
       </section>
@@ -238,7 +287,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
         <span className="status-pill">日报：{dailySummary?.report_count ?? 0} 条</span>
       </section>
 
-      <section className="metric-grid" aria-label="经营指标">
+      {showMetrics ? <section className="metric-grid" aria-label="经营指标">
         {dashboardMetrics.map((metric) => (
           <article className={`metric-card ${metric.state}`} key={metric.label}>
             <span>{metric.label}</span>
@@ -246,16 +295,16 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
             <em>{metric.trend}</em>
           </article>
         ))}
-      </section>
+      </section> : null}
 
       <section className="management-layout">
-        <div className="panel-block">
+        {showReportPanel ? <div className="panel-block">
           <div className="section-title">
             <h3>管理报告</h3>
             <FileText size={18} aria-hidden="true" />
           </div>
           <div className="management-report-grid">
-            {reportTypes.map((item) => (
+            {visibleReportTypes.map((item) => (
               <article key={item.key}>
                 <span>{item.mode}</span>
                 <strong>{reportLabels[item.key] ?? item.title}</strong>
@@ -266,10 +315,10 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
               </article>
             ))}
           </div>
-        </div>
+        </div> : null}
 
-        <aside className="side-stack">
-          <section className="panel-block">
+        {showRiskQueue || showDailySummary ? <aside className="side-stack">
+          {showRiskQueue ? <section className="panel-block">
             <div className="section-title">
               <h3>风险队列</h3>
               <AlertTriangle size={18} aria-hidden="true" />
@@ -285,9 +334,9 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
                 </article>
               ))}
             </div>
-          </section>
+          </section> : null}
 
-          <section className="panel-block">
+          {showDailySummary ? <section className="panel-block">
             <div className="section-title">
               <h3>员工日报汇总</h3>
               <ClipboardList size={18} aria-hidden="true" />
@@ -376,11 +425,11 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
                 </article>
               ))}
             </div>
-          </section>
-        </aside>
+          </section> : null}
+        </aside> : null}
       </section>
 
-      <section className="split-layout secondary">
+      {showReportList ? <section className="split-layout secondary">
         <div className="panel-block">
           <div className="section-title">
             <h3>最近报告</h3>
@@ -391,7 +440,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
               <article className={highlightReportId === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openReport(item.id)}>
                 <strong>{item.title}</strong>
                 <span>{reportLabels[item.report_type] ?? item.report_type}</span>
-                <em>{item.generation_mode}</em>
+                <em>已生成</em>
               </article>
             ))}
             {!reports.length && <div className="empty-state">暂无报告。</div>}
@@ -416,7 +465,7 @@ export default function ManagementDashboardPage({ onNavigate }: ManagementDashbo
             <div className="empty-state">选择或生成报告后展示。</div>
           )}
         </div>
-      </section>
+      </section> : null}
     </div>
   );
 }
