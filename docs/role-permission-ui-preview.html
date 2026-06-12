@@ -659,9 +659,17 @@
         name: "系统管理员",
         role: "管理员",
         title: "系统治理管理员",
-        scope: "全部后台界面权限",
+        scope: "系统治理后台",
         defaultPage: "adminOverview",
         badge: "管"
+      },
+      test: {
+        name: "全权限测试账号",
+        role: "测试账号",
+        title: "验收与演示账号",
+        scope: "全后台权限 + 演示视角切换",
+        defaultPage: "adminOverview",
+        badge: "测"
       },
       manager: {
         name: "王管理者",
@@ -751,7 +759,17 @@
     };
 
     const rolePages = {
-      admin: Object.keys(navItems),
+      admin: [
+        "adminOverview",
+        "adminUsers",
+        "adminRoles",
+        "adminPermissions",
+        "adminAudit",
+        "adminNotifications",
+        "adminKnowledgeSources",
+        "adminSystemStatus"
+      ],
+      test: Object.keys(navItems),
       manager: [
         "managerOverview",
         "managerGrowthDashboard",
@@ -818,9 +836,9 @@
     const workspaceCopy = {
       admin: {
         title: "系统治理总览",
-        subtitle: "管理员可进入全部后台界面；系统控制、权限、审计等治理入口只在此身份展示。",
+        subtitle: "管理员只进入系统治理后台；测试账号用于全权限验收和演示视角切换。",
         metrics: [
-          ["后台模块", "34", "全部可访问", "success"],
+          ["治理模块", "8", "系统治理", "success"],
           ["权限风险", "0", "越权会拦截", "success"],
           ["待处理通知", "3", "治理事项", "warning"]
         ],
@@ -828,6 +846,20 @@
           ["系统管理员", "启用", "负责用户、角色、权限、审计、知识来源和系统状态。"],
           ["权限矩阵", "待确认", "确认后进入正式实现，普通业务角色不显示治理入口。"],
           ["系统状态", "可查看", "只允许管理员执行初始化、接口状态和系统维护动作。"]
+        ]
+      },
+      test: {
+        title: "测试账号演示视角",
+        subtitle: "测试账号拥有全后台权限，用于验收和演示；正式上线前应移除或关闭。",
+        metrics: [
+          ["后台模块", "全部", "用于验收", "success"],
+          ["演示视角", "6", "可切换", "success"],
+          ["上线处理", "移除", "不进入生产", "warning"]
+        ],
+        rows: [
+          ["演示视角", "可切换", "用于查看顾问、员工、老师、学生、管理者、管理员界面。"],
+          ["权限边界", "测试专用", "普通账号和管理员账号不允许随意切换角色。"],
+          ["上线动作", "待移除", "删除测试账号入口和演示视角切换。"]
         ]
       },
       manager: {
@@ -1012,7 +1044,7 @@
                 </button>
               `).join("")}
             </div>
-            <p class="muted" style="margin:16px 0 0;">建议正式实现时，普通账号不再提供后台角色下拉切换；权限以登录账号为准。</p>
+            <p class="muted" style="margin:16px 0 0;">当前正式实现为账号密码登录；普通账号不提供角色切换，测试账号在正式后台右上角提供演示视角切换。</p>
           </section>
         </main>
       `;
@@ -1128,15 +1160,15 @@
 
     function renderMatrix() {
       const modules = [
-        ["客户增长", ["admin", "consultant"]],
-        ["员工通用", ["admin", "manager", "consultant", "employee", "teacher"]],
-        ["老师学生服务", ["admin", "teacher"]],
-        ["学生服务台", ["admin", "student"]],
-        ["经营管理", ["admin", "manager"]],
-        ["系统治理", ["admin"]],
-        ["报告中心", ["admin", "manager"]]
+        ["客户增长", ["test", "consultant"]],
+        ["员工通用", ["test", "manager", "consultant", "employee", "teacher"]],
+        ["老师学生服务", ["test", "teacher"]],
+        ["学生服务台", ["test", "student"]],
+        ["经营管理", ["test", "manager"]],
+        ["系统治理", ["test", "admin"]],
+        ["报告中心", ["test", "manager"]]
       ];
-      const roles = ["admin", "manager", "consultant", "employee", "teacher", "student"];
+      const roles = ["test", "admin", "manager", "consultant", "employee", "teacher", "student"];
       return `
         <section class="matrix-panel">
           <div class="panel-title">
@@ -1259,6 +1291,7 @@
 
     function simulateDenied() {
       const deniedByRole = {
+        test: "studentOverview",
         admin: "studentOverview",
         manager: "adminUsers",
         consultant: "teacherLeaveApproval",
