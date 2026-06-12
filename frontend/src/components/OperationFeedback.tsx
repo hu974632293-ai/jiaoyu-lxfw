@@ -22,7 +22,7 @@ const phaseLabel: Record<OperationPhase, string> = {
   pending: "处理中",
   success: "成功",
   error: "失败",
-  fallback: "兜底",
+  fallback: "参考",
 };
 
 export function OperationFeedback({ feedback, action, compact = false }: OperationFeedbackProps) {

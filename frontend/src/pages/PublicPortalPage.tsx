@@ -212,7 +212,7 @@ function HomePage({ onNavigate, onLogin }: Pick<PublicPortalPageProps, "onNaviga
           <p className="eyebrow">GLOBAL ATLAS</p>
           <h2>从目标目的地，展开一套升学方案。</h2>
           <p>
-            当前官网只展示方向性项目摘要，不伪造院校合作、录取率或真实案例。后续项目库丰富后，这里可以升级成完整的项目探索地图。
+            官网只展示方向性项目摘要，不伪造院校合作、录取率或真实案例。具体适配由顾问结合学生情况继续判断。
           </p>
           <button className="icon-button secondary" onClick={() => onNavigate("publicProjects")}>
             查看公开项目
@@ -420,7 +420,7 @@ function ProjectsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate
         <div>
           <p className="eyebrow">项目/课程</p>
           <h1>项目先作为方向展示，真正适配需要顾问判断。</h1>
-          <p>当前项目页只展示公开摘要，不伪造院校合作、录取率或真实案例。后续可升级为三级项目详情页。</p>
+          <p>项目页只展示公开摘要，不伪造院校合作、录取率或真实案例。详细方案以顾问沟通和学生实际情况为准。</p>
         </div>
         <aside className="subpage-kicker-panel dark">
           <MapPinned size={20} aria-hidden="true" />
@@ -569,7 +569,7 @@ function FaqSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate">) {
         <div>
           <p className="eyebrow">知识/FAQ</p>
           <h1>高频问题先自助解决，复杂情况再交给顾问。</h1>
-          <p>客服 Agent 面向公开官网和潜在客户，不暴露内部 CRM、审计、权限或接口调试信息。</p>
+          <p>客服 Agent 面向公开官网和潜在客户，不暴露内部 CRM、审计、权限或内部技术信息。</p>
         </div>
         <PublicAgentPanel compact />
       </section>

@@ -25,7 +25,7 @@ export default function LoginPage({ onLogin, onBackToPortal }: LoginPageProps) {
       <section className="login-intro">
         <p className="eyebrow">登录入口</p>
         <h1>从公开官网进入对应业务后台</h1>
-        <p>当前为演示登录，真实认证后续接入。</p>
+        <p>请选择身份进入对应业务后台。</p>
         <button className="ghost-button" onClick={onBackToPortal}>
           <ArrowLeft size={16} aria-hidden="true" />
           返回官网
