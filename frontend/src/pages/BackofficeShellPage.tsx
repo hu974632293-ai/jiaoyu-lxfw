@@ -24,31 +24,24 @@ import TeacherPsychWorkflowPage from "./TeacherPsychWorkflowPage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
+import type { LoginAccountProfile } from "../authRules";
 import { backofficeNavItems, roleVisiblePages } from "../navigation";
 import type { BackofficePageKey } from "../navigation";
 import type { PageProps } from "../App";
 
 type BackofficeShellPageProps = {
+  accountProfile: LoginAccountProfile;
   role: RoleKey;
   activePage: BackofficePageKey;
   selectedLeadId: number | null;
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
-  onRoleChange: (role: RoleKey) => void;
   onLogout: () => void;
   onSeedDemo: () => Promise<void>;
   seedStatus: string;
+  accessNotice: string;
 };
 
 type BackofficeComponent = (props: PageProps) => JSX.Element;
-
-const roleAccountProfiles: Record<RoleKey, { name: string; title: string }> = {
-  admin: { name: "系统管理员", title: "系统治理管理员" },
-  manager: { name: "王管理者", title: "经营管理者" },
-  consultant: { name: "李顾问", title: "客户增长顾问" },
-  employee: { name: "张员工", title: "运营员工" },
-  teacher: { name: "周老师", title: "学生服务老师" },
-  student: { name: "陈同学", title: "学生用户" },
-};
 
 const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
   employeeWorkspace: EmployeeWorkspacePage,
@@ -72,14 +65,15 @@ const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponen
 };
 
 export default function BackofficeShellPage({
+  accountProfile,
   role,
   activePage,
   selectedLeadId,
   onNavigate,
-  onRoleChange,
   onLogout,
   onSeedDemo,
   seedStatus,
+  accessNotice,
 }: BackofficeShellPageProps) {
   const currentRole = roleOptions.find((item) => item.key === role) ?? roleOptions[0];
   const visiblePages = roleVisiblePages[role];
@@ -90,7 +84,6 @@ export default function BackofficeShellPage({
     .filter((item): item is (typeof backofficeNavItems)[number] => Boolean(item));
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
   const shellClass = role === "student" ? "workspace-shell student-shell" : "workspace-shell staff-shell";
-  const accountProfile = roleAccountProfiles[role];
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -207,14 +200,11 @@ export default function BackofficeShellPage({
           </div>
         </div>
         <div className="top-actions">
-          <label className="role-switcher">
-            <span>当前角色</span>
-            <select value={role} onChange={(event) => onRoleChange(event.target.value as RoleKey)}>
-              {roleOptions.map((option) => (
-                <option value={option.key}>{option.label}</option>
-              ))}
-            </select>
-          </label>
+          <div className="role-switcher readonly-identity" aria-label="当前登录身份">
+            <span>当前账号</span>
+            <strong>{accountProfile.displayName} / {currentRole.label}</strong>
+            <small>{accountProfile.accessScope}</small>
+          </div>
           <button className="ghost-button" onClick={onLogout}>
             返回官网
           </button>
@@ -224,6 +214,7 @@ export default function BackofficeShellPage({
       <section className="status-strip" aria-label="系统状态">
         <span className="status-pill">当前模块：{current.label}</span>
         {role !== "student" ? <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span> : null}
+        {accessNotice ? <span className="status-pill warning">{accessNotice}</span> : null}
       </section>
 
       <div className={`workspace-grid ${role === "student" ? "student-workspace-grid" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
@@ -263,9 +254,9 @@ export default function BackofficeShellPage({
 
           <div className="sidebar-foot">
             <button className="sidebar-account-card" type="button" title="当前登录用户">
-              <span className="sidebar-account-avatar">{accountProfile.name.slice(0, 1)}</span>
+              <span className="sidebar-account-avatar">{accountProfile.displayName.slice(0, 1)}</span>
               <span className="sidebar-account-text">
-                <strong>{accountProfile.name}</strong>
+                <strong>{accountProfile.displayName}</strong>
                 <small>{accountProfile.title}</small>
               </span>
               <ChevronDown size={15} aria-hidden="true" />

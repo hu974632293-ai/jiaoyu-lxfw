@@ -334,33 +334,130 @@ button:disabled {
 .login-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 24px;
+  grid-template-columns: minmax(320px, 1fr) minmax(380px, 460px);
+  gap: clamp(24px, 4vw, 56px);
   align-items: center;
-  padding: 40px;
-  background: #f6f8fb;
+  padding: clamp(26px, 5vw, 72px);
+  background:
+    linear-gradient(105deg, rgba(8, 25, 31, 0.88), rgba(8, 25, 31, 0.58) 46%, rgba(8, 25, 31, 0.78)),
+    url("./assets/images/public-portal-hero-graduation.jpg");
+  background-position: center;
+  background-size: cover;
 }
 
 .login-intro {
   display: grid;
   gap: 16px;
   max-width: 720px;
+  color: white;
+}
+
+.login-intro .eyebrow {
+  color: #f2b55f;
+}
+
+.login-intro h1 {
+  color: white;
+  font-size: clamp(36px, 5vw, 62px);
+  line-height: 1.08;
+}
+
+.login-intro p {
+  max-width: 620px;
+  color: rgba(245, 249, 249, 0.84);
 }
 
 .login-panel {
-  border: 1px solid var(--line);
-  background: white;
-  border-radius: 8px;
-  padding: 22px;
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(226, 237, 239, 0.42);
+  background: rgba(246, 251, 251, 0.9);
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 28px 80px rgba(8, 25, 31, 0.28);
+  backdrop-filter: blur(18px);
 }
 
 .login-panel h2 {
   margin-top: 0;
 }
 
+.login-form {
+  display: grid;
+  gap: 12px;
+}
+
+.login-field {
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(126, 148, 151, 0.58);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 10px;
+  padding: 0 13px;
+  color: var(--muted);
+}
+
+.login-field:focus-within {
+  border-color: #2f7d68;
+  box-shadow: 0 0 0 3px rgba(47, 125, 104, 0.14);
+}
+
+.login-field input {
+  min-width: 0;
+  height: 48px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.login-submit {
+  min-height: 50px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2fb7a8, #188f82);
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 14px 32px rgba(24, 143, 130, 0.26);
+}
+
+.login-submit:hover {
+  filter: brightness(1.03);
+}
+
+.login-error {
+  margin: 0;
+  color: var(--red) !important;
+  font-weight: 700;
+}
+
+.login-shortcut-block {
+  margin-top: 18px;
+}
+
+.shortcut-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shortcut-divider::before,
+.shortcut-divider::after {
+  content: "";
+  height: 1px;
+  background: rgba(126, 148, 151, 0.34);
+}
+
 .role-login-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -370,20 +467,20 @@ button:disabled {
   gap: 10px;
   align-items: start;
   border: 1px solid #dde4eb;
-  background: #fbfdff;
+  background: rgba(255, 255, 255, 0.74);
   color: var(--ink);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 11px;
   text-align: left;
 }
 
 .role-login-card:hover {
-  border-color: #b9d3ea;
-  background: #edf6ff;
+  border-color: rgba(47, 125, 104, 0.48);
+  background: #eef8f4;
 }
 
 .role-login-card svg {
-  color: var(--blue);
+  color: #2f7d68;
   margin-top: 2px;
 }
 
@@ -470,6 +567,28 @@ button:disabled {
   align-items: center;
   gap: 8px;
   color: var(--muted);
+}
+
+.readonly-identity {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 220px;
+}
+
+.readonly-identity span,
+.readonly-identity small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.readonly-identity strong {
+  color: var(--ink);
+  font-size: 14px;
 }
 
 .role-switcher select,

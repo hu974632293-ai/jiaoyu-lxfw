@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { RoleKey } from "./data/prototype";
+import { roleVisiblePages } from "./authRules";
 
 export type AppMode = "public" | "login" | "backoffice";
 
@@ -159,14 +160,7 @@ export const backofficeNavItems: BackofficeNavItem[] = [
   { key: "systemDemo", label: "系统与演示", desc: "权限、审计、接口文档和初始化", group: "governance", icon: Settings },
 ];
 
-export const roleVisiblePages: Record<RoleKey, BackofficePageKey[]> = {
-  admin: ["roleOverview", "adminUsers", "adminRoles", "adminPermissions", "adminAudit", "adminNotifications", "adminKnowledgeSources", "adminSystemStatus"],
-  manager: ["roleOverview", "managerGrowthDashboard", "managerDailySummary", "managerPsychWeekly", "managerFeedbackWeekly", "managerRiskQueue"],
-  consultant: ["roleOverview", "consultantNewLead", "consultantLeadQueue", "consultantFunnel", "consultantCustomer360", "consultantTasks", "consultantEvents"],
-  employee: ["roleOverview", "employeeQuickEntry", "employeeReports", "employeeOrg", "employeeCustomerQuery", "employeeGuide"],
-  teacher: ["roleOverview", "teacherLeaveApproval", "teacherFeedback", "teacherPsych", "teacherAcademic", "teacherGrades"],
-  student: ["roleOverview", "studentLeaveRequest", "studentFeedbackSubmit", "studentGradeQuery", "studentApplicationProgress", "studentExamNodes", "studentLifeSupport"],
-};
+export { roleVisiblePages };
 
 export const roleDefaultPage: Record<RoleKey, BackofficePageKey> = {
   admin: "roleOverview",

@@ -3,9 +3,15 @@ import { apiRequest } from "./api/client";
 import BackofficeShellPage from "./pages/BackofficeShellPage";
 import LoginPage from "./pages/LoginPage";
 import PublicPortalPage from "./pages/PublicPortalPage";
-import { roleOptions } from "./data/prototype";
 import type { RoleKey } from "./data/prototype";
-import { isAppMode, isBackofficePageKey, isPublicPageKey, roleDefaultPage, roleVisiblePages } from "./navigation";
+import {
+  canAccessAccountPage,
+  getAccountDefaultPage,
+  isLoginAccountKey,
+  loginAccounts,
+} from "./authRules";
+import type { LoginAccountKey } from "./authRules";
+import { isAppMode, isBackofficePageKey, isPublicPageKey, roleDefaultPage } from "./navigation";
 import type { AppMode, BackofficePageKey, PublicPageKey } from "./navigation";
 
 export type PageProps = {
@@ -19,21 +25,23 @@ type PersistedViewState = {
   mode: AppMode;
   publicPage: PublicPageKey;
   backofficePage: BackofficePageKey;
+  accountKey: LoginAccountKey | null;
   role: RoleKey;
   selectedLeadId: number | null;
+  accessNotice: string;
 };
 
 const defaultViewState: PersistedViewState = {
   mode: "public",
   publicPage: "home",
   backofficePage: "roleOverview",
+  accountKey: null,
   role: "admin",
   selectedLeadId: 1,
+  accessNotice: "",
 };
 
-function isRoleKey(value: string | null): value is RoleKey {
-  return Boolean(value && roleOptions.some((item) => item.key === value));
-}
+const accountStorageKey = "jiaoyu-login-account";
 
 function parseLeadId(value: string | null) {
   if (!value) {
@@ -43,12 +51,13 @@ function parseLeadId(value: string | null) {
   return Number.isInteger(nextValue) && nextValue > 0 ? nextValue : defaultViewState.selectedLeadId;
 }
 
-function canRestoreBackofficePage(role: RoleKey, page: BackofficePageKey) {
-  if (roleVisiblePages[role].includes(page)) {
-    return true;
+function readStoredAccount() {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  return role === "consultant" && ["growthOverview", "customerGrowth", "customer360"].includes(page);
+  const value = window.localStorage.getItem(accountStorageKey);
+  return isLoginAccountKey(value) ? value : null;
 }
 
 function readViewStateFromUrl(): PersistedViewState {
@@ -57,23 +66,33 @@ function readViewStateFromUrl(): PersistedViewState {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const roleParam = params.get("role");
+  const accountParam = params.get("account");
   const modeParam = params.get("mode");
   const publicParam = params.get("public");
   const pageParam = params.get("page");
-  const role = isRoleKey(roleParam) ? roleParam : defaultViewState.role;
-  const inferredMode: AppMode = params.has("page") || params.has("role") || params.has("leadId") ? "backoffice" : defaultViewState.mode;
+  const accountKey = isLoginAccountKey(accountParam) ? accountParam : readStoredAccount();
+  const role = accountKey ? loginAccounts[accountKey].role : defaultViewState.role;
+  const inferredMode: AppMode = params.has("page") || params.has("account") || params.has("role") || params.has("leadId") ? "backoffice" : defaultViewState.mode;
   const mode = isAppMode(modeParam) ? modeParam : inferredMode;
   const publicPage = isPublicPageKey(publicParam) ? publicParam : defaultViewState.publicPage;
-  const parsedBackofficePage = isBackofficePageKey(pageParam) ? pageParam : roleDefaultPage[role];
-  const backofficePage = canRestoreBackofficePage(role, parsedBackofficePage) ? parsedBackofficePage : roleDefaultPage[role];
+  const defaultBackofficePage = accountKey ? getAccountDefaultPage(accountKey) : roleDefaultPage[role];
+  const parsedBackofficePage = isBackofficePageKey(pageParam) ? pageParam : defaultBackofficePage;
+  const canEnterBackoffice = Boolean(accountKey);
+  const canRestorePage = accountKey ? canAccessAccountPage(accountKey, parsedBackofficePage) : false;
+  const backofficePage = canRestorePage ? parsedBackofficePage : defaultBackofficePage;
+  const accessNotice =
+    canEnterBackoffice && isBackofficePageKey(pageParam) && !canRestorePage
+      ? "当前账号无权访问该后台模块，已返回允许进入的工作台。"
+      : "";
 
   return {
-    mode,
+    mode: mode === "backoffice" && !canEnterBackoffice ? "login" : mode,
     publicPage,
     backofficePage,
+    accountKey,
     role,
     selectedLeadId: parseLeadId(params.get("leadId")),
+    accessNotice,
   };
 }
 
@@ -86,6 +105,9 @@ function buildUrlFromViewState(state: PersistedViewState) {
   }
 
   if (state.mode === "backoffice") {
+    if (state.accountKey) {
+      params.set("account", state.accountKey);
+    }
     params.set("role", state.role);
     params.set("page", state.backofficePage);
     if (state.selectedLeadId) {
@@ -101,8 +123,10 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>(() => readViewStateFromUrl().mode);
   const [publicPage, setPublicPage] = useState<PublicPageKey>(() => readViewStateFromUrl().publicPage);
   const [backofficePage, setBackofficePage] = useState<BackofficePageKey>(() => readViewStateFromUrl().backofficePage);
+  const [accountKey, setAccountKey] = useState<LoginAccountKey | null>(() => readViewStateFromUrl().accountKey);
   const [role, setRole] = useState<RoleKey>(() => readViewStateFromUrl().role);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(() => readViewStateFromUrl().selectedLeadId);
+  const [accessNotice, setAccessNotice] = useState(() => readViewStateFromUrl().accessNotice);
   const [seedStatus, setSeedStatus] = useState("演示数据未初始化");
   const hasSyncedInitialUrl = useRef(false);
   const suppressNextUrlWrite = useRef(false);
@@ -117,8 +141,10 @@ export default function App() {
       setMode(nextState.mode);
       setPublicPage(nextState.publicPage);
       setBackofficePage(nextState.backofficePage);
+      setAccountKey(nextState.accountKey);
       setRole(nextState.role);
       setSelectedLeadId(nextState.selectedLeadId);
+      setAccessNotice(nextState.accessNotice);
     }
 
     window.addEventListener("popstate", applyUrlState);
@@ -126,7 +152,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const nextUrl = buildUrlFromViewState({ mode, publicPage, backofficePage, role, selectedLeadId });
+    const nextUrl = buildUrlFromViewState({ mode, publicPage, backofficePage, accountKey, role, selectedLeadId, accessNotice });
     const currentUrl = `${window.location.pathname}${window.location.search}`;
 
     if (suppressNextUrlWrite.current) {
@@ -145,21 +171,28 @@ export default function App() {
     if (nextUrl !== currentUrl) {
       window.history.pushState(null, "", nextUrl);
     }
-  }, [mode, publicPage, backofficePage, role, selectedLeadId]);
+  }, [mode, publicPage, backofficePage, accountKey, role, selectedLeadId, accessNotice]);
 
   function openLogin() {
     setMode("login");
   }
 
-  function enterBackoffice(nextRole: RoleKey) {
-    setRole(nextRole);
-    setBackofficePage(roleDefaultPage[nextRole]);
+  function enterBackoffice(nextAccountKey: LoginAccountKey) {
+    const nextAccount = loginAccounts[nextAccountKey];
+    window.localStorage.setItem(accountStorageKey, nextAccountKey);
+    setAccountKey(nextAccountKey);
+    setRole(nextAccount.role);
+    setBackofficePage(getAccountDefaultPage(nextAccountKey));
+    setAccessNotice("");
     setMode("backoffice");
   }
 
   function logoutToPortal() {
+    window.localStorage.removeItem(accountStorageKey);
+    setAccountKey(null);
     setMode("public");
     setPublicPage("home");
+    setAccessNotice("");
   }
 
   function navigatePublic(page: PublicPageKey) {
@@ -168,10 +201,22 @@ export default function App() {
   }
 
   function navigateBackoffice(page: BackofficePageKey, leadId?: number) {
+    if (!accountKey) {
+      setMode("login");
+      return;
+    }
+
     if (typeof leadId === "number") {
       setSelectedLeadId(leadId);
     }
-    setBackofficePage(page);
+
+    if (!canAccessAccountPage(accountKey, page)) {
+      setBackofficePage(getAccountDefaultPage(accountKey));
+      setAccessNotice("当前账号无权访问该后台模块，已返回允许进入的工作台。");
+    } else {
+      setBackofficePage(page);
+      setAccessNotice("");
+    }
     setMode("backoffice");
   }
 
@@ -193,16 +238,23 @@ export default function App() {
     return <LoginPage onLogin={enterBackoffice} onBackToPortal={logoutToPortal} />;
   }
 
+  if (!accountKey) {
+    return <LoginPage onLogin={enterBackoffice} onBackToPortal={logoutToPortal} />;
+  }
+
+  const accountProfile = loginAccounts[accountKey];
+
   return (
     <BackofficeShellPage
+      accountProfile={accountProfile}
       role={role}
       activePage={backofficePage}
       selectedLeadId={selectedLeadId}
       onNavigate={navigateBackoffice}
-      onRoleChange={enterBackoffice}
       onLogout={logoutToPortal}
       onSeedDemo={seedDemo}
       seedStatus={seedStatus}
+      accessNotice={accessNotice}
     />
   );
 }
