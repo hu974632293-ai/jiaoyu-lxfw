@@ -106,6 +106,7 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
   });
   const [pendingOperation, setPendingOperation] = useState<ManagementOperation>(null);
   const [highlightReportId, setHighlightReportId] = useState<number | null>(null);
+  const [isFullReportOpen, setIsFullReportOpen] = useState(false);
 
   const riskQueue = useMemo(
     () => todoItems.filter((item) => item.level === "高" || item.meta.includes("投诉") || item.meta.includes("心理")),
@@ -199,6 +200,7 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
       const detail = await apiRequest<ReportDetail>(`/api/reports/${created.id}`);
       setActiveReport(detail);
       setHighlightReportId(created.id);
+      setIsFullReportOpen(false);
       await refresh({ preserveFeedback: true });
       setOperationFeedback({
         phase: "success",
@@ -232,6 +234,7 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
       const detail = await apiRequest<ReportDetail>(`/api/reports/${reportId}`);
       setActiveReport(detail);
       setHighlightReportId(reportId);
+      setIsFullReportOpen(false);
       setOperationFeedback({
         phase: "success",
         title: "报告详情已打开",
@@ -265,6 +268,8 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
   const hasManagementSidePanel = showRiskQueue || showDailySummary;
   const managementSectionCount = Number(showReportPanel) + Number(hasManagementSidePanel);
   const managementLayoutClass = managementSectionCount > 1 ? "management-layout" : "management-layout management-layout-single";
+  const reportDetailEntries = Object.entries(activeReport?.content ?? {});
+  const visibleReportEntries = isFullReportOpen ? reportDetailEntries : reportDetailEntries.slice(0, 6);
 
   return (
     <div className="page-stack">
@@ -438,13 +443,16 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
             <h3>最近报告</h3>
             <span>{reports.length} 份</span>
           </div>
-          <div className="log-list">
+          <div className="report-row-list">
             {reports.slice(0, 5).map((item) => (
-              <article className={highlightReportId === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openReport(item.id)}>
-                <strong>{item.title}</strong>
-                <span>{reportLabels[item.report_type] ?? item.report_type}</span>
-                <em>已生成</em>
-              </article>
+              <button className={highlightReportId === item.id ? "report-row is-highlighted" : "report-row"} key={item.id} onClick={() => openReport(item.id)}>
+                <span className="report-row-main">
+                  <strong>{item.title}</strong>
+                  <small>{reportLabels[item.report_type] ?? item.report_type}</small>
+                </span>
+                <span className="report-row-status">已生成</span>
+                <span className="report-row-action">查看详情</span>
+              </button>
             ))}
             {!reports.length && <div className="empty-state">暂无报告。</div>}
           </div>
@@ -456,13 +464,20 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
             <BarChart3 size={18} aria-hidden="true" />
           </div>
           {activeReport ? (
-            <div className="report-business-list compact-report-list">
-              {Object.entries(activeReport.content).slice(0, 6).map(([key, value]) => (
-                <article key={key}>
-                  <span>{formatReportKey(key)}</span>
-                  <strong>{formatReportValue(value)}</strong>
-                </article>
-              ))}
+            <div className="report-detail-panel">
+              <div className="report-business-list compact-report-list">
+                {visibleReportEntries.map(([key, value]) => (
+                  <article key={key}>
+                    <span>{formatReportKey(key)}</span>
+                    <strong>{formatReportValue(value)}</strong>
+                  </article>
+                ))}
+              </div>
+              {reportDetailEntries.length > 6 ? (
+                <button className="report-detail-action" type="button" onClick={() => setIsFullReportOpen((current) => !current)}>
+                  {isFullReportOpen ? "收起完整报告" : "查看完整报告"}
+                </button>
+              ) : null}
             </div>
           ) : (
             <div className="empty-state">选择或生成报告后展示。</div>
@@ -474,7 +489,25 @@ export default function ManagementDashboardPage({ onNavigate, initialView = "ove
 }
 
 function formatReportKey(value: string): string {
-  return value.replace(/_/g, " ");
+  const labels: Record<string, string> = {
+    summary: "摘要",
+    source: "来源",
+    progress: "进展",
+    risks: "风险",
+    suggestions: "建议",
+    recommendations: "建议",
+    departments: "部门汇总",
+    employees: "员工汇总",
+    lead_count: "线索数量",
+    assessment_count: "研判数量",
+    high_value_count: "高价值客户",
+    follow_up_pending: "待跟进事项",
+    new_leads: "新增线索",
+    high_potential: "高潜客户",
+    feedback_count: "反馈数量",
+    unresolved_count: "未关闭事项",
+  };
+  return labels[value] ?? value.replace(/_/g, " ");
 }
 
 function formatReportValue(value: unknown): string {

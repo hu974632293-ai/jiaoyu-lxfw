@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
@@ -40,37 +40,13 @@ type BackofficeShellPageProps = {
 
 type BackofficeComponent = (props: PageProps) => JSX.Element;
 
-const roleShellSummaries: Record<RoleKey, { title: string; items: string[]; footnote: string }> = {
-  admin: {
-    title: "治理重点",
-    items: ["权限与角色", "审计与通知", "知识来源"],
-    footnote: "系统状态与 seed 归入治理页内处理",
-  },
-  manager: {
-    title: "经营重点",
-    items: ["增长总览", "团队日报", "风险报告"],
-    footnote: "优先看趋势、风险和待决策事项",
-  },
-  consultant: {
-    title: "顾问重点",
-    items: ["客户队列", "画像研判", "跟进任务"],
-    footnote: "客户 360 由客户增长场景进入",
-  },
-  employee: {
-    title: "员工重点",
-    items: ["快捷录入", "口述日报", "受控查询"],
-    footnote: "低频入口保持轻量，不挤压工作区",
-  },
-  teacher: {
-    title: "老师重点",
-    items: ["请假审批", "反馈处理", "辅助预警"],
-    footnote: "心理预警只做辅助识别，不替代诊断",
-  },
-  student: {
-    title: "学生重点",
-    items: ["请假反馈", "申请进度", "生活支持"],
-    footnote: "学生默认使用轻量收起导航",
-  },
+const roleAccountProfiles: Record<RoleKey, { name: string; title: string }> = {
+  admin: { name: "系统管理员", title: "系统治理管理员" },
+  manager: { name: "王管理者", title: "经营管理者" },
+  consultant: { name: "李顾问", title: "客户增长顾问" },
+  employee: { name: "张员工", title: "运营员工" },
+  teacher: { name: "周老师", title: "学生服务老师" },
+  student: { name: "陈同学", title: "学生用户" },
 };
 
 const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
@@ -113,7 +89,7 @@ export default function BackofficeShellPage({
     .filter((item): item is (typeof backofficeNavItems)[number] => Boolean(item));
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
   const shellClass = role === "student" ? "workspace-shell student-shell" : "workspace-shell staff-shell";
-  const roleSummary = roleShellSummaries[role];
+  const accountProfile = roleAccountProfiles[role];
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -245,7 +221,6 @@ export default function BackofficeShellPage({
       </header>
 
       <section className="status-strip" aria-label="系统状态">
-        <span className="status-pill">角色重点：{currentRole.focus}</span>
         <span className="status-pill">当前模块：{current.label}</span>
         {role !== "student" ? <span className="status-pill">当前客户 ID：{selectedLeadId ?? "未选择"}</span> : null}
       </section>
@@ -286,13 +261,14 @@ export default function BackofficeShellPage({
           </div>
 
           <div className="sidebar-foot">
-            <span className="sidebar-foot-title">{roleSummary.title}</span>
-            <div className="sidebar-foot-list">
-              {roleSummary.items.map((item) => (
-                <span>{item}</span>
-              ))}
-            </div>
-            <small>{roleSummary.footnote}</small>
+            <button className="sidebar-account-card" type="button" title="当前登录用户">
+              <span className="sidebar-account-avatar">{accountProfile.name.slice(0, 1)}</span>
+              <span className="sidebar-account-text">
+                <strong>{accountProfile.name}</strong>
+                <small>{accountProfile.title}</small>
+              </span>
+              <ChevronDown size={15} aria-hidden="true" />
+            </button>
           </div>
         </aside>
 
