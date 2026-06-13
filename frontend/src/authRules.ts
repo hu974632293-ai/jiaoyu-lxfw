@@ -57,6 +57,7 @@ const allBackofficePages: BackofficePageKey[] = [
   "adminNotifications",
   "adminKnowledgeSources",
   "adminSystemStatus",
+  "employeeAgent",
   "growthOverview",
   "customerGrowth",
   "customer360",
@@ -80,6 +81,7 @@ const adminGovernancePages: BackofficePageKey[] = [
   "adminNotifications",
   "adminKnowledgeSources",
   "adminSystemStatus",
+  "employeeAgent",
 ];
 
 export const roleVisiblePages: Record<RoleKey, BackofficePageKey[]> = {
