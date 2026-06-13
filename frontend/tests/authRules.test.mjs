@@ -57,7 +57,13 @@ test("manager, consultant, and teacher inherit employee workspace entries", () =
   for (const account of ["manager", "consultant", "teacher"]) {
     assert.equal(authRules.canAccessAccountPage(account, "employeeReports"), true, `${account} should access employee reports`);
     assert.equal(authRules.canAccessAccountPage(account, "employeeOrg"), true, `${account} should access organization lookup`);
+    assert.equal(authRules.canAccessAccountPage(account, "employeeAgent"), true, `${account} should access enterprise assistant`);
   }
+});
+
+test("employee account can access enterprise assistant from employee workspace", () => {
+  assert.equal(authRules.canAccessAccountPage("employee", "employeeAgent"), true);
+  assert.equal(authRules.getAccountVisiblePages("employee").includes("employeeAgent"), true);
 });
 
 test("login shortcuts fill accounts without directly deciding permission scope", () => {

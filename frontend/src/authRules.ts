@@ -33,7 +33,8 @@ const allBackofficePages: BackofficePageKey[] = [
   "employeeReports",
   "employeeOrg",
   "employeeCustomerQuery",
-  "employeeGuide", "employeeAgent",
+  "employeeGuide",
+  "employeeAgent",
   "teacherLeaveApproval",
   "teacherFeedback",
   "teacherPsych",
@@ -57,7 +58,6 @@ const allBackofficePages: BackofficePageKey[] = [
   "adminNotifications",
   "adminKnowledgeSources",
   "adminSystemStatus",
-  "employeeAgent",
   "growthOverview",
   "customerGrowth",
   "customer360",
@@ -71,7 +71,7 @@ const allBackofficePages: BackofficePageKey[] = [
   "systemDemo",
 ];
 
-const employeePages: BackofficePageKey[] = ["employeeQuickEntry", "employeeReports", "employeeOrg", "employeeCustomerQuery", "employeeGuide"];
+const employeePages: BackofficePageKey[] = ["employeeQuickEntry", "employeeReports", "employeeOrg", "employeeCustomerQuery", "employeeGuide", "employeeAgent"];
 const adminGovernancePages: BackofficePageKey[] = [
   "roleOverview",
   "adminUsers",

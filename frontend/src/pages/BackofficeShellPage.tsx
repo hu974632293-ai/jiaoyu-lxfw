@@ -47,6 +47,7 @@ type BackofficeShellPageProps = {
 type BackofficeComponent = (props: PageProps) => JSX.Element;
 
 const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
+  employeeAgent: EmployeeAgentPanel,
   employeeWorkspace: EmployeeWorkspacePage,
   teacherStudentService: TeacherStudentServicePage,
   teacherLeaveApproval: TeacherLeaveApprovalWorkflowPage,

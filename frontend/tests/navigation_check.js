@@ -18,6 +18,7 @@ const requiredPageKeys = [
   "customerGrowth",
   "customer360",
   "employeeWorkspace",
+  "employeeAgent",
   "teacherStudentService",
   "studentService",
   "managementDashboard",
@@ -31,12 +32,12 @@ for (const key of requiredPageKeys) {
 }
 
 const expectedDefaults = {
-  admin: "systemGovernance",
-  manager: "managementDashboard",
-  consultant: "customerGrowth",
-  employee: "employeeWorkspace",
-  teacher: "teacherStudentService",
-  student: "studentService",
+  admin: "roleOverview",
+  manager: "roleOverview",
+  consultant: "roleOverview",
+  employee: "roleOverview",
+  teacher: "roleOverview",
+  student: "roleOverview",
 };
 
 for (const [role, page] of Object.entries(expectedDefaults)) {
@@ -54,6 +55,14 @@ for (const forbidden of ["二期助手", "当前角色隐藏", "角色暂不展�
 
 if (/disabled=\{disabled\}/.test(contents["src/pages/BackofficeShellPage.tsx"])) {
   throw new Error("后台导航不应渲染禁用入口");
+}
+
+if (!/key:\s*"employeeAgent"/.test(contents["src/navigation.ts"])) {
+  throw new Error("员工企业助手缺少导航项");
+}
+
+if (!/employeeAgent:\s*EmployeeAgentPanel/.test(contents["src/pages/BackofficeShellPage.tsx"])) {
+  throw new Error("员工企业助手缺少页面映射");
 }
 
 console.log("navigation check OK");
