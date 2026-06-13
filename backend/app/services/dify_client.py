@@ -11,7 +11,7 @@ class DifyClient:
     def enabled(self) -> bool:
         return bool(self.api_base and self.api_key)
 
-    async def chat(self, question: str, conversation_id: str | None = None):
+    async def chat(self, question: str, conversation_id: str | None = None, inputs: dict | None = None, user: str = "anonymous"):
         if not self.enabled():
             return {
                 "answer": "Dify 未配置，当前返回演示降级结果。",
@@ -21,11 +21,11 @@ class DifyClient:
             }
 
         payload = {
-            "inputs": {},
+            "inputs": inputs or {},
             "query": question,
             "response_mode": "blocking",
             "conversation_id": conversation_id,
-            "user": "demo-user",
+            "user": user,
         }
         headers = {"Authorization": f"Bearer {self.api_key}"}
         async with httpx.AsyncClient(timeout=30) as client:

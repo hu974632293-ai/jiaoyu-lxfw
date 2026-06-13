@@ -18,16 +18,20 @@ SCENE_LABELS = {
 }
 
 
-async def ask_knowledge(
-    db: Session,
-    question: str,
-    scene: str = "customer_service",
-    lead_id: int | None = None,
-    conversation_id: str | None = None,
-) -> dict[str, Any]:
+async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
     client = DifyClient()
+    request_context = {
+        "scene": payload.scene,
+        "role": payload.role,
+        "lead_id": payload.lead_id,
+        "student_id": payload.student_id,
+        "business_context": payload.business_context,
+        "action_mode": payload.action_mode,
+    }
+    question = payload.question
+    conversation_id = payload.conversation_id
     try:
-        result = await client.chat(question, conversation_id=conversation_id)
+        result = await client.chat(question, conversation_id=conversation_id, inputs=request_context, user=payload.actor_username or payload.role or "anonymous")
     except Exception as exc:
         result = {
             "answer": f"Dify 调用失败：{exc}",
@@ -38,8 +42,8 @@ async def ask_knowledge(
 
     fallback_reason = _fallback_reason(result["status"])
     log = KnowledgeChatLog(
-        lead_id=lead_id,
-        scene=scene,
+        lead_id=payload.lead_id,
+        scene=payload.scene,
         question=question,
         answer=result["answer"],
         citations=json.dumps(result["citations"], ensure_ascii=False),
@@ -53,6 +57,7 @@ async def ask_knowledge(
     return {
         "id": log.id,
         "scene": log.scene,
+        "request_context": request_context,
         "scene_label": SCENE_LABELS.get(log.scene, log.scene),
         "answer": log.answer,
         "citations": result["citations"],

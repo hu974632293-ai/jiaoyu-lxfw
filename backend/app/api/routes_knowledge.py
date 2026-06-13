@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
 @router.post("/chat")
 async def chat(payload: KnowledgeChatRequest, db: Session = Depends(get_db)):
-    result = await ask_knowledge(db, payload.question, payload.scene, payload.lead_id, payload.conversation_id)
+    result = await ask_knowledge(db, payload)
     return ok(result)
 
 

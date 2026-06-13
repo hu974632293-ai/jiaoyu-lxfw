@@ -21,13 +21,21 @@ def handle_enterprise_chat(db: Session, payload: EnterpriseChatRequest) -> dict[
     intent = _detect_intent(message)
 
     if intent == "create_lead":
-        result = _create_lead_from_message(db, message, payload.actor_username)
-        answer = f"已创建客户：{result['customer_name']}，当前阶段：{result['status']}。"
-        status = "success"
-    elif intent == "query_lead":
-        result = _query_leads(db, message)
-        answer = f"找到 {len(result['leads'])} 条匹配客户。"
-        status = "success"
+        customer_name = _extract_customer_name(message)
+        phone = _extract_phone(message)
+        result = {
+            "draft": {
+                "customer_name": customer_name,
+                "contact_info": phone,
+                "background_info": message,
+                "source_channel": "????",
+            },
+            "requires_confirmation": True,
+            "confirmation_endpoint": "/api/leads",
+            "action_type": "create_lead",
+        }
+        answer = "?????????????????????"
+        status = "draft"
     elif intent == "update_lead_status":
         result = _update_lead_status_from_message(db, message, payload.actor_username)
         answer = f"已更新客户 #{result['lead_id']} 状态为 {result['status']}。"
@@ -46,6 +54,9 @@ def handle_enterprise_chat(db: Session, payload: EnterpriseChatRequest) -> dict[
         "status": status,
         "answer": answer,
         "result": result,
+        "requires_confirmation": result.get("requires_confirmation", False),
+        "confirmation_endpoint": result.get("confirmation_endpoint", ""),
+        "action_type": result.get("action_type", ""),
     }
 
 

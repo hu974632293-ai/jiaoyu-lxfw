@@ -1,11 +1,19 @@
-from pydantic import BaseModel
+﻿"""知识库相关 Schema"""
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
 
 
 class KnowledgeChatRequest(BaseModel):
     question: str
     scene: str = "customer_service"
+    role: str = "public"
+    actor_username: str | None = None
     lead_id: int | None = None
+    student_id: int | None = None
     conversation_id: str | None = None
+    business_context: dict[str, Any] = Field(default_factory=dict)
+    action_mode: Literal["answer", "draft", "confirm"] = "answer"
 
 
 class KnowledgeSourceCreate(BaseModel):
