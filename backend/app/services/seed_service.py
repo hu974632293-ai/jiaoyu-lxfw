@@ -146,6 +146,12 @@ def seed_demo_data(db: Session):
 
     _ensure_demo_agent_data(db)
 
+    # Task 3: ??????????????
+    _hash_demo_passwords(db)
+
+    # Task 3: ?????????
+    _ensure_test_accounts(db)
+
     db.commit()
     ensure_default_admin_data(db)
     return {
@@ -1387,3 +1393,43 @@ def _ensure_demo_operation_items(
                 detail=json.dumps({"source": "api/demo/seed"}, ensure_ascii=False),
             )
         )
+
+
+def _hash_demo_passwords(db):
+    from app.core.security import hash_password
+    users = db.query(SysUser).all()
+    for user in users:
+        if "$" not in user.password_hash and len(user.password_hash) < 40:
+            user.password_hash = hash_password(user.password_hash)
+    db.flush()
+
+
+_TEST_ACCOUNTS = [
+    ("admin", "admin123", "?????", "admin"),
+    ("manager", "manager123", "?????", "manager"),
+    ("consultant", "consultant123", "????", "consultant"),
+    ("employee", "employee123", "????", "employee"),
+    ("teacher", "teacher123", "????", "teacher"),
+    ("student", "student123", "????", "student"),
+]
+
+
+def _ensure_test_accounts(db):
+    from app.core.security import hash_password
+    for username, password, real_name, role in _TEST_ACCOUNTS:
+        user = db.query(SysUser).filter_by(username=username).first()
+        if not user:
+            user = SysUser(
+                username=username,
+                password_hash=hash_password(password),
+                real_name=real_name,
+                user_type="EMPLOYEE",
+                role=role,
+            )
+            db.add(user)
+            db.flush()
+        else:
+            user.password_hash = hash_password(password)
+            user.real_name = real_name
+            user.role = role
+    db.flush()

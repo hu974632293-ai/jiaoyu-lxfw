@@ -18,9 +18,11 @@ from app.api import (
     routes_roles,
     routes_student_assistant,
     routes_users,
+    routes_auth,
 )
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.auth import AuthenticationError
 from app.core.permissions import PermissionDeniedError
 from app.core.response import fail, ok
 
@@ -45,11 +47,17 @@ def health_check():
     return ok({"status": "ok"})
 
 
+@app.exception_handler(AuthenticationError)
+async def authentication_error_handler(_request, _exc: AuthenticationError):
+    return JSONResponse(status_code=401, content=fail("请先登录", 40100))
+
+
 @app.exception_handler(PermissionDeniedError)
 async def permission_denied_handler(_request, exc: PermissionDeniedError):
     return JSONResponse(status_code=403, content=fail(f"缺少权限：{exc.permission_code}", 40300))
 
 
+app.include_router(routes_auth.router)
 app.include_router(routes_demo.router)
 app.include_router(routes_profile.router)
 app.include_router(routes_leads.router)
