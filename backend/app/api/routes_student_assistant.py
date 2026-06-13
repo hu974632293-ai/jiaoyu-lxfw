@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import require_permission
 from app.core.response import fail, ok
+from fastapi.responses import JSONResponse
+from app.models.user import SysUser
+from app.services.scope_service import DataScopeError, ensure_can_access_student
 from app.schemas.student_assistant import (
     FeedbackReplyRequest,
     FeedbackHandleRequest,
@@ -47,7 +51,7 @@ router = APIRouter(prefix="/api/student-assistant", tags=["student-assistant"])
 
 
 @router.get("/students")
-def students(db: Session = Depends(get_db)):
+def students(current_user: SysUser = Depends(require_permission("assistant:student:use")), db: Session = Depends(get_db)):
     return ok(list_students(db))
 
 
@@ -65,7 +69,7 @@ def list_leaves(student_id: int | None = None, status: str | None = None, db: Se
 
 
 @router.post("/leaves")
-def create_leave(payload: LeaveCreate, db: Session = Depends(get_db)):
+def create_leave(payload: LeaveCreate, current_user: SysUser = Depends(require_permission("assistant:student:use")), db: Session = Depends(get_db)):
     try:
         return ok(serialize_leave(create_leave_request(db, payload)))
     except ValueError as exc:
@@ -92,7 +96,7 @@ def update_leave(leave_id: int, payload: LeaveUpdate, db: Session = Depends(get_
 
 
 @router.post("/leaves/{leave_id}/approve")
-def approve_leave(leave_id: int, payload: LeaveApprovalRequest, db: Session = Depends(get_db)):
+def approve_leave(leave_id: int, payload: LeaveApprovalRequest, current_user: SysUser = Depends(require_permission("student:leave:approve")), db: Session = Depends(get_db)):
     leave = approve_leave_request(db, leave_id, payload)
     if not leave:
         return fail("请假申请不存在", 40402)

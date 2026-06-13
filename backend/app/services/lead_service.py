@@ -8,8 +8,11 @@ from app.schemas.lead import LeadCreate
 from app.services.crm_service import create_stage_history
 
 
-def create_lead(db: Session, payload: LeadCreate):
-    lead = CrmLead(**payload.model_dump())
+def create_lead(db: Session, payload: LeadCreate, owner_id: int | None = None):
+    lead_data = payload.model_dump()
+    if owner_id is not None:
+        lead_data["owner_id"] = owner_id
+    lead = CrmLead(**lead_data)
     db.add(lead)
     db.commit()
     db.refresh(lead)

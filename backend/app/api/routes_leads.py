@@ -1,19 +1,27 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import require_permission
 from app.core.response import fail, ok
+from app.models.user import SysUser
 from app.schemas.crm import CrmFollowUpCreate
 from app.schemas.lead import LeadCreate, LeadStatusUpdate
 from app.services.crm_service import create_follow_up, list_lead_timeline, serialize_follow_up
 from app.services.lead_service import create_lead, get_lead, list_leads, update_lead_status
+from app.services.scope_service import DataScopeError, ensure_can_access_lead
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
 
 @router.post("")
-def create(payload: LeadCreate, db: Session = Depends(get_db)):
-    lead = create_lead(db, payload)
+def create(
+    payload: LeadCreate,
+    current_user: SysUser = Depends(require_permission("crm:lead:write")),
+    db: Session = Depends(get_db),
+):
+    lead = create_lead(db, payload, owner_id=current_user.id)
     return ok({"id": lead.id})
 
 
@@ -61,8 +69,19 @@ def detail(lead_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{lead_id}/status")
-def update_status(lead_id: int, payload: LeadStatusUpdate, db: Session = Depends(get_db)):
-    lead = update_lead_status(db, lead_id, payload.status, payload.reason, payload.operator_username)
+def update_status(
+    lead_id: int,
+    payload: LeadStatusUpdate,
+    current_user: SysUser = Depends(require_permission("crm:lead:write")),
+    db: Session = Depends(get_db),
+):
+    try:
+        ensure_can_access_lead(db, current_user, lead_id)
+    except DataScopeError:
+        return JSONResponse(status_code=403, content=fail("无权操作该客户", 40301))
+    except ValueError as exc:
+        return fail(str(exc), 40401)
+    lead = update_lead_status(db, lead_id, payload.status, payload.reason, current_user.username)
     if not lead:
         return fail("客户不存在", 40401)
     return ok({"id": lead.id, "status": lead.status})
