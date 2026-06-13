@@ -45,9 +45,10 @@ export default function LoginPage({ onLogin, onBackToPortal }: LoginPageProps) {
         body: JSON.stringify({ username, password }),
       });
       setAccessToken(result.access_token);
-      const account = Object.values(loginAccounts).find(
-        (item) => item.username === result.user.username || item.role === result.user.role
-      );
+      // ??????????? role ????????? test ? admin????
+      const account =
+        Object.values(loginAccounts).find((item) => item.username === result.user.username) ||
+        Object.values(loginAccounts).find((item) => item.role === result.user.role);
       onLogin(account?.key ?? "consultant");
     } catch (err) {
       setError(err instanceof Error ? err.message : "账号或密码不正确，请检查后再登录。");
