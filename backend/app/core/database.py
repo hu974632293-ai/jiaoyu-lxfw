@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, inspect, text
+﻿from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import settings
@@ -36,11 +36,12 @@ def init_db():
         user,
     )
 
-    Base.metadata.create_all(bind=engine)
-    _ensure_sqlite_compatible_columns()
-    _ensure_crm_lead_compatible_columns()
-    _ensure_student_grade_compatible_columns()
-    _ensure_enterprise_compatible_columns()
+    if settings.app_env != "production":
+        Base.metadata.create_all(bind=engine)
+        _ensure_sqlite_compatible_columns()
+        _ensure_crm_lead_compatible_columns()
+        _ensure_student_grade_compatible_columns()
+        _ensure_enterprise_compatible_columns()
 
 
 def _ensure_sqlite_compatible_columns():
