@@ -18,6 +18,7 @@ for (const file of requiredFiles) {
 const manager = read("src/pages/ManagementDashboardPage.tsx");
 const governance = read("src/pages/SystemGovernancePage.tsx");
 const shell = read("src/pages/BackofficeShellPage.tsx");
+const styles = read("src/styles.css");
 
 for (const text of ["经营管理后台", "增长总览", "客户经营报告", "员工日报汇总", "学生心理健康周报", "投诉处理周报", "风险队列"]) {
   if (!manager.includes(text)) {
@@ -41,6 +42,18 @@ for (const component of ["ManagementDashboardPage", "SystemGovernancePage"]) {
   if (!shell.includes(component)) {
     throw new Error(`Shell 未接入管理页面: ${component}`);
   }
+}
+
+if (!/\.management-report-workspace\s*\{[\s\S]*?align-items:\s*stretch;/.test(styles)) {
+  throw new Error("管理者报告工作区三列卡片应底线对齐");
+}
+
+if (!/\.management-report-workspace\s+\.report-workspace-panel\s*\{[\s\S]*?height:\s*clamp\(/.test(styles)) {
+  throw new Error("管理者报告工作区卡片应使用稳定高度");
+}
+
+if (!/\.report-workspace-panel\s+\.report-row-list,[\s\S]*?\.report-workspace-panel\s+\.compact-report-list,[\s\S]*?\.management-summary-panel\s+\.compact-summary-list\s*\{[\s\S]*?flex:\s*1;[\s\S]*?overflow:\s*auto;/.test(styles)) {
+  throw new Error("管理者报告工作区列表和摘要应在卡片内部滚动");
 }
 
 console.log("management governance check OK");

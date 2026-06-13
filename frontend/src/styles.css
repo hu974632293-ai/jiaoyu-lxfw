@@ -1877,7 +1877,7 @@ td span {
   display: grid;
   grid-template-columns: minmax(300px, 0.95fr) minmax(340px, 1.1fr) minmax(280px, 0.8fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .report-workspace-panel {
@@ -1887,10 +1887,17 @@ td span {
   min-height: 0;
 }
 
+.management-report-workspace .report-workspace-panel {
+  height: clamp(520px, calc(100vh - 430px), 720px);
+  overflow: hidden;
+}
+
 .report-workspace-panel .report-row-list,
-.management-summary-panel .compact-summary-list,
-.report-workspace-panel .compact-report-list {
-  max-height: clamp(260px, calc(100vh - 430px), 520px);
+.report-workspace-panel .compact-report-list,
+.management-summary-panel .compact-summary-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
 }
 
@@ -1985,8 +1992,11 @@ td span {
 }
 
 .report-detail-panel {
-  display: grid;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 .report-detail-action {
@@ -2545,6 +2555,11 @@ textarea {
   .employee-guide-workspace,
   .employee-org-workspace {
     grid-template-columns: 1fr;
+  }
+
+  .management-report-workspace .report-workspace-panel {
+    height: auto;
+    max-height: 620px;
   }
 }
 
