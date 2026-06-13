@@ -33,7 +33,7 @@ const allBackofficePages: BackofficePageKey[] = [
   "employeeReports",
   "employeeOrg",
   "employeeCustomerQuery",
-  "employeeGuide",
+  "employeeGuide", "employeeAgent",
   "teacherLeaveApproval",
   "teacherFeedback",
   "teacherPsych",

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
 import EmployeeWorkspacePage from "./EmployeeWorkspacePage";
+import EmployeeAgentPanel from "./EmployeeAgentPanel";
 import GrowthOverviewPage from "./GrowthOverviewPage";
 import ManagementDashboardPage from "./ManagementDashboardPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";

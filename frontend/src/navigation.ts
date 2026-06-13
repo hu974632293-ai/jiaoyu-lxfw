@@ -52,6 +52,7 @@ export type BackofficePageKey =
   | "employeeOrg"
   | "employeeCustomerQuery"
   | "employeeGuide"
+  | "employeeAgent"
   | "teacherLeaveApproval"
   | "teacherFeedback"
   | "teacherPsych"
