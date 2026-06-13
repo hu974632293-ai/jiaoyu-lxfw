@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiRequest } from "./api/client";
+import { apiRequest, clearAccessToken } from "./api/client";
 import BackofficeShellPage from "./pages/BackofficeShellPage";
 import LoginPage from "./pages/LoginPage";
 import PublicPortalPage from "./pages/PublicPortalPage";
@@ -198,6 +198,7 @@ export default function App() {
 
   function logoutToPortal() {
     window.localStorage.removeItem(accountStorageKey);
+    clearAccessToken();
     setAccountKey(null);
     setMode("public");
     setPublicPage("home");
