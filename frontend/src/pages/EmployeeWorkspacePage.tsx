@@ -637,19 +637,19 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
                   <em>{item.contact_info}</em>
                 </article>
               )) : <div className="empty-state">当前搜索下暂无联系人。</div>}
+              {selectedContact ? (
+                <dl className="detail-list">
+                  <div>
+                    <dt>职责</dt>
+                    <dd>{selectedContact.responsibilities || "暂无"}</dd>
+                  </div>
+                  <div>
+                    <dt>联系方式</dt>
+                    <dd>{selectedContact.contact_info || "暂无"}</dd>
+                  </div>
+                </dl>
+              ) : null}
             </div>
-            {selectedContact ? (
-              <dl className="detail-list">
-                <div>
-                  <dt>职责</dt>
-                  <dd>{selectedContact.responsibilities || "暂无"}</dd>
-                </div>
-                <div>
-                  <dt>联系方式</dt>
-                  <dd>{selectedContact.contact_info || "暂无"}</dd>
-                </div>
-              </dl>
-            ) : null}
           </section> : null}
 
           {showCustomerQuery ? <section className="panel-block">
