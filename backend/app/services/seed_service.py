@@ -1411,6 +1411,7 @@ _TEST_ACCOUNTS = [
     ("employee", "employee123", "????", "employee"),
     ("teacher", "teacher123", "????", "teacher"),
     ("student", "student123", "????", "student"),
+    ("test", "test123", "???????", "admin"),
 ]
 
 
