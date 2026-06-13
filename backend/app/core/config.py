@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     llm_provider: str = "rule_only"
     llm_api_key: str = ""
 
+    dify_app_id_map: str = "customer_service:,enterprise_guide:,student_life:,policy:"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

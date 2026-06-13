@@ -9,6 +9,7 @@ from app.models.operation import AuditLog
 from app.models.user import SysUser
 from app.schemas.knowledge import KnowledgeSourceCreate, KnowledgeSourceUpdate, KnowledgeSyncJobCreate
 from app.services.dify_client import DifyClient
+from app.services.fallback_answers import match_scene_answer
 
 SCENE_LABELS = {
     "customer_service": "客服咨询",
@@ -41,6 +42,10 @@ async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
         }
 
     fallback_reason = _fallback_reason(result["status"])
+
+    # ? Dify ???????????????????
+    if result["status"] in {"fallback", "error"}:
+        result["answer"] = match_scene_answer(payload.scene, question)
     log = KnowledgeChatLog(
         lead_id=payload.lead_id,
         scene=payload.scene,
