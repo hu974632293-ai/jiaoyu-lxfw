@@ -25,6 +25,8 @@ const requiredComponentTokens = [
   "requires_confirmation",
   "draft",
   "business_result",
+  "getEnterpriseAgentScenesForRole",
+  "getEnterpriseAgentTaskSummary",
   "confirmAgentAction",
   "当前任务",
   "处理状态",
@@ -88,6 +90,7 @@ const forbiddenTokens = [
   "generateDailyDraft",
   "submitDailyReport",
   "buildActionIntent",
+  'role: "employee"',
 ];
 
 for (const token of forbiddenTokens) {

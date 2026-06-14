@@ -71,9 +71,11 @@ const allBackofficePages: BackofficePageKey[] = [
   "systemDemo",
 ];
 
-const employeePages: BackofficePageKey[] = ["employeeQuickEntry", "employeeReports", "employeeOrg", "employeeCustomerQuery", "employeeGuide", "employeeAgent"];
+const enterpriseCommonPages: BackofficePageKey[] = ["employeeReports", "employeeOrg", "employeeGuide", "employeeAgent"];
+const consultantEnterprisePages: BackofficePageKey[] = [...enterpriseCommonPages, "employeeCustomerQuery"];
 const adminGovernancePages: BackofficePageKey[] = [
   "roleOverview",
+  "employeeAgent",
   "adminUsers",
   "adminRoles",
   "adminPermissions",
@@ -85,10 +87,10 @@ const adminGovernancePages: BackofficePageKey[] = [
 
 export const roleVisiblePages: Record<RoleKey, BackofficePageKey[]> = {
   admin: adminGovernancePages,
-  manager: ["roleOverview", "managerGrowthDashboard", "managerDailySummary", "managerPsychWeekly", "managerFeedbackWeekly", "managerRiskQueue", ...employeePages, "reports"],
-  consultant: ["roleOverview", "consultantNewLead", "consultantLeadQueue", "consultantFunnel", "consultantCustomer360", "consultantTasks", "consultantEvents", ...employeePages],
-  employee: ["roleOverview", ...employeePages],
-  teacher: ["roleOverview", "teacherLeaveApproval", "teacherFeedback", "teacherPsych", "teacherAcademic", "teacherGrades", ...employeePages],
+  manager: ["roleOverview", "managerGrowthDashboard", "managerDailySummary", "managerPsychWeekly", "managerFeedbackWeekly", "managerRiskQueue", ...enterpriseCommonPages, "reports"],
+  consultant: ["roleOverview", "consultantNewLead", "consultantLeadQueue", "consultantFunnel", "consultantCustomer360", "consultantTasks", "consultantEvents", ...consultantEnterprisePages],
+  employee: ["roleOverview", ...enterpriseCommonPages],
+  teacher: ["roleOverview", "teacherLeaveApproval", "teacherFeedback", "teacherPsych", "teacherAcademic", "teacherGrades", ...enterpriseCommonPages],
   student: ["roleOverview", "studentLeaveRequest", "studentFeedbackSubmit", "studentGradeQuery", "studentApplicationProgress", "studentExamNodes", "studentLifeSupport"],
 };
 

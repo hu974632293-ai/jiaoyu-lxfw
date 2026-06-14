@@ -29,11 +29,12 @@ test("test account can access every backoffice page needed by acceptance", () =>
   }
 });
 
-test("admin account only exposes system governance pages", () => {
+test("admin account exposes governance pages and the enterprise agent public assistant", () => {
   for (const page of ["adminUsers", "adminRoles", "adminPermissions", "adminAudit", "adminNotifications", "adminKnowledgeSources", "adminSystemStatus"]) {
     assert.equal(authRules.canAccessAccountPage("admin", page), true, `${page} should be available to admin`);
   }
-  for (const page of ["studentLeaveRequest", "teacherLeaveApproval", "consultantLeadQueue", "employeeReports", "employeeAgent", "managerRiskQueue"]) {
+  assert.equal(authRules.canAccessAccountPage("admin", "employeeAgent"), true, "admin should access enterprise agent public scenes");
+  for (const page of ["studentLeaveRequest", "teacherLeaveApproval", "consultantLeadQueue", "employeeReports", "employeeCustomerQuery", "managerRiskQueue"]) {
     assert.equal(authRules.canAccessAccountPage("admin", page), false, `${page} should not be in the admin production view`);
   }
 });
@@ -48,18 +49,32 @@ test("test account can render menus by demo role view", () => {
   assert.deepEqual(authRules.getAccountVisiblePages("admin", "student"), authRules.roleVisiblePages.admin);
 });
 
-test("student account cannot access staff, teacher, manager, or admin pages", () => {
+test("student account cannot access staff, teacher, manager, admin, or enterprise agent pages", () => {
   assert.equal(authRules.canAccessAccountPage("student", "studentLeaveRequest"), true);
-  for (const page of ["employeeReports", "teacherLeaveApproval", "managerRiskQueue", "adminPermissions"]) {
+  for (const page of ["employeeReports", "employeeAgent", "teacherLeaveApproval", "managerRiskQueue", "adminPermissions"]) {
     assert.equal(authRules.canAccessAccountPage("student", page), false, `${page} should be denied for student`);
   }
 });
 
-test("manager, consultant, and teacher inherit employee workspace entries", () => {
-  for (const account of ["manager", "consultant", "teacher"]) {
-    assert.equal(authRules.canAccessAccountPage(account, "employeeReports"), true, `${account} should access employee reports`);
+test("manager, consultant, employee, and teacher can access enterprise common pages", () => {
+  for (const account of ["manager", "consultant", "employee", "teacher"]) {
+    assert.equal(authRules.canAccessAccountPage(account, "employeeReports"), true, `${account} should access reports or personal daily records`);
     assert.equal(authRules.canAccessAccountPage(account, "employeeOrg"), true, `${account} should access organization lookup`);
+    assert.equal(authRules.canAccessAccountPage(account, "employeeGuide"), true, `${account} should access guide`);
     assert.equal(authRules.canAccessAccountPage(account, "employeeAgent"), true, `${account} should access enterprise assistant`);
+  }
+});
+
+test("customer query page is limited to consultant and not exposed as an enterprise common page", () => {
+  assert.equal(authRules.canAccessAccountPage("consultant", "employeeCustomerQuery"), true);
+  for (const account of ["employee", "teacher", "admin"]) {
+    assert.equal(authRules.canAccessAccountPage(account, "employeeCustomerQuery"), false, `${account} should not access customer query by default`);
+  }
+});
+
+test("manager, consultant, and teacher keep role-specific entries", () => {
+  for (const account of ["manager", "consultant", "teacher"]) {
+    assert.equal(authRules.canAccessAccountPage(account, "roleOverview"), true, `${account} should access role overview`);
   }
 });
 

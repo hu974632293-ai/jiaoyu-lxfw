@@ -6,9 +6,17 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../api/client";
 import { isLoginAccountKey, loginAccounts } from "../authRules";
+import {
+  enterpriseAgentSceneKeys,
+  getDefaultEnterpriseAgentScene,
+  getEnterpriseAgentSceneForRole,
+  getEnterpriseAgentScenesForRole,
+  getEnterpriseAgentTaskSummary,
+} from "../enterpriseAgentRules";
+import type { EnterpriseAgentSceneKey } from "../enterpriseAgentRules";
 import type { PageProps } from "../App";
 
-type AgentScene = "daily" | "org" | "customer" | "guide";
+type AgentScene = EnterpriseAgentSceneKey;
 
 type Message = {
   role: "user" | "assistant";
@@ -74,85 +82,8 @@ type AgentActionPayload = {
   idempotency_key: string;
 };
 
-type TaskSummary = {
-  taskType: string;
-  subject: string;
-  related: string;
-  waitingFor: string;
-  resultLabel: string;
-};
-
-const scenes: Array<{
-  key: AgentScene;
-  label: string;
-  shortLabel: string;
-  hint: string;
-  prompt: string;
-}> = [
-  {
-    key: "daily",
-    label: "日报",
-    shortLabel: "日",
-    hint: "口述转草稿",
-    prompt: "今天跟进了王同学申请材料，联系家长确认预算，发现签证材料还缺资产证明。帮我生成日报草稿。",
-  },
-  {
-    key: "org",
-    label: "组织",
-    shortLabel: "组",
-    hint: "按事项找负责人",
-    prompt: "学生服务投诉现在谁负责？请给出处理入口和下一步。",
-  },
-  {
-    key: "customer",
-    label: "客户",
-    shortLabel: "客",
-    hint: "查询受控客户信息",
-    prompt: "查询本周高潜客户数量，并告诉我需要跟进的重点。",
-  },
-  {
-    key: "guide",
-    label: "指南",
-    shortLabel: "新",
-    hint: "新人制度流程",
-    prompt: "新人入职第一周需要完成哪些事项？",
-  },
-];
-
-const taskSummaries: Record<AgentScene, TaskSummary> = {
-  daily: {
-    taskType: "日报草稿",
-    subject: "我的日报",
-    related: "今日跟进记录",
-    waitingFor: "风险事项和明日计划",
-    resultLabel: "日报草稿",
-  },
-  org: {
-    taskType: "查找负责人",
-    subject: "负责人查询",
-    related: "学生服务投诉",
-    waitingFor: "负责人和处理入口",
-    resultLabel: "负责人建议",
-  },
-  customer: {
-    taskType: "客户查询",
-    subject: "受控客户信息",
-    related: "本周高潜客户",
-    waitingFor: "重点跟进名单",
-    resultLabel: "客户摘要",
-  },
-  guide: {
-    taskType: "新人指南",
-    subject: "新人流程",
-    related: "入职第一周事项",
-    waitingFor: "步骤和联系人",
-    resultLabel: "流程指引",
-  },
-};
-
 type TaskState = "idle" | "answered" | "error";
 
-const sceneKeys: AgentScene[] = ["daily", "org", "customer", "guide"];
 const sceneToKnowledgeScene: Record<AgentScene, string> = {
   daily: "enterprise_daily",
   org: "enterprise_org",
@@ -160,8 +91,8 @@ const sceneToKnowledgeScene: Record<AgentScene, string> = {
   guide: "enterprise_guide",
 };
 
-function sceneIntro(scene: AgentScene): Message[] {
-  const copy = scenes.find((item) => item.key === scene) ?? scenes[0];
+function sceneIntro(scene: AgentScene, role: PageProps["role"]): Message[] {
+  const copy = getEnterpriseAgentSceneForRole(role, scene);
   return [
     {
       role: "assistant",
@@ -170,9 +101,9 @@ function sceneIntro(scene: AgentScene): Message[] {
   ];
 }
 
-function initialMessagesByScene(): Record<AgentScene, Message[]> {
-  return sceneKeys.reduce(
-    (result, scene) => ({ ...result, [scene]: sceneIntro(scene) }),
+function initialMessagesByScene(role: PageProps["role"]): Record<AgentScene, Message[]> {
+  return enterpriseAgentSceneKeys.reduce(
+    (result, scene) => ({ ...result, [scene]: sceneIntro(scene, role) }),
     {} as Record<AgentScene, Message[]>,
   );
 }
@@ -218,9 +149,12 @@ function buildPendingAction(data: AgentActionPayload): PendingAction | null {
   };
 }
 
-export default function EmployeeAgentPanel(_props: PageProps) {
-  const [activeScene, setActiveScene] = useState<AgentScene>("daily");
-  const [messagesByScene, setMessagesByScene] = useState<Record<AgentScene, Message[]>>(initialMessagesByScene);
+export default function EmployeeAgentPanel(props: PageProps) {
+  const scenes = getEnterpriseAgentScenesForRole(props.role);
+  const defaultScene = getDefaultEnterpriseAgentScene(props.role);
+  const visibleSceneKeys = scenes.map((scene) => scene.key).join(",");
+  const [activeScene, setActiveScene] = useState<AgentScene>(defaultScene);
+  const [messagesByScene, setMessagesByScene] = useState<Record<AgentScene, Message[]>>(() => initialMessagesByScene(props.role));
   const [sessionIds, setSessionIds] = useState<Partial<Record<AgentScene, number>>>({});
   const [pendingActions, setPendingActions] = useState<Partial<Record<AgentScene, PendingAction>>>({});
   const [input, setInput] = useState("");
@@ -229,7 +163,7 @@ export default function EmployeeAgentPanel(_props: PageProps) {
   const [taskState, setTaskState] = useState<TaskState>("idle");
   const [lastResults, setLastResults] = useState<Partial<Record<AgentScene, KnowledgeChatResult>>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
-  const messages = messagesByScene[activeScene] ?? sceneIntro(activeScene);
+  const messages = messagesByScene[activeScene] ?? sceneIntro(activeScene, props.role);
   const pendingAction = pendingActions[activeScene];
   const actorUsername = currentActorUsername();
 
@@ -238,13 +172,19 @@ export default function EmployeeAgentPanel(_props: PageProps) {
   }, [messages]);
 
   useEffect(() => {
+    if (!scenes.some((scene) => scene.key === activeScene)) {
+      setActiveScene(defaultScene);
+    }
+  }, [activeScene, defaultScene, scenes, visibleSceneKeys]);
+
+  useEffect(() => {
     void loadSceneSession(activeScene);
   }, [activeScene]);
 
   function setSceneMessages(scene: AgentScene, updater: (current: Message[]) => Message[]) {
     setMessagesByScene((current) => ({
       ...current,
-      [scene]: updater(current[scene] ?? sceneIntro(scene)),
+      [scene]: updater(current[scene] ?? sceneIntro(scene, props.role)),
     }));
   }
 
@@ -258,11 +198,11 @@ export default function EmployeeAgentPanel(_props: PageProps) {
     try {
       const data = await apiRequest<ChatSessionResult>(`/api/knowledge/sessions/latest?${params.toString()}`);
       setSessionIds((current) => ({ ...current, [scene]: data.session_id ?? undefined }));
-      setSceneMessages(scene, () => (data.messages.length ? mapSessionMessages(data.messages) : sceneIntro(scene)));
+      setSceneMessages(scene, () => (data.messages.length ? mapSessionMessages(data.messages) : sceneIntro(scene, props.role)));
       setPendingActions((current) => ({ ...current, [scene]: data.latest_action ? buildPendingAction(data.latest_action) ?? undefined : undefined }));
       setTaskState(data.messages.length ? "answered" : "idle");
     } catch {
-      setSceneMessages(scene, () => sceneIntro(scene));
+      setSceneMessages(scene, () => sceneIntro(scene, props.role));
     } finally {
       setLoadingSession(false);
     }
@@ -290,7 +230,7 @@ export default function EmployeeAgentPanel(_props: PageProps) {
         method: "POST",
         body: JSON.stringify({
           scene: sceneToKnowledgeScene[scene],
-          role: "employee",
+          role: props.role,
           actor_username: actorUsername,
           channel: "employee_agent",
           session_id: sessionIds[scene],
@@ -355,8 +295,8 @@ export default function EmployeeAgentPanel(_props: PageProps) {
     }
   }
 
-  const activeSceneCopy = scenes.find((item) => item.key === activeScene) ?? scenes[0];
-  const taskSummary = taskSummaries[activeScene];
+  const activeSceneCopy = getEnterpriseAgentSceneForRole(props.role, activeScene);
+  const taskSummary = getEnterpriseAgentTaskSummary(props.role, activeScene);
   const activeResult = lastResults[activeScene];
   const hasAnswer = taskState === "answered";
   const resultActionStatus = activeResult?.action_status;
