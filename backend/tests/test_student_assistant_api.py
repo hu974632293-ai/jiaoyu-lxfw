@@ -14,6 +14,30 @@ def _auth_headers(username: str = "admin", password: str = "admin123") -> dict[s
     return {"Authorization": f"Bearer {response.json()['data']['access_token']}"}
 
 
+def test_student_agent_chat_requires_token_and_uses_current_identity():
+    seed_response = client.post("/api/demo/seed")
+    assert seed_response.status_code == 200
+    student_id = client.get("/api/student-assistant/students", headers=_auth_headers()).json()["data"][0]["id"]
+
+    anonymous_response = client.post(
+        "/api/student-assistant/chat",
+        json={"student_id": student_id, "message": "我想查询申请进度", "actor_username": "admin"},
+    )
+    assert anonymous_response.status_code == 401
+    assert anonymous_response.json()["code"] == 40100
+
+    student_response = client.post(
+        "/api/student-assistant/chat",
+        headers=_auth_headers("student", "student123"),
+        json={"student_id": student_id, "message": "我想查询申请进度", "actor_username": "admin"},
+    )
+    assert student_response.status_code == 200
+    payload = student_response.json()
+    assert payload["code"] == 0
+    assert payload["data"]["intent"] == "application_progress"
+    assert payload["data"]["actor_username"] == "student"
+
+
 def test_student_assistant_chat_leave_feedback_psych_and_progress_api():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200

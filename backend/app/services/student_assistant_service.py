@@ -105,6 +105,7 @@ def handle_student_chat(db: Session, payload: StudentChatRequest) -> dict[str, A
         "conversation_id": conversation.id,
         "intent": intent,
         "status": status,
+        "actor_username": payload.actor_username,
         "answer": answer,
         "result": result,
     }

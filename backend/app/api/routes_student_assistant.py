@@ -90,7 +90,11 @@ def students(current_user: SysUser = Depends(require_token_permission("assistant
 
 
 @router.post("/chat")
-def chat(payload: StudentChatRequest, db: Session = Depends(get_db)):
+def chat(payload: StudentChatRequest, current_user: SysUser = Depends(require_token_permission("assistant:student:use")), db: Session = Depends(get_db)):
+    scope_response = _ensure_student_scope(db, current_user, payload.student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     try:
         return ok(handle_student_chat(db, payload))
     except ValueError as exc:

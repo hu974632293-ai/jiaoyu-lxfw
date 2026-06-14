@@ -38,7 +38,7 @@
 | ACTIVE | `docs/business-flow-test-plan.md` | 最终业务链路验收和 B1-B12 闭环验收口径。 |
 | ACTIVE | `docs/test-object-claim-table.md` | 多人验收对象认领、测试账号和管理员边界。 |
 | ACTIVE | `docs/mysql-migration-readiness.md` | SQLite 到 MySQL 的迁移准备、Alembic baseline 和空库验证流程。 |
-| ACTIVE | `docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` | Agent 需求覆盖、Dify 批次、资料来源和后续批次范围。需清理其中的乱码状态行。 |
+| ACTIVE | `docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` | Agent 需求覆盖、Dify 批次、资料来源和后续批次范围。Batch 状态需随提交持续更新。 |
 | ACTIVE | `docs/superpowers/specs/2026-06-14-enterprise-agent-command-design.md` | 企业助手 AI 指挥台专项设计和验收方向。 |
 | REFERENCE | `docs/superpowers/plans/2026-06-13-v3-production-foundation-batch1.md` | Batch 1 执行轨迹和文件清单。批次一已标记完成，后续不应把未勾选框当作当前未完成事实。 |
 | REFERENCE | `docs/superpowers/plans/2026-06-14-enterprise-agent-command-implementation.md` | 企业助手指挥台专项计划。当前需与最新专项检查结果一起使用。 |
@@ -97,8 +97,9 @@
 2. `docs/dify/education-service-agent.yml` 已覆盖 5 个 app 场景：公开客服、企业新人指南、学生生活支持、客户研判、报告解释。客户研判和报告解释后续仍需与对应业务 Agent 面板、报告解释入口和真实 Dify 数据集继续联调。
 3. 官网客服 Agent 7 类公开咨询覆盖、活动报名联动和业务化来源展示仍需按验收计划跑真实链路。
 4. 企业新人指南真实资料接入需要继续确认，不能只停留在静态新人指南页面。
-5. 学生/老师 Agent、客户研判 Agent、报告 Agent 仍属于后续批次，不应被当作 Batch 1 已完成范围。
-6. PDF/Word 报告导出、部署交付、Dify 真实同步和最终 B1-B12 全链路验收仍是后续工作。
+5. 学生/老师 Agent 仍在推进中：后端 `/api/student-assistant/chat` 已收紧为 token 身份和学生数据范围校验，前端学生/老师 Agent 面板、动作草稿确认和老师处理型入口仍属后续范围。
+6. 客户研判 Agent、报告 Agent 仍属于后续批次，不应被当作 Batch 1 已完成范围。
+7. PDF/Word 报告导出、部署交付、Dify 真实同步和最终 B1-B12 全链路验收仍是后续工作。
 
 ## 7. 当前发现的不一致和返工风险
 
@@ -135,16 +136,28 @@ npm.cmd run build
 - 在系统治理页呈现同步状态、失败原因和重试入口；
 - 保持 Dify 不可用时的可解释 fallback，不阻断 CRM、研判、活动和报告主业务。
 
-### 7.3 Agent 覆盖设计文档存在乱码状态行
+### 7.3 学生助手后端身份边界已收紧
 
-`docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` 的 `6.2 第二批` 下存在乱码状态句。后续线程读到这里会降低可信度，建议在 Dify 批次开始前替换为明确状态：
+2026-06-15 批次四后端先收口学生助手对话入口：
+
+- `/api/student-assistant/chat` 现在必须携带具备 `assistant:student:use` 权限的 Bearer token。
+- 服务端使用当前 token 用户覆盖请求体中的 `actor_username`，避免前端伪造操作者身份。
+- 对话前复用学生数据范围校验；学生演示账号仅允许访问自己的演示学生档案，不获得全量学生访问权。
+
+后续学生/老师 Agent 批次仍需继续补前端面板、动作草稿确认和老师处理型入口。
+
+### 7.4 Agent 覆盖设计文档状态行已清理
+
+`docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` 的 `6.2 第二批` 状态行已替换为明确批次状态。后续继续维护时应保持以下信息随提交更新：
 
 - 已完成什么；
 - 当前 YAML 覆盖哪些场景；
 - 还缺哪些场景；
 - 下一批验收命令是什么。
 
-### 7.4 历史计划 checkbox 不应再作为唯一事实
+当前该乱码状态行已清理；后续维护重点是让批次状态随提交更新，不只停留在聊天里。
+
+### 7.5 历史计划 checkbox 不应再作为唯一事实
 
 `docs/superpowers/plans/2026-06-13-v3-production-foundation-batch1.md` 内仍有大量 `- [ ]` 步骤，这是执行计划模板痕迹。当前事实应以最近提交、测试结果和 `agent-requirement-coverage-design.md` 中的批次完成状态为准。
 
