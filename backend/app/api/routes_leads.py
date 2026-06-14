@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions import require_permission
+from app.core.permissions import require_token_permission
 from app.core.response import fail, ok
 from app.models.user import SysUser
 from app.schemas.crm import CrmFollowUpCreate
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/leads", tags=["leads"])
 @router.post("")
 def create(
     payload: LeadCreate,
-    current_user: SysUser = Depends(require_permission("crm:lead:write")),
+    current_user: SysUser = Depends(require_token_permission("crm:lead:write")),
     db: Session = Depends(get_db),
 ):
     lead = create_lead(db, payload, owner_id=current_user.id)
@@ -72,7 +72,7 @@ def detail(lead_id: int, db: Session = Depends(get_db)):
 def update_status(
     lead_id: int,
     payload: LeadStatusUpdate,
-    current_user: SysUser = Depends(require_permission("crm:lead:write")),
+    current_user: SysUser = Depends(require_token_permission("crm:lead:write")),
     db: Session = Depends(get_db),
 ):
     try:
@@ -96,7 +96,19 @@ def timeline(lead_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{lead_id}/follow-ups")
-def add_follow_up(lead_id: int, payload: CrmFollowUpCreate, db: Session = Depends(get_db)):
+def add_follow_up(
+    lead_id: int,
+    payload: CrmFollowUpCreate,
+    current_user: SysUser = Depends(require_token_permission("crm:lead:write")),
+    db: Session = Depends(get_db),
+):
+    try:
+        ensure_can_access_lead(db, current_user, lead_id)
+    except DataScopeError:
+        return JSONResponse(status_code=403, content=fail("无权操作该客户", 40301))
+    except ValueError as exc:
+        return fail(str(exc), 40401)
+    payload.operator_username = current_user.username
     follow_up = create_follow_up(db, lead_id, payload)
     if not follow_up:
         return fail("客户不存在", 40401)

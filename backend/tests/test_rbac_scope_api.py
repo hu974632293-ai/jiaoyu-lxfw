@@ -95,3 +95,98 @@ def test_enterprise_assistant_core_queries_accept_bearer_token_and_enforce_role_
     response = client.get("/api/enterprise-assistant/daily-reports", headers=denied_headers)
     assert response.status_code == 403
     assert response.json()["code"] == 40300
+
+
+def test_crm_write_operations_reject_legacy_actor_header_and_accept_bearer_token():
+    client.post("/api/demo/seed")
+    admin_headers = {"Authorization": f"Bearer {_token('admin', 'admin123')}"}
+    consultant_headers = {"Authorization": f"Bearer {_token('consultant', 'consultant123')}"}
+    legacy_headers = {"X-Actor-Username": "admin"}
+
+    legacy_create = client.post(
+        "/api/leads",
+        headers=legacy_headers,
+        json={"customer_name": "legacy CRM 客户", "contact_info": "13900001111", "background_info": "不应由旧 header 写入"},
+    )
+    assert legacy_create.status_code == 401
+    assert legacy_create.json()["code"] == 40100
+
+    created = client.post(
+        "/api/leads",
+        headers=admin_headers,
+        json={"customer_name": "token CRM 客户", "contact_info": "13900002222", "background_info": "真实登录写入"},
+    ).json()["data"]
+    lead_id = created["id"]
+
+    legacy_responses = [
+        client.post(
+            f"/api/leads/{lead_id}/follow-ups",
+            headers=legacy_headers,
+            json={"follow_type": "电话", "content": "旧 header 不应新增跟进", "operator_username": "admin"},
+        ),
+        client.post(
+            "/api/crm/tasks",
+            headers=legacy_headers,
+            json={"lead_id": lead_id, "title": "旧 header 不应创建任务", "owner_username": "admin"},
+        ),
+        client.patch(
+            f"/api/leads/{lead_id}/status",
+            headers=legacy_headers,
+            json={"status": "high_potential", "reason": "旧 header 不应改状态"},
+        ),
+    ]
+    for response in legacy_responses:
+        assert response.status_code == 401
+        assert response.json()["code"] == 40100
+
+    follow_up = client.post(
+        f"/api/leads/{lead_id}/follow-ups",
+        headers=admin_headers,
+        json={"follow_type": "电话", "content": "真实登录新增跟进", "operator_username": "admin"},
+    )
+    task = client.post(
+        "/api/crm/tasks",
+        headers=admin_headers,
+        json={"lead_id": lead_id, "title": "真实登录创建任务", "owner_username": "admin"},
+    )
+    status = client.patch(
+        f"/api/leads/{lead_id}/status",
+        headers=admin_headers,
+        json={"status": "high_potential", "reason": "真实登录改状态"},
+    )
+
+    assert follow_up.status_code == 200
+    assert task.status_code == 200
+    assert status.status_code == 200
+
+    scoped_task_create = client.post(
+        "/api/crm/tasks",
+        headers=consultant_headers,
+        json={"lead_id": lead_id, "title": "顾问不应创建非本人客户任务", "owner_username": "consultant"},
+    )
+    assert scoped_task_create.status_code == 403
+    assert scoped_task_create.json()["code"] == 40301
+
+    scoped_complete = client.patch(
+        f"/api/crm/tasks/{task.json()['data']['id']}/complete",
+        headers=consultant_headers,
+        json={"operator_username": "consultant"},
+    )
+    assert scoped_complete.status_code == 403
+    assert scoped_complete.json()["code"] == 40301
+
+    legacy_complete = client.patch(
+        f"/api/crm/tasks/{task.json()['data']['id']}/complete",
+        headers=legacy_headers,
+        json={"operator_username": "admin"},
+    )
+    assert legacy_complete.status_code == 401
+    assert legacy_complete.json()["code"] == 40100
+
+    complete = client.patch(
+        f"/api/crm/tasks/{task.json()['data']['id']}/complete",
+        headers=admin_headers,
+        json={"operator_username": "admin"},
+    )
+    assert complete.status_code == 200
+    assert complete.json()["data"]["status"] == "已完成"
