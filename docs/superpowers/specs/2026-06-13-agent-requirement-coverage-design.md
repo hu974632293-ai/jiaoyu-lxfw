@@ -472,6 +472,16 @@ YAML 应至少覆盖这些场景：
 2. 区分 SQLite 验收结果和 MySQL 验收结果。
 3. 汇总认证、权限、Dify、导出、部署、业务闭环的剩余风险。
 
+当前状态：
+
+1. 2026-06-15 已完成最终 B1-B12 验收准备，新增 `docs/verification-checklist.md`，统一 B1-B12 执行矩阵、自动化验证、人工浏览器验收、SQLite 验收、MySQL 验收、Dify 未配置 fallback、真实 Dify 验收、导出和部署证据口径。
+2. 新增 `backend/tests/test_final_acceptance_readiness.py`，用于检查业务动线计划保留 B1-B12、最终验收清单覆盖关键交付域、状态文档已记录最终验收准备批次。
+3. 当前仅完成验收准备；B1-B12 人工浏览器验收、真实 MySQL 验收和真实 Dify 验收仍需按清单执行后记录结论。
+
+验证：
+
+1. `cd backend && python -m pytest tests/test_final_acceptance_readiness.py -v`
+
 ## 7. 前端形态建议
 
 本轮 UI 优先级最低，建议只做最小增强：
@@ -499,6 +509,7 @@ YAML 应至少覆盖这些场景：
 
 1. 本文件中的每个 `客户需求表/.../...` 路径都要有当前状态和后续动作。
 2. 后续实施计划必须引用本文件，不能再按“页面看起来有”判断需求完成。
+3. 最终验收执行必须引用 `docs/verification-checklist.md`，并把自动化验证、人工浏览器验收、SQLite 验收、MySQL 验收分开记录。
 
 ### 8.2 功能验收
 
@@ -543,6 +554,13 @@ npm.cmd run build
 8. 权限、审计、通知和知识来源治理。
 9. SQLite 和 MySQL 两套验证结果分开记录。
 
+最终验收准备文档检查：
+
+```bash
+cd backend
+python -m pytest tests/test_final_acceptance_readiness.py -v
+```
+
 ## 9. 下一步计划
 
 本设计确认后，进入实施计划阶段。建议拆成八个可提交批次：
@@ -554,6 +572,6 @@ npm.cmd run build
 5. 批次五：客户研判 Agent、报告 Agent 和报告解释。
 6. 批次六：业务闭环补洞，覆盖负责人分配、软删除/归档、报告筛选、通知处理。
 7. 批次七：Dify 真实同步、PDF/Word 导出和部署交付。
-8. 批次八：按 `docs/business-flow-test-plan.md` 跑 B1-B12 最终验收，并区分 SQLite/MySQL 结果。
+8. 批次八：先以 `docs/verification-checklist.md` 完成最终 B1-B12 验收准备，再按 `docs/business-flow-test-plan.md` 跑 B1-B12 最终验收，并区分 SQLite/MySQL 结果。
 
 每个批次都应单独验证、单独提交，避免一次性改动过大。
