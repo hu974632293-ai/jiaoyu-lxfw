@@ -1033,19 +1033,20 @@ button:disabled {
 
 .content-frame {
   min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
   padding: 16px;
 }
 
-.agent-workspace-grid,
-.org-workspace-grid {
+.workspace-grid {
   height: calc(100vh - 8px);
   min-height: 0;
   align-items: stretch;
   overflow: hidden;
 }
 
-.agent-workspace-grid .sidebar,
-.org-workspace-grid .sidebar {
+.workspace-grid .sidebar {
   height: 100%;
   max-height: 100%;
   min-height: 0;
@@ -1053,31 +1054,22 @@ button:disabled {
   overflow: hidden;
 }
 
-.agent-workspace-grid .sidebar-main,
-.org-workspace-grid .sidebar-main {
+.workspace-grid .sidebar-main {
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
   flex-direction: column;
 }
 
-.agent-workspace-grid .sidebar-nav,
-.org-workspace-grid .sidebar-nav {
+.workspace-grid .sidebar-nav {
   min-height: 0;
   overflow-y: auto;
   align-content: start;
   padding-right: 2px;
 }
 
-.agent-workspace-grid .sidebar-foot,
-.org-workspace-grid .sidebar-foot {
+.workspace-grid .sidebar-foot {
   flex: 0 0 auto;
-}
-
-.org-workspace-grid .content-frame {
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
 }
 
 .agent-content-frame {
@@ -2550,6 +2542,7 @@ textarea {
   }
 
   .workspace-grid,
+  .workspace-grid.sidebar-expanded,
   .workspace-grid.sidebar-collapsed,
   .split-layout,
   .split-layout.secondary,
@@ -2580,27 +2573,23 @@ textarea {
     min-height: auto;
   }
 
-  .agent-workspace-grid,
-  .org-workspace-grid {
+  .workspace-grid {
     height: auto;
     overflow: visible;
   }
 
-  .agent-workspace-grid .sidebar,
-  .org-workspace-grid .sidebar,
-  .org-workspace-grid .content-frame {
+  .workspace-grid .sidebar,
+  .content-frame {
     height: auto;
     max-height: none;
     overflow: visible;
   }
 
-  .agent-workspace-grid .sidebar-main,
-  .org-workspace-grid .sidebar-main {
+  .workspace-grid .sidebar-main {
     display: grid;
   }
 
-  .agent-workspace-grid .sidebar-nav,
-  .org-workspace-grid .sidebar-nav {
+  .workspace-grid .sidebar-nav {
     overflow: visible;
   }
 
