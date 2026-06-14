@@ -55,3 +55,31 @@ def test_status_documents_record_final_acceptance_readiness_batch():
     for content in [audit, design]:
         assert "最终 B1-B12 验收准备" in content
         assert "docs/verification-checklist.md" in content
+        assert "docs/v3-final-acceptance-readiness.md" in content
+
+
+def test_final_acceptance_readiness_document_covers_risk_and_configuration_matrix():
+    readiness_path = PROJECT_ROOT / "docs" / "v3-final-acceptance-readiness.md"
+
+    assert readiness_path.exists()
+    content = readiness_path.read_text(encoding="utf-8")
+
+    for flow_id in [f"B{index}" for index in range(1, 13)]:
+        assert flow_id in content
+
+    for required_text in [
+        "已自动验证",
+        "需人工验收",
+        "上线后配置项",
+        "角色边界",
+        "前端入口",
+        "API/对象",
+        "自动验证命令",
+        "人工验收项",
+        "上线配置项",
+        "已知风险",
+        "Dify key/app/dataset",
+        "SQLite",
+        "MySQL",
+    ]:
+        assert required_text in content

@@ -475,7 +475,8 @@ YAML 应至少覆盖这些场景：
 当前状态：
 
 1. 2026-06-15 已完成最终 B1-B12 验收准备，新增 `docs/verification-checklist.md`，统一 B1-B12 执行矩阵、自动化验证、人工浏览器验收、SQLite 验收、MySQL 验收、Dify 未配置 fallback、真实 Dify 验收、导出和部署证据口径。
-2. 新增 `backend/tests/test_final_acceptance_readiness.py`，用于检查业务动线计划保留 B1-B12、最终验收清单覆盖关键交付域、状态文档已记录最终验收准备批次。
+2. 新增 `docs/v3-final-acceptance-readiness.md`，承接最终 B1-B12 验收准备矩阵、证据分层、角色边界、API/对象、上线配置项和已知风险。
+3. 新增 `backend/tests/test_final_acceptance_readiness.py`，用于检查业务动线计划保留 B1-B12、最终验收清单和准备矩阵覆盖关键交付域、状态文档已记录最终验收准备批次。
 3. 当前仅完成验收准备；B1-B12 人工浏览器验收、真实 MySQL 验收和真实 Dify 验收仍需按清单执行后记录结论。
 
 验证：

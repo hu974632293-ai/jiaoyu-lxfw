@@ -38,6 +38,7 @@
 | ACTIVE | `docs/business-flow-test-plan.md` | 最终业务链路验收和 B1-B12 闭环验收口径。 |
 | ACTIVE | `docs/test-object-claim-table.md` | 多人验收对象认领、测试账号和管理员边界。 |
 | ACTIVE | `docs/verification-checklist.md` | 最终 B1-B12 验收准备执行清单，区分自动化/人工、SQLite/MySQL、Dify fallback/真实 Dify。 |
+| ACTIVE | `docs/v3-final-acceptance-readiness.md` | 最终 B1-B12 验收准备矩阵，覆盖角色边界、API/对象、上线配置项和风险。 |
 | ACTIVE | `docs/mysql-migration-readiness.md` | SQLite 到 MySQL 的迁移准备、Alembic baseline 和空库验证流程。 |
 | ACTIVE | `docs/deployment-delivery-runbook.md` | 部署交付、环境变量、启动、CORS、健康检查、生产初始化、备份恢复和演示 seed 边界。 |
 | ACTIVE | `docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` | Agent 需求覆盖、Dify 批次、资料来源和后续批次范围。Batch 状态需随提交持续更新。 |
@@ -104,7 +105,7 @@
 7. 业务闭环补洞已完成通知部分：通知列表返回业务对象跳转地址，后端支持标记已读和处理完成，系统治理通知页已接入对应动作和打开对象入口；报告历史筛选、负责人分配联动、归档或软删除策略仍需继续补。
 8. Dify 同步预留已完成配置健康、同步任务重试和治理页状态承接；真实 Dify key、app、dataset 配置后仍需验收真实同步命中率。
 9. PDF/Word 报告导出已完成接口、前端动作和审计记录；部署交付文档、环境变量说明、CORS 配置承接、健康检查说明、生产初始化边界、备份恢复流程和轻量验证测试已完成。
-10. 最终 B1-B12 验收准备已补 `docs/verification-checklist.md` 和轻量文档覆盖测试；B1-B12 人工全链路验收仍是后续工作，且 SQLite 与 MySQL、Dify 未配置 fallback 与真实 Dify 结果必须分开记录。
+10. 最终 B1-B12 验收准备已补 `docs/verification-checklist.md`、`docs/v3-final-acceptance-readiness.md` 和轻量文档覆盖测试；B1-B12 人工全链路验收仍是后续工作，且 SQLite 与 MySQL、Dify 未配置 fallback 与真实 Dify 结果必须分开记录。
 
 ## 7. 当前发现的不一致和返工风险
 
@@ -208,14 +209,15 @@ python -m pytest tests/test_deployment_delivery.py -v
 2026-06-15 最终 B1-B12 验收准备批次已完成：
 
 - 新增 `docs/verification-checklist.md`，把 B1-B12 链路、自动化验证、人工浏览器验收、SQLite 验收、MySQL 验收、Dify 未配置 fallback、真实 Dify 验收、导出和部署证据口径统一到一份清单。
-- 新增 `backend/tests/test_final_acceptance_readiness.py`，检查 B1-B12 用例仍在业务动线计划中，最终验收清单覆盖关键交付域，并要求状态文档记录本批入口。
+- 新增 `docs/v3-final-acceptance-readiness.md`，把 B1-B12 的角色边界、前端入口、API/对象、已自动验证、需人工验收、上线配置项和已知风险补成矩阵。
+- 新增 `backend/tests/test_final_acceptance_readiness.py`，检查 B1-B12 用例仍在业务动线计划中，并验证最终验收准备文档覆盖执行清单、角色边界、API/对象、上线配置项和风险。
 - 本批只做最终验收准备，不代表 B1-B12 人工浏览器验收或真实 MySQL、真实 Dify 验收已经通过。
 
 ## 8. 后续执行建议
 
 1. 新线程入口先读：`AGENTS.md`、本审计文档、当前要执行的 batch plan 或专项 design。
 2. 每个新 batch 开始前先写三句话：本批假设、取舍、成功标准。
-3. 执行最终验收时先使用 `docs/verification-checklist.md` 认领 B1-B12 证据，再按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 逐项记录对象 ID。
+3. 执行最终验收时先使用 `docs/v3-final-acceptance-readiness.md` 确认 B1-B12 角色边界、入口、API/对象和风险，再用 `docs/verification-checklist.md` 认领证据，并按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 逐项记录对象 ID。
 4. Dify 批次开始前先清理 Agent 覆盖设计文档的乱码状态行，并决定 YAML 是扩到五类场景还是分阶段补齐。
 5. 企业助手指挥台应单独收口，不要混进 Dify 接入或客服 Agent 验收。
 6. 后续提交仍按当前项目规则：先查 `git status`，只 stage 当前任务相关文件，中文 commit。
