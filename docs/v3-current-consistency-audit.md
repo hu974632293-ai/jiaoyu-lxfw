@@ -213,6 +213,25 @@ python -m pytest tests/test_deployment_delivery.py -v
 - 新增 `backend/tests/test_final_acceptance_readiness.py`，检查 B1-B12 用例仍在业务动线计划中，并验证最终验收准备文档覆盖执行清单、角色边界、API/对象、上线配置项和风险。
 - 本批只做最终验收准备，不代表 B1-B12 人工浏览器验收或真实 MySQL、真实 Dify 验收已经通过。
 
+### 7.9 后端完整回归已复核
+
+2026-06-15 针对上一轮完整回归中曾出现的 seed/通知 `StaleDataError` 做了重新复核。
+
+复核命令：
+
+```powershell
+cd D:\00_Project\jiaoyu_lxfw\backend
+python -m pytest -v
+```
+
+结果：64 passed，用时约 108 秒。
+
+当前判断：
+
+- 本次未复现 `ensure_default_admin_data()` 与通知记录提交相关的历史失败。
+- `backend/app/services/seed_service.py` 当前仍表现为换行脏标记，文本 diff 为空，不应作为本批提交内容。
+- 如果后续完整回归再次出现同类 `StaleDataError`，应优先沿 `seed_demo_data()` 删除通知后复用同一 Session 调用 `ensure_default_admin_data()` 的状态路径继续定位，并先写最小失败测试再改 service。
+
 ## 8. 后续执行建议
 
 1. 新线程入口先读：`AGENTS.md`、本审计文档、当前要执行的 batch plan 或专项 design。
