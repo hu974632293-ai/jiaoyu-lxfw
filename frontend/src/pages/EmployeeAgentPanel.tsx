@@ -22,6 +22,15 @@ type KnowledgeChatResult = {
   session_id: number | null;
   messages: SessionMessage[];
   status: string;
+  action_type: PendingAction["action_type"] | "answer" | "query_customer_summary" | "query_org_contact" | "query_employee_guide";
+  action_status: "suggested" | "waiting_confirmation" | "confirmed" | "synced" | "failed" | "expired";
+  requires_confirmation: boolean;
+  draft: Record<string, unknown> | null;
+  target_type: string;
+  target_id: number | null;
+  next_step: string;
+  business_result: Record<string, unknown>;
+  idempotency_key: string;
 };
 
 type SessionMessage = {
@@ -36,6 +45,7 @@ type ChatSessionResult = {
   scene: string;
   channel: string;
   messages: SessionMessage[];
+  latest_action?: AgentActionPayload | null;
 };
 
 type PendingAction = {
@@ -52,6 +62,16 @@ type AgentActionResult = {
   target_type: string;
   target_id: number;
   idempotent: boolean;
+};
+
+type AgentActionPayload = {
+  action_type: PendingAction["action_type"] | string;
+  action_status: string;
+  requires_confirmation: boolean;
+  draft: Record<string, unknown> | null;
+  target_type: string;
+  next_step: string;
+  idempotency_key: string;
 };
 
 type TaskSummary = {
@@ -170,45 +190,32 @@ function currentActorUsername() {
   return isLoginAccountKey(account) ? loginAccounts[account].username : "employee";
 }
 
-function buildActionIntent(scene: AgentScene, question: string, actor: string): PendingAction | null {
-  const idempotencyBase = `${actor}-${scene}-${Date.now()}`;
-  if (question.includes("状态") || question.includes("更新为")) {
-    const leadId = Number(question.match(/客户\s*(\d+)/)?.[1] ?? 0);
-    const status = question.match(/更新为\s*([a-zA-Z_一-龥]+)/)?.[1]?.replace(/[，。,. ]+$/, "") ?? "";
-    if (leadId && status) {
-      return {
-        action_type: "update_lead_status",
-        label: "确认更新状态",
-        description: "确认后同步到客户列表、客户 360 和阶段记录。",
-        idempotency_key: `${idempotencyBase}-status`,
-        draft: { lead_id: leadId, status, reason: "企业助手确认更新" },
-        status: "pending",
-      };
-    }
-  }
-  if (question.includes("录入") || question.includes("新增客户")) {
-    const phone = question.match(/1\d{10}/)?.[0] ?? "";
-    const name = question.match(/客户[:：]\s*([^，,。]+)/)?.[1]?.trim() || "企业助手录入客户";
-    return {
-      action_type: "create_lead",
-      label: "确认保存客户",
-      description: "确认后同步到客户增长和客户 360。",
-      idempotency_key: `${idempotencyBase}-lead`,
-      draft: { customer_name: name, contact_info: phone, background_info: question, source_channel: "企业助手" },
-      status: "pending",
-    };
-  }
-  if (scene === "daily" || question.includes("日报")) {
-    return {
-      action_type: "submit_daily_report",
+function buildPendingAction(data: AgentActionPayload): PendingAction | null {
+  if (!data.requires_confirmation || !data.draft || !data.idempotency_key) return null;
+  if (!["submit_daily_report", "create_lead", "update_lead_status"].includes(data.action_type)) return null;
+  const copy: Record<PendingAction["action_type"], { label: string; description: string }> = {
+    submit_daily_report: {
       label: "确认提交日报",
-      description: "确认后同步到员工日报和管理者日报汇总。",
-      idempotency_key: `${idempotencyBase}-daily`,
-      draft: { content: question },
-      status: "pending",
-    };
-  }
-  return null;
+      description: data.next_step || "确认后同步到员工日报和管理者日报汇总。",
+    },
+    create_lead: {
+      label: "确认保存客户",
+      description: data.next_step || "确认后同步到客户增长和客户 360。",
+    },
+    update_lead_status: {
+      label: "确认更新状态",
+      description: data.next_step || "确认后同步到客户列表、客户 360 和阶段记录。",
+    },
+  };
+  const actionType = data.action_type as PendingAction["action_type"];
+  return {
+    action_type: actionType,
+    label: copy[actionType].label,
+    description: copy[actionType].description,
+    idempotency_key: data.idempotency_key,
+    draft: data.draft,
+    status: data.action_status === "confirmed" || data.action_status === "synced" ? "confirmed" : "pending",
+  };
 }
 
 export default function EmployeeAgentPanel(_props: PageProps) {
@@ -220,6 +227,7 @@ export default function EmployeeAgentPanel(_props: PageProps) {
   const [sending, setSending] = useState(false);
   const [loadingSession, setLoadingSession] = useState(false);
   const [taskState, setTaskState] = useState<TaskState>("idle");
+  const [lastResults, setLastResults] = useState<Partial<Record<AgentScene, KnowledgeChatResult>>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = messagesByScene[activeScene] ?? sceneIntro(activeScene);
   const pendingAction = pendingActions[activeScene];
@@ -251,6 +259,7 @@ export default function EmployeeAgentPanel(_props: PageProps) {
       const data = await apiRequest<ChatSessionResult>(`/api/knowledge/sessions/latest?${params.toString()}`);
       setSessionIds((current) => ({ ...current, [scene]: data.session_id ?? undefined }));
       setSceneMessages(scene, () => (data.messages.length ? mapSessionMessages(data.messages) : sceneIntro(scene)));
+      setPendingActions((current) => ({ ...current, [scene]: data.latest_action ? buildPendingAction(data.latest_action) ?? undefined : undefined }));
       setTaskState(data.messages.length ? "answered" : "idle");
     } catch {
       setSceneMessages(scene, () => sceneIntro(scene));
@@ -293,11 +302,12 @@ export default function EmployeeAgentPanel(_props: PageProps) {
       if (data.session_id) {
         setSessionIds((current) => ({ ...current, [scene]: data.session_id ?? undefined }));
       }
-      const nextPendingAction = buildActionIntent(scene, question, actorUsername);
+      setLastResults((current) => ({ ...current, [scene]: data }));
+      const nextPendingAction = buildPendingAction(data);
       if (data.messages?.length) {
         setSceneMessages(scene, () => mapSessionMessages(data.messages));
         setPendingActions((current) => ({ ...current, [scene]: nextPendingAction ?? undefined }));
-        setTaskState("answered");
+        setTaskState(data.action_status === "failed" ? "error" : "answered");
       } else {
         applyAssistantAnswer(scene, data.answer, nextPendingAction);
       }
@@ -347,18 +357,41 @@ export default function EmployeeAgentPanel(_props: PageProps) {
 
   const activeSceneCopy = scenes.find((item) => item.key === activeScene) ?? scenes[0];
   const taskSummary = taskSummaries[activeScene];
+  const activeResult = lastResults[activeScene];
   const hasAnswer = taskState === "answered";
-  const taskStatus = sending ? "处理中" : loadingSession ? "恢复会话中" : taskState === "error" ? "需要重试" : hasAnswer ? "已返回建议" : "等待输入";
+  const resultActionStatus = activeResult?.action_status;
+  const taskStatus = sending
+    ? "处理中"
+    : loadingSession
+      ? "恢复会话中"
+      : taskState === "error" || resultActionStatus === "failed"
+        ? "需要重试"
+        : pendingAction?.status === "pending"
+          ? "等待确认"
+          : pendingAction?.status === "confirmed" || resultActionStatus === "synced"
+            ? "已同步"
+            : hasAnswer
+              ? "已返回建议"
+              : "等待输入";
   const nextAction = sending
     ? "等待结果返回"
     : pendingAction?.status === "pending"
       ? "确认后同步业务记录"
       : pendingAction?.status === "confirmed"
         ? "已同步，可继续追问"
+      : activeResult?.next_step
+        ? activeResult.next_step
     : hasAnswer
       ? "继续追问 / 按建议进入对应业务页"
       : "选择场景或直接输入问题";
-  const resultStatus = hasAnswer ? taskSummary.resultLabel : taskSummary.waitingFor;
+  const hasBusinessResult = Boolean(activeResult?.business_result && Object.keys(activeResult.business_result).length);
+  const resultStatus = pendingAction?.status === "pending"
+    ? "待你确认"
+    : hasBusinessResult
+      ? taskSummary.resultLabel
+      : hasAnswer
+        ? "已回复"
+        : taskSummary.waitingFor;
 
   return (
     <div className="enterprise-agent-shell">

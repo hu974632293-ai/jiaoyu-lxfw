@@ -174,3 +174,200 @@ def test_employee_agent_confirm_actions_sync_business_tables_and_are_idempotent(
 
     lead_detail = client.get(f"/api/leads/{lead_id}", headers=headers).json()["data"]
     assert lead_detail["status"] == "high_potential"
+
+
+def test_employee_agent_knowledge_chat_returns_structured_read_results():
+    client.post("/api/demo/seed")
+    token = _token("employee", "employee123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    customer_response = client.post(
+        "/api/knowledge/chat",
+        headers=headers,
+        json={
+            "scene": "enterprise_customer",
+            "role": "employee",
+            "actor_username": "employee",
+            "channel": "employee_agent",
+            "question": "查询本周高潜客户数量，并告诉我需要跟进的重点。",
+            "business_context": {"agent_scene": "customer"},
+            "action_mode": "draft",
+        },
+    )
+    assert customer_response.status_code == 200
+    customer = customer_response.json()["data"]
+    assert customer["action_type"] == "query_customer_summary"
+    assert customer["action_status"] == "suggested"
+    assert customer["requires_confirmation"] is False
+    assert customer["draft"] is None
+    assert customer["target_type"] == "crm_lead"
+    assert isinstance(customer["business_result"]["high_potential_count"], int)
+    assert "高潜客户" in customer["answer"]
+    assert "暂时无法回答" not in customer["answer"]
+
+    org_response = client.post(
+        "/api/knowledge/chat",
+        headers=headers,
+        json={
+            "scene": "enterprise_org",
+            "role": "employee",
+            "actor_username": "employee",
+            "channel": "employee_agent",
+            "question": "学生服务投诉现在谁负责？请给出处理入口和下一步。",
+            "business_context": {"agent_scene": "org"},
+            "action_mode": "draft",
+        },
+    )
+    assert org_response.status_code == 200
+    org = org_response.json()["data"]
+    assert org["action_type"] == "query_org_contact"
+    assert org["action_status"] == "suggested"
+    assert org["requires_confirmation"] is False
+    assert org["draft"] is None
+    assert org["target_type"] == "employee_directory"
+    assert org["business_result"]["display_name"]
+    assert "负责" in org["answer"]
+    assert "学生服务" in org["answer"]
+    assert "暂时无法回答" not in org["answer"]
+
+
+def test_employee_agent_knowledge_chat_only_returns_draft_for_write_intent():
+    client.post("/api/demo/seed")
+    token = _token("employee", "employee123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    greeting_response = client.post(
+        "/api/knowledge/chat",
+        headers=headers,
+        json={
+            "scene": "enterprise_daily",
+            "role": "employee",
+            "actor_username": "employee",
+            "channel": "employee_agent",
+            "question": "你好",
+            "business_context": {"agent_scene": "daily"},
+            "action_mode": "draft",
+        },
+    )
+    assert greeting_response.status_code == 200
+    greeting = greeting_response.json()["data"]
+    assert greeting["action_type"] == "answer"
+    assert greeting["action_status"] == "suggested"
+    assert greeting["requires_confirmation"] is False
+    assert greeting["draft"] is None
+
+    daily_response = client.post(
+        "/api/knowledge/chat",
+        headers=headers,
+        json={
+            "scene": "enterprise_daily",
+            "role": "employee",
+            "actor_username": "employee",
+            "channel": "employee_agent",
+            "question": "今天跟进了王同学申请材料，风险是签证材料还缺资产证明，明天补齐清单。帮我生成日报草稿。",
+            "business_context": {"agent_scene": "daily"},
+            "action_mode": "draft",
+        },
+    )
+    assert daily_response.status_code == 200
+    daily = daily_response.json()["data"]
+    assert daily["action_type"] == "submit_daily_report"
+    assert daily["action_status"] == "waiting_confirmation"
+    assert daily["requires_confirmation"] is True
+    assert daily["target_type"] == "work_daily_report"
+    assert daily["draft"]["content"].startswith("今天跟进了王同学")
+    assert daily["idempotency_key"]
+
+    restore_response = client.get(
+        "/api/knowledge/sessions/latest",
+        headers=headers,
+        params={"scene": "enterprise_daily", "channel": "employee_agent", "actor_username": "employee"},
+    )
+    assert restore_response.status_code == 200
+    restored = restore_response.json()["data"]
+    assert restored["latest_action"]["action_type"] == "submit_daily_report"
+    assert restored["latest_action"]["action_status"] == "waiting_confirmation"
+    assert restored["latest_action"]["draft"]["content"].startswith("今天跟进了王同学")
+
+    confirm_response = client.post(
+        "/api/enterprise-assistant/actions/confirm",
+        headers=headers,
+        json={
+            "action_type": "submit_daily_report",
+            "actor_username": "employee",
+            "idempotency_key": daily["idempotency_key"],
+            "draft": daily["draft"],
+            "session_id": daily["session_id"],
+        },
+    )
+    assert confirm_response.status_code == 200
+
+    confirmed_restore_response = client.get(
+        "/api/knowledge/sessions/latest",
+        headers=headers,
+        params={"scene": "enterprise_daily", "channel": "employee_agent", "actor_username": "employee"},
+    )
+    assert confirmed_restore_response.status_code == 200
+    assert confirmed_restore_response.json()["data"]["latest_action"] is None
+
+
+def test_employee_agent_customer_write_intents_return_backend_drafts():
+    client.post("/api/demo/seed")
+    token = _token("employee", "employee123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_response = client.post(
+        "/api/knowledge/chat",
+        headers=headers,
+        json={
+            "scene": "enterprise_customer",
+            "role": "employee",
+            "actor_username": "employee",
+            "channel": "employee_agent",
+            "question": "帮我新增客户：后端草稿客户，电话 13900009999，关注新加坡本科。",
+            "business_context": {"agent_scene": "customer"},
+            "action_mode": "draft",
+        },
+    )
+    assert create_response.status_code == 200
+    create_data = create_response.json()["data"]
+    assert create_data["action_type"] == "create_lead"
+    assert create_data["action_status"] == "waiting_confirmation"
+    assert create_data["requires_confirmation"] is True
+    assert create_data["draft"]["customer_name"] == "后端草稿客户"
+    assert create_data["draft"]["contact_info"] == "13900009999"
+
+    confirm_create = client.post(
+        "/api/enterprise-assistant/actions/confirm",
+        headers=headers,
+        json={
+            "action_type": "create_lead",
+            "actor_username": "employee",
+            "idempotency_key": create_data["idempotency_key"],
+            "draft": create_data["draft"],
+            "session_id": create_data["session_id"],
+        },
+    )
+    assert confirm_create.status_code == 200
+    lead_id = confirm_create.json()["data"]["target_id"]
+
+    update_response = client.post(
+        "/api/knowledge/chat",
+        headers=headers,
+        json={
+            "scene": "enterprise_customer",
+            "role": "employee",
+            "actor_username": "employee",
+            "channel": "employee_agent",
+            "question": f"把客户 {lead_id} 状态更新为 high_potential，原因是预算明确。",
+            "business_context": {"agent_scene": "customer"},
+            "action_mode": "draft",
+        },
+    )
+    assert update_response.status_code == 200
+    update_data = update_response.json()["data"]
+    assert update_data["action_type"] == "update_lead_status"
+    assert update_data["action_status"] == "waiting_confirmation"
+    assert update_data["requires_confirmation"] is True
+    assert update_data["draft"]["lead_id"] == lead_id
+    assert update_data["draft"]["status"] == "high_potential"

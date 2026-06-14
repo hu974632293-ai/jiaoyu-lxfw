@@ -394,24 +394,32 @@ def confirm_agent_action(db: Session, payload: AgentActionConfirmRequest, actor_
     else:
         raise ValueError("不支持的动作类型")
 
-    action_log = AgentActionLog(
-        user_id=actor.id if actor else None,
-        assistant_type="employee_agent",
-        action_type=payload.action_type,
-        target_type=target_type,
-        target_id=target_id,
-        payload_json=json.dumps(
-            {
-                "idempotency_key": payload.idempotency_key,
-                "session_id": payload.session_id,
-                "draft": payload.draft,
-                "result": result,
-            },
-            ensure_ascii=False,
-        ),
-        status="success",
+    action_log = _find_pending_agent_action(db, actor.id if actor else None, payload.action_type, payload.idempotency_key)
+    payload_json = json.dumps(
+        {
+            "idempotency_key": payload.idempotency_key,
+            "session_id": payload.session_id,
+            "draft": payload.draft,
+            "result": result,
+        },
+        ensure_ascii=False,
     )
-    db.add(action_log)
+    if action_log:
+        action_log.target_type = target_type
+        action_log.target_id = target_id
+        action_log.payload_json = payload_json
+        action_log.status = "success"
+    else:
+        action_log = AgentActionLog(
+            user_id=actor.id if actor else None,
+            assistant_type="employee_agent",
+            action_type=payload.action_type,
+            target_type=target_type,
+            target_id=target_id,
+            payload_json=payload_json,
+            status="success",
+        )
+        db.add(action_log)
     if payload.session_id:
         db.add(
             ChatMessage(
@@ -652,6 +660,23 @@ def _find_confirmed_agent_action(db: Session, user_id: int | None, action_type: 
         AgentActionLog.assistant_type == "employee_agent",
         AgentActionLog.action_type == action_type,
         AgentActionLog.status == "success",
+    )
+    if user_id is None:
+        query = query.filter(AgentActionLog.user_id.is_(None))
+    else:
+        query = query.filter(AgentActionLog.user_id == user_id)
+    for item in query.order_by(AgentActionLog.id.desc()).limit(50).all():
+        payload = _parse_json(item.payload_json, {})
+        if payload.get("idempotency_key") == idempotency_key:
+            return item
+    return None
+
+
+def _find_pending_agent_action(db: Session, user_id: int | None, action_type: str, idempotency_key: str) -> AgentActionLog | None:
+    query = db.query(AgentActionLog).filter(
+        AgentActionLog.assistant_type == "employee_agent",
+        AgentActionLog.action_type == action_type,
+        AgentActionLog.status == "pending",
     )
     if user_id is None:
         query = query.filter(AgentActionLog.user_id.is_(None))

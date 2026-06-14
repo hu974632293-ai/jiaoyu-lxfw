@@ -20,6 +20,11 @@ const requiredComponentTokens = [
   "employee_agent",
   "session_id",
   "actor_username",
+  "action_type",
+  "action_status",
+  "requires_confirmation",
+  "draft",
+  "business_result",
   "confirmAgentAction",
   "当前任务",
   "处理状态",
@@ -82,6 +87,7 @@ const forbiddenTokens = [
   "enterprise-agent-artifact-actions",
   "generateDailyDraft",
   "submitDailyReport",
+  "buildActionIntent",
 ];
 
 for (const token of forbiddenTokens) {
