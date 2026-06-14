@@ -81,7 +81,6 @@ const adminGovernancePages: BackofficePageKey[] = [
   "adminNotifications",
   "adminKnowledgeSources",
   "adminSystemStatus",
-  "employeeAgent",
 ];
 
 export const roleVisiblePages: Record<RoleKey, BackofficePageKey[]> = {
@@ -101,7 +100,7 @@ export const loginAccounts: Record<LoginAccountKey, LoginAccountProfile> = {
     displayName: "系统管理员",
     role: "admin",
     title: "系统治理管理员",
-    accessScope: "全部后台界面权限",
+    accessScope: "系统治理后台",
   },
   manager: {
     key: "manager",

@@ -33,7 +33,7 @@ test("admin account only exposes system governance pages", () => {
   for (const page of ["adminUsers", "adminRoles", "adminPermissions", "adminAudit", "adminNotifications", "adminKnowledgeSources", "adminSystemStatus"]) {
     assert.equal(authRules.canAccessAccountPage("admin", page), true, `${page} should be available to admin`);
   }
-  for (const page of ["studentLeaveRequest", "teacherLeaveApproval", "consultantLeadQueue", "employeeReports", "managerRiskQueue"]) {
+  for (const page of ["studentLeaveRequest", "teacherLeaveApproval", "consultantLeadQueue", "employeeReports", "employeeAgent", "managerRiskQueue"]) {
     assert.equal(authRules.canAccessAccountPage("admin", page), false, `${page} should not be in the admin production view`);
   }
 });
@@ -42,6 +42,8 @@ test("test account can render menus by demo role view", () => {
   assert.equal(authRules.canSwitchDemoRole("test"), true);
   assert.equal(authRules.canSwitchDemoRole("admin"), false);
   assert.deepEqual(authRules.getAccountVisiblePages("test", "student"), authRules.roleVisiblePages.student);
+  assert.deepEqual(authRules.getAccountVisiblePages("test", "employee"), authRules.roleVisiblePages.employee);
+  assert.equal(authRules.getAccountVisiblePages("test", "employee").includes("employeeAgent"), true);
   assert.deepEqual(authRules.getAccountVisiblePages("test", "consultant"), authRules.roleVisiblePages.consultant);
   assert.deepEqual(authRules.getAccountVisiblePages("admin", "student"), authRules.roleVisiblePages.admin);
 });
