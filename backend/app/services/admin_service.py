@@ -265,20 +265,57 @@ def list_audit_logs(db: Session) -> list[dict[str, Any]]:
 def list_notifications(db: Session) -> list[dict[str, Any]]:
     users = {item.id: item for item in db.query(SysUser).all()}
     notifications = db.query(Notification).order_by(Notification.created_at.desc(), Notification.id.desc()).limit(50).all()
-    return [
-        {
-            "id": item.id,
-            "user_id": item.user_id,
-            "receiver_name": users[item.user_id].real_name if item.user_id in users else "全员",
-            "target_type": item.target_type,
-            "target_id": item.target_id,
-            "title": item.title,
-            "content": item.content,
-            "status": item.status,
-            "created_at": item.created_at.isoformat() if item.created_at else None,
-        }
-        for item in notifications
-    ]
+    return [_serialize_notification(item, users) for item in notifications]
+
+
+def mark_notification_read(db: Session, notification_id: int) -> dict[str, Any]:
+    notification = db.get(Notification, notification_id)
+    if not notification:
+        raise ValueError("通知不存在")
+    notification.status = "已读"
+    notification.read_at = notification.read_at or datetime.utcnow()
+    db.commit()
+    db.refresh(notification)
+    users = {item.id: item for item in db.query(SysUser).all()}
+    return _serialize_notification(notification, users)
+
+
+def handle_notification(db: Session, notification_id: int) -> dict[str, Any]:
+    notification = db.get(Notification, notification_id)
+    if not notification:
+        raise ValueError("通知不存在")
+    notification.status = "已处理"
+    notification.read_at = notification.read_at or datetime.utcnow()
+    db.commit()
+    db.refresh(notification)
+    users = {item.id: item for item in db.query(SysUser).all()}
+    return _serialize_notification(notification, users)
+
+
+def _notification_target_url(notification: Notification) -> str:
+    if notification.target_type == "crm_lead" and notification.target_id:
+        return f"/backoffice/customer-growth?lead_id={notification.target_id}"
+    if notification.target_type == "student_psych_alert" and notification.target_id:
+        return f"/backoffice/teacher-student-service?alert_id={notification.target_id}"
+    if notification.target_type == "report_snapshot" and notification.target_id:
+        return f"/backoffice/reports?report_id={notification.target_id}"
+    return "/backoffice"
+
+
+def _serialize_notification(item: Notification, users: dict[int, SysUser]) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "user_id": item.user_id,
+        "receiver_name": users[item.user_id].real_name if item.user_id in users else "全员",
+        "target_type": item.target_type,
+        "target_id": item.target_id,
+        "target_url": _notification_target_url(item),
+        "title": item.title,
+        "content": item.content,
+        "status": item.status,
+        "read_at": item.read_at.isoformat() if item.read_at else None,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
 
 
 def _parse_json(raw: str) -> Any:

@@ -397,6 +397,12 @@ YAML 应至少覆盖这些场景：
 
 ### 6.5 第五批：业务闭环补洞
 
+当前状态：
+
+1. 2026-06-15 已补通知闭环：`/api/notifications` 返回业务对象跳转地址，新增通知标记已读和处理完成接口，系统治理通知页可标记已读、处理完成并打开对应业务对象。
+2. 本批已验证 `cd backend && python -m pytest -v`、`cd frontend && node tests\notification_closure_check.js`、`npm.cmd run build`、`git diff --check`。
+3. 负责人分配联动、项目/活动/CRM/报告归档或软删除策略、报告历史筛选仍在后续补洞范围。
+
 范围：
 
 1. 项目、活动、CRM、报告、通知补归档或软删除策略。

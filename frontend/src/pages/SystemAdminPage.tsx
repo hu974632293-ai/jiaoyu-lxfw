@@ -45,11 +45,15 @@ type AuditItem = {
 type NotificationItem = {
   id: number;
   receiver_name: string;
+  target_type: string;
+  target_id: number | null;
+  target_url: string;
   title: string;
   content: string;
   status: string;
+  read_at?: string | null;
 };
-type SystemOperation = "load" | "audit" | null;
+type SystemOperation = "load" | "audit" | "notification" | null;
 export type AdminGovernanceView = "overview" | "users" | "roles" | "permissions" | "audit" | "notifications";
 
 type SystemAdminPageProps = PageProps & {
@@ -97,7 +101,7 @@ function formatOperationTime() {
   }).format(new Date());
 }
 
-export default function SystemAdminPage({ role, initialView = "overview" }: SystemAdminPageProps) {
+export default function SystemAdminPage({ role, initialView = "overview", onNavigate }: SystemAdminPageProps) {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [permissionItems, setPermissionItems] = useState<PermissionItem[]>([]);
@@ -205,6 +209,73 @@ export default function SystemAdminPage({ role, initialView = "overview" }: Syst
     }
   }
 
+  async function markNotificationRead(item: { id?: number; title: string }) {
+    if (!item.id) return;
+    setPendingOperation("notification");
+    try {
+      const updated = await apiRequest<NotificationItem>(`/api/notifications/${item.id}/read`, { method: "POST" });
+      setNotificationItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
+      setOperationFeedback({
+        phase: "success",
+        title: "通知已标记为已读",
+        detail: item.title,
+        target: "通知中心",
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "通知已读更新失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "暂时无法更新通知状态。",
+        target: "通知中心",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  async function handleNotification(item: { id?: number; title: string }) {
+    if (!item.id) return;
+    setPendingOperation("notification");
+    try {
+      const updated = await apiRequest<NotificationItem>(`/api/notifications/${item.id}/handle`, { method: "POST" });
+      setNotificationItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
+      setOperationFeedback({
+        phase: "success",
+        title: "通知已处理完成",
+        detail: item.title,
+        target: "通知中心",
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "通知处理失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "暂时无法处理通知。",
+        target: "通知中心",
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  function openNotificationTarget(item: { targetUrl?: string }) {
+    if (!item.targetUrl) return;
+    if (item.targetUrl.includes("customer-growth")) {
+      onNavigate("customerGrowth");
+      return;
+    }
+    if (item.targetUrl.includes("teacher-student-service")) {
+      onNavigate("teacherStudentService");
+      return;
+    }
+    if (item.targetUrl.includes("reports")) {
+      onNavigate("reports");
+    }
+  }
+
   useEffect(() => {
     load();
   }, []);
@@ -237,12 +308,14 @@ export default function SystemAdminPage({ role, initialView = "overview" }: Syst
 
   const displayNotifications = notificationItems.length
     ? notificationItems.map((item) => ({
+        id: item.id,
         title: item.title,
         receiver: item.receiver_name,
         status: item.status,
         content: item.content,
+        targetUrl: item.target_url,
       }))
-    : notifications.map((item) => ({ ...item, content: "待确认通知内容" }));
+    : notifications.map((item) => ({ ...item, id: undefined, content: "待确认通知内容", targetUrl: "" }));
 
   const displayAuditRows = auditItems.length
     ? auditItems.map((item) => ({
@@ -375,6 +448,17 @@ export default function SystemAdminPage({ role, initialView = "overview" }: Syst
                       {item.receiver} / {item.content}
                     </span>
                     <em>{item.status}</em>
+                    <div className="inline-actions">
+                      <button className="tiny-button" onClick={() => markNotificationRead(item)} disabled={hasPendingOperation || !item.id}>
+                        标记已读
+                      </button>
+                      <button className="tiny-button" onClick={() => handleNotification(item)} disabled={hasPendingOperation || !item.id}>
+                        处理完成
+                      </button>
+                      <button className="ghost-button" onClick={() => openNotificationTarget(item)} disabled={!item.targetUrl}>
+                        打开对象
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>

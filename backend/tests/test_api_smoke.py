@@ -105,6 +105,18 @@ def test_permission_role_audit_and_notification_api():
     notifications_payload = notifications_response.json()
     assert notifications_payload["code"] == 0
     assert any(item["title"] == "高潜客户需要今日回访" for item in notifications_payload["data"])
+    first_notification = notifications_payload["data"][0]
+    assert first_notification["target_url"].startswith("/")
+
+    read_response = client.post(f"/api/notifications/{first_notification['id']}/read", headers=headers)
+    assert read_response.status_code == 200
+    assert read_response.json()["data"]["status"] == "已读"
+    assert read_response.json()["data"]["read_at"]
+
+    handle_response = client.post(f"/api/notifications/{first_notification['id']}/handle", headers=headers)
+    assert handle_response.status_code == 200
+    assert handle_response.json()["data"]["status"] == "已处理"
+    assert handle_response.json()["data"]["target_url"] == first_notification["target_url"]
 
 
 def test_permission_dependencies_reject_user_without_required_permission():
