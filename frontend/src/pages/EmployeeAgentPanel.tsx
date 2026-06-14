@@ -306,6 +306,7 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
 
   const activeSceneCopy = scenes.find((item) => item.key === activeScene) ?? scenes[0];
   const canSubmitDaily = Boolean(dailyContent.trim()) && !sending;
+  const hasArtifact = artifact.title !== defaultArtifact.title;
 
   return (
     <div className="enterprise-agent-shell">
@@ -344,6 +345,25 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
             <em>{activeSceneCopy.hint}</em>
           </div>
 
+          <div className="enterprise-agent-quickbar" aria-label="快捷启动">
+            <button type="button" className="enterprise-agent-tool-chip primary" onClick={generateDailyDraft}>
+              <FileText size={16} aria-hidden="true" />
+              生成日报
+            </button>
+            <button type="button" className="enterprise-agent-tool-chip" onClick={() => void sendPrompt(scenes[1].prompt, "org")}>
+              <Building2 size={16} aria-hidden="true" />
+              查负责人
+            </button>
+            <button type="button" className="enterprise-agent-tool-chip" onClick={() => void sendPrompt(scenes[2].prompt, "customer")}>
+              <Search size={16} aria-hidden="true" />
+              查客户
+            </button>
+            <button type="button" className="enterprise-agent-tool-chip" onClick={() => void sendPrompt(scenes[3].prompt, "guide")}>
+              <UserRound size={16} aria-hidden="true" />
+              新人指南
+            </button>
+          </div>
+
           <div className="enterprise-agent-dialog">
             {messages.map((msg, index) => (
               <div key={`${msg.role}-${index}`} className={`enterprise-agent-message ${msg.role}`}>
@@ -354,34 +374,36 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
             <div ref={bottomRef} />
           </div>
 
-          <article className={`enterprise-agent-artifact ${artifact.tone}`}>
-            <div className="enterprise-agent-artifact-head">
-              <div>
-                <span>当前结果</span>
-                <h2>{artifact.title}</h2>
-              </div>
-              <strong>{artifact.state}</strong>
-            </div>
-            <div className="enterprise-agent-artifact-grid">
-              {artifact.items.map((item) => (
-                <div key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
+          {hasArtifact && (
+            <article className={`enterprise-agent-artifact ${artifact.tone}`}>
+              <div className="enterprise-agent-artifact-head">
+                <div>
+                  <span>当前结果</span>
+                  <h2>{artifact.title}</h2>
                 </div>
-              ))}
-            </div>
-            <p>{artifact.note}</p>
-            <div className="enterprise-agent-artifact-actions">
-              <button type="button" onClick={submitDailyReport} disabled={!canSubmitDaily}>
-                <ClipboardCheck size={16} aria-hidden="true" />
-                提交日报
-              </button>
-              <button type="button" onClick={() => onNavigate("employeeWorkspace")}>
-                <Building2 size={16} aria-hidden="true" />
-                进入工作台
-              </button>
-            </div>
-          </article>
+                <strong>{artifact.state}</strong>
+              </div>
+              <div className="enterprise-agent-artifact-grid">
+                {artifact.items.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+              <p>{artifact.note}</p>
+              <div className="enterprise-agent-artifact-actions">
+                <button type="button" onClick={submitDailyReport} disabled={!canSubmitDaily}>
+                  <ClipboardCheck size={16} aria-hidden="true" />
+                  提交日报
+                </button>
+                <button type="button" onClick={() => onNavigate("employeeWorkspace")}>
+                  <Building2 size={16} aria-hidden="true" />
+                  进入工作台
+                </button>
+              </div>
+            </article>
+          )}
 
           <form
             className="enterprise-agent-input"
@@ -434,54 +456,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
           </div>
         </aside>
 
-        <aside className="enterprise-agent-side" aria-label="快捷启动">
-          <div className="enterprise-panel-heading compact">
-            <div>
-              <h2>快捷启动</h2>
-              <span>低权重入口</span>
-            </div>
-          </div>
-          <button type="button" className="enterprise-agent-quick primary" onClick={generateDailyDraft}>
-            <FileText size={18} aria-hidden="true" />
-            <span>
-              <strong>生成日报</strong>
-              <small>整理口述为草稿</small>
-            </span>
-          </button>
-          <button type="button" className="enterprise-agent-quick" onClick={() => void sendPrompt(scenes[1].prompt, "org")}>
-            <Building2 size={18} aria-hidden="true" />
-            <span>
-              <strong>查负责人</strong>
-              <small>按事项定位联系人</small>
-            </span>
-          </button>
-          <button type="button" className="enterprise-agent-quick" onClick={() => void sendPrompt(scenes[2].prompt, "customer")}>
-            <Search size={18} aria-hidden="true" />
-            <span>
-              <strong>查客户</strong>
-              <small>受控客户视图</small>
-            </span>
-          </button>
-          <button type="button" className="enterprise-agent-quick" onClick={() => void sendPrompt(scenes[3].prompt, "guide")}>
-            <UserRound size={18} aria-hidden="true" />
-            <span>
-              <strong>新人指南</strong>
-              <small>制度与流程</small>
-            </span>
-          </button>
-
-          <div className="enterprise-agent-recent">
-            <h3>最近结果</h3>
-            <button type="button" onClick={() => setArtifact(defaultArtifact)}>
-              <strong>打开新人清单</strong>
-              <span>23 分钟前 / 李顾问</span>
-            </button>
-            <button type="button" onClick={() => void sendPrompt("查询投诉负责人。", "org")}>
-              <strong>查询投诉负责人</strong>
-              <span>8 分钟前 / 周老师</span>
-            </button>
-          </div>
-        </aside>
       </div>
     </div>
   );

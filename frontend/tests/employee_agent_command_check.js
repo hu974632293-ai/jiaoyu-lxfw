@@ -3,8 +3,10 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const componentPath = path.join(root, "src/pages/EmployeeAgentPanel.tsx");
+const shellPath = path.join(root, "src/pages/BackofficeShellPage.tsx");
 const stylesPath = path.join(root, "src/styles.css");
 const component = fs.readFileSync(componentPath, "utf8");
+const shell = fs.readFileSync(shellPath, "utf8");
 const styles = fs.readFileSync(stylesPath, "utf8");
 
 const requiredComponentTokens = [
@@ -12,7 +14,8 @@ const requiredComponentTokens = [
   "enterprise-agent-main",
   "enterprise-agent-conversation",
   "enterprise-agent-execution",
-  "enterprise-agent-side",
+  "enterprise-agent-quickbar",
+  "enterprise-agent-tool-chip",
   "日报草稿已生成",
   "执行队列",
   "快捷启动",
@@ -31,11 +34,14 @@ const requiredStyleTokens = [
   ".enterprise-agent-main",
   ".enterprise-agent-conversation",
   ".enterprise-agent-execution",
-  ".enterprise-agent-side",
-  "grid-template-columns: minmax(0, 1fr) 300px",
+  ".enterprise-agent-quickbar",
+  ".enterprise-agent-tool-chip",
+  "grid-template-columns: minmax(0, 1fr) 236px",
+  ".agent-workspace-grid",
+  ".agent-content-frame",
+  "height: calc(100vh - 188px)",
   "grid-template-areas:",
   '"conversation rail"',
-  '"conversation side"',
 ];
 
 for (const token of requiredStyleTokens) {
@@ -61,13 +67,24 @@ for (const token of forbiddenTokens) {
 }
 
 const forbiddenStyleTokens = [
+  "enterprise-agent-side",
   "grid-template-columns: minmax(0, 1fr) 270px 292px",
+  "grid-template-columns: minmax(0, 1fr) 300px",
+  "height: calc(100vh - 244px)",
+  "  height: calc(100vh - 96px);",
+  "height: min(720px, calc(100vh - 280px))",
   "min-height: calc(100vh - 190px)",
 ];
 
 for (const token of forbiddenStyleTokens) {
   if (styles.includes(token)) {
     throw new Error(`企业助手不应继续使用三列或伪两列布局: ${token}`);
+  }
+}
+
+for (const token of ["agent-workspace-grid", "agent-content-frame"]) {
+  if (!shell.includes(token)) {
+    throw new Error(`企业助手后台外壳缺少专用整屏布局: ${token}`);
   }
 }
 

@@ -1036,6 +1036,25 @@ button:disabled {
   padding: 16px;
 }
 
+.agent-workspace-grid {
+  height: calc(100vh - 188px);
+  min-height: 0;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.agent-workspace-grid .sidebar {
+  max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.agent-content-frame {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 .context-panel {
   position: sticky;
   top: 14px;
@@ -4617,7 +4636,11 @@ textarea {
 
 /* 企业助手 Agent 面板 */
 .enterprise-agent-shell {
-  min-height: calc(100vh - 96px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding: 20px;
   color: #13221e;
   background:
@@ -4677,8 +4700,7 @@ textarea {
 .enterprise-agent-tabs button,
 .enterprise-agent-artifact-actions button,
 .enterprise-agent-input button,
-.enterprise-agent-quick,
-.enterprise-agent-recent button {
+.enterprise-agent-tool-chip {
   font: inherit;
 }
 
@@ -4702,19 +4724,18 @@ textarea {
 
 .enterprise-agent-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 236px;
   grid-template-areas:
-    "conversation rail"
-    "conversation side";
+    "conversation rail";
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .enterprise-agent-conversation,
-.enterprise-agent-execution,
-.enterprise-agent-side {
+.enterprise-agent-execution {
   border: 1px solid rgba(24, 58, 49, 0.1);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.76);
   box-shadow: 0 18px 48px rgba(28, 51, 45, 0.08);
 }
@@ -4722,8 +4743,9 @@ textarea {
 .enterprise-agent-conversation {
   grid-area: conversation;
   display: grid;
-  grid-template-rows: auto auto auto auto;
-  min-height: auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  height: 100%;
+  min-height: 0;
   padding: 18px;
   gap: 14px;
 }
@@ -4755,13 +4777,41 @@ textarea {
   font-style: normal;
 }
 
+.enterprise-agent-quickbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.enterprise-agent-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(24, 58, 49, 0.12);
+  border-radius: 999px;
+  color: #31564d;
+  background: rgba(255, 255, 255, 0.5);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.enterprise-agent-tool-chip.primary {
+  color: #fff;
+  border-color: #0d4b3e;
+  background: #0d4b3e;
+}
+
 .enterprise-agent-dialog {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 132px;
-  max-height: 260px;
+  min-height: 0;
+  max-height: none;
   padding: 10px 4px 2px;
 }
 
@@ -4936,20 +4986,17 @@ textarea {
   cursor: not-allowed;
 }
 
-.enterprise-agent-execution,
-.enterprise-agent-side {
+.enterprise-agent-execution {
   padding: 14px;
-  align-self: start;
+  align-self: stretch;
+  max-height: 100%;
+  overflow-y: auto;
   background: rgba(255, 255, 255, 0.56);
   box-shadow: 0 10px 28px rgba(28, 51, 45, 0.05);
 }
 
 .enterprise-agent-execution {
   grid-area: rail;
-}
-
-.enterprise-agent-side {
-  grid-area: side;
 }
 
 .enterprise-panel-heading {
@@ -4991,18 +5038,14 @@ textarea {
   font-weight: 800;
 }
 
-.enterprise-agent-execution li strong,
-.enterprise-agent-quick strong,
-.enterprise-agent-recent strong {
+.enterprise-agent-execution li strong {
   display: block;
   color: #17261f;
   font-size: 14px;
   line-height: 1.35;
 }
 
-.enterprise-agent-execution li small,
-.enterprise-agent-quick small,
-.enterprise-agent-recent span {
+.enterprise-agent-execution li small {
   display: block;
   margin-top: 3px;
   color: #72827b;
@@ -5026,8 +5069,7 @@ textarea {
   border-top: 1px solid rgba(24, 58, 49, 0.1);
 }
 
-.enterprise-agent-context h3,
-.enterprise-agent-recent h3 {
+.enterprise-agent-context h3 {
   margin: 0 0 10px;
   font-size: 15px;
   letter-spacing: 0;
@@ -5045,63 +5087,17 @@ textarea {
   font-size: 13px;
 }
 
-.enterprise-agent-side {
-  opacity: 0.94;
-  box-shadow: 0 14px 34px rgba(28, 51, 45, 0.06);
-}
-
-.enterprise-agent-quick,
-.enterprise-agent-recent button {
-  width: 100%;
-  border: 1px solid rgba(24, 58, 49, 0.1);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.68);
-  cursor: pointer;
-  text-align: left;
-}
-
-.enterprise-agent-quick {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  min-height: 62px;
-  margin-bottom: 10px;
-  padding: 10px;
-  color: #0d4b3e;
-}
-
-.enterprise-agent-quick.primary {
-  color: #fff;
-  border-color: #0d4b3e;
-  background: #0d4b3e;
-}
-
-.enterprise-agent-quick.primary strong,
-.enterprise-agent-quick.primary small {
-  color: #fff;
-}
-
-.enterprise-agent-recent {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(24, 58, 49, 0.1);
-}
-
-.enterprise-agent-recent button {
-  min-height: 54px;
-  margin-bottom: 8px;
-  padding: 10px 12px;
-}
-
 @media (max-width: 1280px) {
   .enterprise-agent-main {
-    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-columns: minmax(0, 1fr) 220px;
   }
 }
 
 @media (max-width: 900px) {
   .enterprise-agent-shell {
+    height: auto;
+    min-height: calc(100vh - 96px);
+    overflow: visible;
     padding: 14px;
   }
 
@@ -5111,6 +5107,7 @@ textarea {
   }
 
   .enterprise-agent-conversation {
+    height: auto;
     min-height: auto;
   }
 
@@ -5120,8 +5117,7 @@ textarea {
   }
 
   .enterprise-agent-conversation,
-  .enterprise-agent-execution,
-  .enterprise-agent-side {
+  .enterprise-agent-execution {
     margin-bottom: 14px;
   }
 
