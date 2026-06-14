@@ -4035,10 +4035,15 @@ textarea {
 }
 
 .customer-agent-actions,
-.report-agent-actions {
+.report-agent-actions,
+.report-export-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 8px;
+}
+
+.report-export-actions {
+  margin-top: 12px;
 }
 
 .customer-agent-result,

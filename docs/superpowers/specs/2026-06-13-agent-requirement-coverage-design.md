@@ -448,6 +448,18 @@ YAML 应至少覆盖这些场景：
 1. 不把导出接口作为报告 Agent 的前置条件。
 2. 不用口头说明替代可执行部署步骤。
 
+当前状态：
+
+1. 2026-06-15 已完成报告导出子批次：后端新增 `GET /api/reports/{report_id}/export?format=pdf|docx`，复用 `report:snapshot:read` 权限，返回文件名、content type、base64 内容和 `export_id`。
+2. 导出记录落入审计日志，动作为“导出报告快照”，记录报告 ID、格式和文件名；不新增导出表，避免本批引入迁移。
+3. 前端报告中心已在报告详情中提供“导出 PDF”“导出 Word”动作，生成或打开报告后可下载文件。
+4. 部署文档、环境变量说明、生产初始化、备份恢复和最终 B1-B12 验收仍在后续批次。
+
+验证：
+
+1. `cd backend && python -m pytest tests/test_report_center_api.py -v`
+2. `cd frontend && node tests\customer_report_agent_check.js`
+
 ### 6.8 第八批：最终验收
 
 范围：

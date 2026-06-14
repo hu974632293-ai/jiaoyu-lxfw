@@ -7,6 +7,7 @@ from app.core.response import fail, ok
 from app.models.report import ReportSnapshot
 from app.schemas.report import CustomerOperationReportRequest, ReportGenerateRequest
 from app.services.report_service import (
+    export_report_snapshot,
     generate_customer_operation_report,
     generate_report_snapshot,
     serialize_report_detail,
@@ -50,3 +51,18 @@ def detail(report_id: int, _permission: None = Depends(require_token_permission(
     if not report:
         return fail("报告不存在", 40403)
     return ok(serialize_report_detail(report))
+
+
+@router.get("/{report_id}/export")
+def export(
+    report_id: int,
+    format: str = "pdf",
+    current_user=Depends(require_token_permission("report:snapshot:read")),
+    db: Session = Depends(get_db),
+):
+    try:
+        return ok(export_report_snapshot(db, report_id, format, current_user.username))
+    except ValueError as exc:
+        return fail(str(exc), 40001)
+    except LookupError as exc:
+        return fail(str(exc), 40403)

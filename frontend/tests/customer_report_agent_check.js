@@ -26,10 +26,16 @@ for (const token of requiredGrowthTokens) {
 const requiredReportTokens = [
   "report-assistant-panel",
   "report-agent-result",
+  "report-export-actions",
+  "exportReport",
+  "/api/reports/${report.id}/export",
+  "content_base64",
   "askReportAssistant",
   "/api/knowledge/chat",
   "report_assistant",
   "报告解释助手",
+  "导出 PDF",
+  "导出 Word",
   "解释本期变化",
   "定位待处理对象",
 ];
@@ -45,6 +51,7 @@ const requiredStyleTokens = [
   ".customer-agent-result",
   ".report-assistant-panel",
   ".report-agent-result",
+  ".report-export-actions",
   "grid-template-columns: minmax(0, 1fr) 280px",
   "overflow-wrap: anywhere",
 ];

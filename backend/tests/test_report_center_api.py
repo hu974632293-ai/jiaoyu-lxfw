@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import base64
 
 from app.core.database import init_db
 from app.main import app
@@ -99,3 +100,50 @@ def test_report_center_generates_four_report_snapshots_and_audit_logs():
     assert audit_response.status_code == 200
     audit_actions = [item["action"] for item in audit_response.json()["data"]]
     assert "生成报告快照" in audit_actions
+
+
+def test_report_export_returns_pdf_docx_and_audit_record():
+    client.post("/api/demo/seed")
+    client.headers.update(_auth_headers())
+
+    report_response = client.post(
+        "/api/reports/generate",
+        json={"report_type": "customer_operation", "generated_by": "admin", "period_start": "2026-06-01", "period_end": "2026-06-10"},
+    )
+    assert report_response.status_code == 200
+    report_id = report_response.json()["data"]["id"]
+
+    pdf_response = client.get(f"/api/reports/{report_id}/export?format=pdf")
+    assert pdf_response.status_code == 200
+    pdf_payload = pdf_response.json()
+    assert pdf_payload["code"] == 0
+    assert pdf_payload["data"]["format"] == "pdf"
+    assert pdf_payload["data"]["content_type"] == "application/pdf"
+    assert pdf_payload["data"]["filename"].endswith(".pdf")
+    assert base64.b64decode(pdf_payload["data"]["content_base64"]).startswith(b"%PDF")
+
+    docx_response = client.get(f"/api/reports/{report_id}/export?format=docx")
+    assert docx_response.status_code == 200
+    docx_payload = docx_response.json()
+    assert docx_payload["code"] == 0
+    assert docx_payload["data"]["format"] == "docx"
+    assert docx_payload["data"]["content_type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert docx_payload["data"]["filename"].endswith(".docx")
+    assert base64.b64decode(docx_payload["data"]["content_base64"]).startswith(b"PK")
+
+    audit_response = client.get("/api/audit/logs")
+    assert audit_response.status_code == 200
+    audit_actions = [item["action"] for item in audit_response.json()["data"]]
+    assert "导出报告快照" in audit_actions
+
+
+def test_report_export_rejects_unsupported_format_and_missing_report():
+    client.headers.update(_auth_headers())
+
+    format_response = client.get("/api/reports/1/export?format=xlsx")
+    assert format_response.status_code == 200
+    assert format_response.json()["code"] == 40001
+
+    missing_response = client.get("/api/reports/999999/export?format=pdf")
+    assert missing_response.status_code == 200
+    assert missing_response.json()["code"] == 40403

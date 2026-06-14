@@ -101,7 +101,7 @@
 6. 客户研判 Agent 和报告 Agent 已完成前端承接：客户增长页通过 `customer_assessment` scene 生成研判依据与跟进建议，报告中心通过 `report_assistant` scene 解释本期变化并定位待处理对象；真实 Dify 数据集命中率仍需上线配置后验收。
 7. 业务闭环补洞已完成通知部分：通知列表返回业务对象跳转地址，后端支持标记已读和处理完成，系统治理通知页已接入对应动作和打开对象入口；报告历史筛选、负责人分配联动、归档或软删除策略仍需继续补。
 8. Dify 同步预留已完成配置健康、同步任务重试和治理页状态承接；真实 Dify key、app、dataset 配置后仍需验收真实同步命中率。
-9. PDF/Word 报告导出、部署交付和最终 B1-B12 全链路验收仍是后续工作。
+9. PDF/Word 报告导出已完成接口、前端动作和审计记录；部署交付和最终 B1-B12 全链路验收仍是后续工作。
 
 ## 7. 当前发现的不一致和返工风险
 
@@ -159,7 +159,26 @@ npm.cmd run build
 
 当前该乱码状态行已清理；后续维护重点是让批次状态随提交更新，不只停留在聊天里。
 
-### 7.5 历史计划 checkbox 不应再作为唯一事实
+### 7.5 PDF/Word 报告导出已收口
+
+2026-06-15 报告导出批次已完成：
+
+- `GET /api/reports/{report_id}/export?format=pdf|docx` 复用 `report:snapshot:read` 权限，返回 `filename`、`content_type`、`content_base64`、`export_id` 和文件大小。
+- 服务层使用标准库生成 PDF/DOCX 内容，不引入新依赖，不新增迁移；导出审计动作为“导出报告快照”。
+- 报告中心详情区已提供“导出 PDF”和“导出 Word”动作，导出失败会保留当前报告上下文。
+
+复核命令：
+
+```powershell
+cd D:\00_Project\jiaoyu_lxfw\backend
+python -m pytest tests/test_report_center_api.py -v
+cd D:\00_Project\jiaoyu_lxfw\frontend
+node tests\customer_report_agent_check.js
+```
+
+结果：全部通过。
+
+### 7.6 历史计划 checkbox 不应再作为唯一事实
 
 `docs/superpowers/plans/2026-06-13-v3-production-foundation-batch1.md` 内仍有大量 `- [ ]` 步骤，这是执行计划模板痕迹。当前事实应以最近提交、测试结果和 `agent-requirement-coverage-design.md` 中的批次完成状态为准。
 

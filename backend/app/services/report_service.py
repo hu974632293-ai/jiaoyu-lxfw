@@ -1,6 +1,10 @@
+import base64
 import json
+import zipfile
 from collections import Counter
 from datetime import date
+from html import escape
+from io import BytesIO
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -111,6 +115,48 @@ def serialize_report_detail(item: ReportSnapshot) -> dict[str, Any]:
     return {
         **serialize_report_summary(item),
         "content": _parse_json(item.content_json, {}),
+    }
+
+
+def export_report_snapshot(db: Session, report_id: int, export_format: str, exported_by: str = "system") -> dict[str, Any]:
+    file_format = export_format.lower()
+    if file_format not in {"pdf", "docx"}:
+        raise ValueError("不支持的导出格式")
+
+    report = db.query(ReportSnapshot).filter(ReportSnapshot.id == report_id).first()
+    if not report:
+        raise LookupError("报告不存在")
+
+    content = _parse_json(report.content_json, {})
+    export_text = _render_report_export_text(report, content)
+    if file_format == "pdf":
+        file_bytes = _build_pdf_bytes(export_text)
+        content_type = "application/pdf"
+    else:
+        file_bytes = _build_docx_bytes(export_text)
+        content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+    filename = f"report-{report.id}-{report.report_type}.{file_format}"
+    audit_log = _create_audit_log(
+        db,
+        exported_by,
+        "导出报告快照",
+        "report_snapshot",
+        str(report.id),
+        {"format": file_format, "filename": filename},
+    )
+    db.flush()
+    export_id = audit_log.id
+    db.commit()
+
+    return {
+        "export_id": export_id,
+        "report_id": report.id,
+        "format": file_format,
+        "filename": filename,
+        "content_type": content_type,
+        "content_base64": base64.b64encode(file_bytes).decode("ascii"),
+        "size": len(file_bytes),
     }
 
 
@@ -235,6 +281,101 @@ def _report_title(report_type: str) -> str:
     }[report_type]
 
 
+def _render_report_export_text(report: ReportSnapshot, content: dict[str, Any]) -> list[str]:
+    lines = [
+        report.title,
+        f"报告编号：{report.id}",
+        f"报告类型：{report.report_type}",
+        f"时间范围：{_date_text(report.period_start) or '未限定'} 至 {_date_text(report.period_end) or '未限定'}",
+        f"生成人：{report.generated_by}",
+        "",
+    ]
+    for key, value in content.items():
+        lines.append(f"{_report_export_key(key)}：{_report_export_value(value)}")
+    return lines
+
+
+def _report_export_key(value: str) -> str:
+    return value.replace("_", " ")
+
+
+def _report_export_value(value: Any) -> str:
+    if isinstance(value, dict):
+        return "；".join(f"{_report_export_key(str(key))}：{_report_export_value(item)}" for key, item in value.items()) or "暂无"
+    if isinstance(value, list):
+        return "；".join(_report_export_value(item) for item in value) or "暂无"
+    return str(value if value is not None else "暂无")
+
+
+def _build_pdf_bytes(lines: list[str]) -> bytes:
+    content_lines = ["BT", "/F1 11 Tf", "50 790 Td"]
+    for index, line in enumerate(lines[:38]):
+        if index:
+            content_lines.append("0 -18 Td")
+        content_lines.append(f"<{_pdf_text_hex(line[:96])}> Tj")
+    content_lines.append("ET")
+    stream = "\n".join(content_lines).encode("ascii")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    return _compose_pdf(objects)
+
+
+def _pdf_text_hex(value: str) -> str:
+    return ("feff" + value.encode("utf-16-be", errors="replace").hex()).upper()
+
+
+def _compose_pdf(objects: list[bytes]) -> bytes:
+    output = BytesIO()
+    output.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for index, item in enumerate(objects, start=1):
+        offsets.append(output.tell())
+        output.write(f"{index} 0 obj\n".encode("ascii"))
+        output.write(item)
+        output.write(b"\nendobj\n")
+    xref_offset = output.tell()
+    output.write(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    output.write(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        output.write(f"{offset:010d} 00000 n \n".encode("ascii"))
+    output.write(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF".encode("ascii"))
+    return output.getvalue()
+
+
+def _build_docx_bytes(lines: list[str]) -> bytes:
+    paragraphs = "\n".join(f"<w:p><w:r><w:t>{escape(line)}</w:t></w:r></w:p>" for line in lines)
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f"<w:body>{paragraphs}<w:sectPr /></w:body></w:document>"
+    )
+    with BytesIO() as buffer:
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "[Content_Types].xml",
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                '<Default Extension="xml" ContentType="application/xml"/>'
+                '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+                "</Types>",
+            )
+            archive.writestr(
+                "_rels/.rels",
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+                "</Relationships>",
+            )
+            archive.writestr("word/document.xml", document_xml)
+        return buffer.getvalue()
+
+
 def _get_actor(db: Session, username: str | None) -> SysUser | None:
     if not username:
         return None
@@ -248,17 +389,17 @@ def _create_audit_log(
     resource_type: str,
     resource_id: str,
     detail: dict[str, Any],
-) -> None:
+) -> AuditLog:
     actor = _get_actor(db, actor_username)
-    db.add(
-        AuditLog(
-            actor_user_id=actor.id if actor else None,
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            detail=json.dumps(detail, ensure_ascii=False),
-        )
+    log = AuditLog(
+        actor_user_id=actor.id if actor else None,
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        detail=json.dumps(detail, ensure_ascii=False),
     )
+    db.add(log)
+    return log
 
 
 def _parse_json(raw: str | None, default: Any) -> Any:

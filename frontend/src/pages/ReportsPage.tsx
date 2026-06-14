@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Play, RefreshCw } from "lucide-react";
+import { BarChart3, Download, Play, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
 import type { PageProps } from "../App";
@@ -23,7 +23,13 @@ type ReportAgentResult = {
   answer: string;
   status: string;
 };
-type ReportOperation = "load" | "generate" | "open" | "agent" | null;
+type ReportExportResult = {
+  format: "pdf" | "docx";
+  filename: string;
+  content_type: string;
+  content_base64: string;
+};
+type ReportOperation = "load" | "generate" | "open" | "agent" | "export" | null;
 
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -203,6 +209,54 @@ export default function ReportsPage({ onNavigate }: PageProps) {
     }
   }
 
+  async function exportReport(format: "pdf" | "docx") {
+    const report = detail ?? created;
+    if (!report) {
+      setOperationFeedback({
+        phase: "error",
+        title: "请先生成或打开报告",
+        detail: "报告详情打开后即可导出 PDF 或 Word 文件。",
+        target: active.title,
+        timestamp: formatOperationTime(),
+      });
+      return;
+    }
+    setPendingOperation("export");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在导出报告",
+      detail: `准备导出 ${report.title}。`,
+      target: report.title,
+    });
+    try {
+      const result = await apiRequest<ReportExportResult>(`/api/reports/${report.id}/export?format=${format}`);
+      const binary = Uint8Array.from(window.atob(result.content_base64), (char) => char.charCodeAt(0));
+      const url = window.URL.createObjectURL(new Blob([binary], { type: result.content_type }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = result.filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      setOperationFeedback({
+        phase: "success",
+        title: "报告已导出",
+        detail: `${format === "pdf" ? "PDF" : "Word"} 文件已准备下载。`,
+        target: result.filename,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "报告导出失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "暂时无法导出报告，可稍后重试。",
+        target: report.title,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
   useEffect(() => {
     loadReports();
   }, []);
@@ -284,6 +338,16 @@ export default function ReportsPage({ onNavigate }: PageProps) {
                 <BarChart3 size={18} aria-hidden="true" />
               </div>
               <ReportBusinessSummary content={detail.content} />
+              <div className="report-export-actions" aria-label="报告导出">
+                <button className="tiny-button" onClick={() => exportReport("pdf")} disabled={hasPendingOperation}>
+                  <Download size={14} aria-hidden="true" />
+                  导出 PDF
+                </button>
+                <button className="ghost-button" onClick={() => exportReport("docx")} disabled={hasPendingOperation}>
+                  <Download size={14} aria-hidden="true" />
+                  导出 Word
+                </button>
+              </div>
             </article>
           ) : (
             <div className="empty-state">点击生成报告后展示业务摘要。</div>
