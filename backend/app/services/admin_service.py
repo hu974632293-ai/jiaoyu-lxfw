@@ -107,12 +107,15 @@ def ensure_default_admin_data(db: Session) -> None:
         db.add(SysUserRole(user_id=admin.id, role_id=admin_role.id))
 
     for title, content, target_type, target_id in DEFAULT_NOTIFICATIONS:
-        notification = db.query(Notification).filter_by(title=title, target_type=target_type, target_id=target_id).first()
-        if notification:
-            notification.content = content
-            notification.status = "未读"
-            notification.created_at = datetime.utcnow()
-        else:
+        updated = (
+            db.query(Notification)
+            .filter_by(title=title, target_type=target_type, target_id=target_id)
+            .update(
+                {"content": content, "status": "未读", "created_at": datetime.utcnow()},
+                synchronize_session=False,
+            )
+        )
+        if updated == 0:
             db.add(Notification(title=title, content=content, target_type=target_type, target_id=target_id))
 
     db.commit()

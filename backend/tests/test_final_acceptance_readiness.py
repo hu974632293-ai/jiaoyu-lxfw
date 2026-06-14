@@ -83,3 +83,47 @@ def test_final_acceptance_readiness_document_covers_risk_and_configuration_matri
         "MySQL",
     ]:
         assert required_text in content
+
+
+def test_final_acceptance_readiness_records_automation_evidence_review():
+    content = read_doc("docs/v3-final-acceptance-readiness.md")
+
+    for required_text in [
+        "自动化证据复核",
+        "python -m pytest tests\\test_final_acceptance_readiness.py -v",
+        "python -m pytest -v",
+        "npm.cmd run test:auth",
+        "node tests\\navigation_check.js",
+        "node tests\\employee_agent_command_check.js",
+        "node tests\\employee_guide_layout_check.mjs",
+        "node tests\\customer_report_agent_check.js",
+        "npm.cmd run build",
+        "git diff --check",
+        "不替代人工浏览器验收",
+        "不替代真实 Dify 验收",
+        "不替代 MySQL 验收",
+    ]:
+        assert required_text in content
+
+
+def test_final_acceptance_docs_record_automation_evidence_review():
+    audit = read_doc("docs/v3-current-consistency-audit.md")
+    readiness = read_doc("docs/v3-final-acceptance-readiness.md")
+
+    for content in [audit, readiness]:
+        for required_text in [
+            "最终 B1-B12 自动化证据复核",
+            "python -m pytest tests\\test_final_acceptance_readiness.py -v",
+            "python -m pytest -v",
+            "npm.cmd run test:auth",
+            "node tests\\navigation_check.js",
+            "node tests\\employee_agent_command_check.js",
+            "node tests\\employee_guide_layout_check.mjs",
+            "node tests\\customer_report_agent_check.js",
+            "npm.cmd run build",
+            "git diff --check",
+            "人工浏览器验收",
+            "SQLite 与 MySQL 验收分开记录",
+            "Dify 未配置 fallback 与真实 Dify 验收分开记录",
+        ]:
+            assert required_text in content

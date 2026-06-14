@@ -110,6 +110,31 @@
 
 ## 7. 本批轻量验证
 
+### 7.1 最终 B1-B12 自动化证据复核
+
+本轮复核目标是确认 B1-B12 最终验收准备已有自动化证据可追溯，但不替代人工浏览器验收，不替代真实 Dify 验收，不替代 MySQL 验收。
+
+边界记录：
+
+- SQLite 与 MySQL 验收分开记录；当前自动化复核只证明本地默认运行库和文档/构建门禁状态，不把 SQLite 通过写成 MySQL 通过。
+- Dify 未配置 fallback 与真实 Dify 验收分开记录；fallback 通过只证明主业务不被阻断，真实 key/app/dataset 配置后仍需按五类 scene 记录命中率和失败重试。
+- B1-B12 人工浏览器验收仍需按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 记录对象 ID、入口 URL、截图或说明。
+
+| 自动化证据 | 命令 | 本轮结果 | 说明 |
+| --- | --- | --- | --- |
+| 最终验收准备文档覆盖 | `python -m pytest tests\test_final_acceptance_readiness.py -v` | 6 passed | 覆盖 B1-B12、执行清单、风险矩阵和本轮证据记录 |
+| seed/通知陈旧对象回归 | `python -m pytest tests\test_admin_seed_notifications.py -v` | 2 passed | 覆盖默认通知重建和 demo seed bulk delete 后清理旧 ORM 对象 |
+| 后端完整回归 | `python -m pytest -v` | 68 passed | 覆盖后端接口、权限、Agent 契约、报告、部署和最终验收准备 |
+| 前端权限与登录规则 | `npm.cmd run test:auth` | 15 passed | 覆盖账号绑定角色、测试账号演示视角、token 注入和企业 Agent scene 权限 |
+| 后台导航结构 | `node tests\navigation_check.js` | passed | 覆盖角色入口、侧边栏和后台导航结构 |
+| 企业助手指挥台结构 | `node tests\employee_agent_command_check.js` | passed | 覆盖企业助手窄导航、中央工作区和任务队列结构 |
+| 新人指南布局 | `node tests\employee_guide_layout_check.mjs` | 1 passed | 覆盖员工指南紧凑布局，不回退成长目录堆叠 |
+| 客户报告 Agent | `node tests\customer_report_agent_check.js` | passed | 覆盖客户研判/报告解释前端承接结构 |
+| 前端构建 | `npm.cmd run build` | passed | TypeScript 与 Vite build 通过 |
+| 差异质量 | `git diff --check` | passed | 收尾前检查空白、冲突标记和补丁格式 |
+
+本轮自动化复核中曾复现 `Notification` 和 `CrmTask` 的 `StaleDataError`：根因是默认通知确保逻辑会加载并改写旧通知对象，demo seed 使用 bulk delete 重置业务表后，同一 Session 里也可能仍保留旧 ORM 对象。当前已补回归测试；默认通知改为 SQL 级 update 后按需新增，demo seed 重置后只清理被删除业务模型的 Session 状态。
+
 ```powershell
 cd D:\00_Project\jiaoyu_lxfw\backend
 python -m pytest tests/test_final_acceptance_readiness.py -v

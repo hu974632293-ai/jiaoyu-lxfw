@@ -232,6 +232,50 @@ python -m pytest -v
 - `backend/app/services/seed_service.py` 当前仍表现为换行脏标记，文本 diff 为空，不应作为本批提交内容。
 - 如果后续完整回归再次出现同类 `StaleDataError`，应优先沿 `seed_demo_data()` 删除通知后复用同一 Session 调用 `ensure_default_admin_data()` 的状态路径继续定位，并先写最小失败测试再改 service。
 
+### 7.10 最终 B1-B12 自动化证据复核
+
+2026-06-15 最终 B1-B12 自动化证据复核已进入执行记录。本轮只认领自动化与结构检查证据，不替代 B1-B12 人工浏览器验收。
+
+边界：
+
+- SQLite 与 MySQL 验收分开记录；当前自动化证据不能写成 MySQL 通过。
+- Dify 未配置 fallback 与真实 Dify 验收分开记录；真实 Dify key/app/dataset 配置后仍需复核五类 scene 命中率。
+- 人工浏览器验收仍需按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 记录对象 ID、入口 URL、截图或说明。
+
+本轮自动化命令：
+
+```powershell
+cd D:\00_Project\jiaoyu_lxfw\backend
+python -m pytest tests\test_final_acceptance_readiness.py -v
+python -m pytest -v
+
+cd D:\00_Project\jiaoyu_lxfw\frontend
+npm.cmd run test:auth
+node tests\navigation_check.js
+node tests\employee_agent_command_check.js
+node tests\employee_guide_layout_check.mjs
+node tests\customer_report_agent_check.js
+npm.cmd run build
+
+cd D:\00_Project\jiaoyu_lxfw
+git diff --check
+```
+
+当前已复核结果：
+
+- `python -m pytest tests\test_final_acceptance_readiness.py -v`：6 passed。
+- `python -m pytest tests\test_admin_seed_notifications.py -v`：2 passed。
+- `python -m pytest -v`：68 passed。
+- `npm.cmd run test:auth`：15 passed。
+- `node tests\navigation_check.js`：passed。
+- `node tests\employee_agent_command_check.js`：passed。
+- `node tests\employee_guide_layout_check.mjs`：1 passed。
+- `node tests\customer_report_agent_check.js`：passed。
+- `npm.cmd run build`：passed。
+- `git diff --check`：passed，仅有 LF/CRLF 提示。
+
+本轮复核曾复现 seed/通知陈旧 ORM 对象导致的 `StaleDataError`：默认通知确保逻辑会加载并改写旧 `Notification` 对象，`CrmTask` 在 demo seed bulk delete 后也可能仍留在同一 Session 中。当前已补 `backend/tests/test_admin_seed_notifications.py`；默认通知改为 SQL 级 update 后按需新增，`seed_demo_data()` 重置业务表后只清理被删除业务模型的 Session 状态。后续不要并行运行多个会调用 `/api/demo/seed` 的 pytest 进程，否则同一个 MySQL 演示库会被并发重置，容易制造非代码缺陷的外键失败。
+
 ## 8. 后续执行建议
 
 1. 新线程入口先读：`AGENTS.md`、本审计文档、当前要执行的 batch plan 或专项 design。

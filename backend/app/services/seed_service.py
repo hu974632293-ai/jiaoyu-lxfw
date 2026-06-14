@@ -175,7 +175,7 @@ def seed_demo_data(db: Session):
 
 
 def _reset_demo_business_data(db: Session) -> None:
-    for model in [
+    reset_models = [
         AssistantIntentLog,
         AssistantConversation,
         AgentIntentLog,
@@ -236,9 +236,13 @@ def _reset_demo_business_data(db: Session) -> None:
         CrmLead,
         TodoItem,
         Notification,
-    ]:
+    ]
+    for model in reset_models:
         db.query(model).delete(synchronize_session=False)
-    db.flush()
+    reset_model_set = set(reset_models)
+    for instance in list(db.identity_map.values()):
+        if type(instance) in reset_model_set:
+            db.expunge(instance)
 
 
 def _ensure_demo_projects(db: Session) -> list[CourseProject]:
