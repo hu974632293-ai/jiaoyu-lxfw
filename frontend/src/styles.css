@@ -1037,7 +1037,7 @@ button:disabled {
 }
 
 .agent-workspace-grid {
-  height: calc(100vh - 188px);
+  height: calc(100vh - 8px);
   min-height: 0;
   align-items: stretch;
   overflow: hidden;
@@ -4743,7 +4743,8 @@ textarea {
 .enterprise-agent-conversation {
   grid-area: conversation;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  position: relative;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   height: 100%;
   min-height: 0;
   padding: 18px;
@@ -4781,6 +4782,11 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  max-width: calc(100% - 220px);
+  justify-content: flex-end;
 }
 
 .enterprise-agent-tool-chip {
@@ -4947,18 +4953,18 @@ textarea {
 
 .enterprise-agent-input {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
-  gap: 10px;
-  padding: 12px;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 8px;
+  padding: 8px;
   border: 1px solid rgba(24, 58, 49, 0.12);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.86);
 }
 
 .enterprise-agent-input textarea {
   width: 100%;
-  min-height: 58px;
-  max-height: 110px;
+  min-height: 40px;
+  max-height: 88px;
   resize: vertical;
   border: 0;
   outline: none;
@@ -4970,8 +4976,8 @@ textarea {
 
 .enterprise-agent-input button {
   display: grid;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   align-self: end;
   border: 0;
@@ -5114,6 +5120,12 @@ textarea {
   .enterprise-agent-tabs {
     justify-content: flex-start;
     margin-top: 14px;
+  }
+
+  .enterprise-agent-quickbar {
+    position: static;
+    max-width: none;
+    justify-content: flex-start;
   }
 
   .enterprise-agent-conversation,
