@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions import require_permission
+from app.core.permissions import require_token_permission
 from app.core.response import fail, ok
-from fastapi.responses import JSONResponse
+from app.models.student import StudentFeedbackTicket, StudentGrade, StudentLeaveRequest
 from app.models.user import SysUser
 from app.services.scope_service import DataScopeError, ensure_can_access_student
 from app.schemas.student_assistant import (
@@ -50,8 +51,41 @@ from app.services.student_assistant_service import (
 router = APIRouter(prefix="/api/student-assistant", tags=["student-assistant"])
 
 
+def _scope_error():
+    return JSONResponse(status_code=403, content=fail("无权操作该学生", 40301))
+
+
+def _missing_error(message: str):
+    return fail(message, 40402)
+
+
+def _ensure_student_scope(db: Session, current_user: SysUser, student_id: int):
+    try:
+        ensure_can_access_student(db, current_user, student_id)
+    except DataScopeError:
+        return _scope_error()
+    except ValueError as exc:
+        return _missing_error(str(exc))
+    return None
+
+
+def _leave_student_id(db: Session, leave_id: int) -> int | None:
+    leave = db.query(StudentLeaveRequest).filter_by(id=leave_id).first()
+    return leave.student_id if leave else None
+
+
+def _ticket_student_id(db: Session, ticket_id: int) -> int | None:
+    ticket = db.query(StudentFeedbackTicket).filter_by(id=ticket_id).first()
+    return ticket.student_id if ticket else None
+
+
+def _grade_student_id(db: Session, grade_id: int) -> int | None:
+    grade = db.query(StudentGrade).filter_by(id=grade_id).first()
+    return grade.student_id if grade else None
+
+
 @router.get("/students")
-def students(current_user: SysUser = Depends(require_permission("assistant:student:use")), db: Session = Depends(get_db)):
+def students(current_user: SysUser = Depends(require_token_permission("assistant:student:use")), db: Session = Depends(get_db)):
     return ok(list_students(db))
 
 
@@ -69,7 +103,11 @@ def list_leaves(student_id: int | None = None, status: str | None = None, db: Se
 
 
 @router.post("/leaves")
-def create_leave(payload: LeaveCreate, current_user: SysUser = Depends(require_permission("assistant:student:use")), db: Session = Depends(get_db)):
+def create_leave(payload: LeaveCreate, current_user: SysUser = Depends(require_token_permission("assistant:student:use")), db: Session = Depends(get_db)):
+    scope_response = _ensure_student_scope(db, current_user, payload.student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     try:
         return ok(serialize_leave(create_leave_request(db, payload)))
     except ValueError as exc:
@@ -85,7 +123,19 @@ def get_leave(leave_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/leaves/{leave_id}")
-def update_leave(leave_id: int, payload: LeaveUpdate, db: Session = Depends(get_db)):
+def update_leave(
+    leave_id: int,
+    payload: LeaveUpdate,
+    current_user: SysUser = Depends(require_token_permission("assistant:student:use")),
+    db: Session = Depends(get_db),
+):
+    student_id = _leave_student_id(db, leave_id)
+    if student_id is None:
+        return fail("请假申请不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     try:
         leave = update_leave_request(db, leave_id, payload)
     except ValueError as exc:
@@ -96,7 +146,19 @@ def update_leave(leave_id: int, payload: LeaveUpdate, db: Session = Depends(get_
 
 
 @router.post("/leaves/{leave_id}/approve")
-def approve_leave(leave_id: int, payload: LeaveApprovalRequest, current_user: SysUser = Depends(require_permission("student:leave:approve")), db: Session = Depends(get_db)):
+def approve_leave(
+    leave_id: int,
+    payload: LeaveApprovalRequest,
+    current_user: SysUser = Depends(require_token_permission("student:leave:approve")),
+    db: Session = Depends(get_db),
+):
+    student_id = _leave_student_id(db, leave_id)
+    if student_id is None:
+        return fail("请假申请不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     leave = approve_leave_request(db, leave_id, payload)
     if not leave:
         return fail("请假申请不存在", 40402)
@@ -104,7 +166,19 @@ def approve_leave(leave_id: int, payload: LeaveApprovalRequest, current_user: Sy
 
 
 @router.post("/leaves/{leave_id}/cancel")
-def cancel_leave(leave_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+def cancel_leave(
+    leave_id: int,
+    payload: StudentServiceActionRequest,
+    current_user: SysUser = Depends(require_token_permission("assistant:student:use")),
+    db: Session = Depends(get_db),
+):
+    student_id = _leave_student_id(db, leave_id)
+    if student_id is None:
+        return fail("请假申请不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     leave = cancel_leave_request(db, leave_id, payload)
     if not leave:
         return fail("请假申请不存在", 40402)
@@ -112,7 +186,19 @@ def cancel_leave(leave_id: int, payload: StudentServiceActionRequest, db: Sessio
 
 
 @router.post("/leaves/{leave_id}/archive")
-def archive_leave(leave_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+def archive_leave(
+    leave_id: int,
+    payload: StudentServiceActionRequest,
+    current_user: SysUser = Depends(require_token_permission("assistant:student:use")),
+    db: Session = Depends(get_db),
+):
+    student_id = _leave_student_id(db, leave_id)
+    if student_id is None:
+        return fail("请假申请不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     leave = archive_leave_request(db, leave_id, payload)
     if not leave:
         return fail("请假申请不存在", 40402)
@@ -125,7 +211,15 @@ def list_feedback(student_id: int | None = None, status: str | None = None, db: 
 
 
 @router.post("/feedback-tickets")
-def create_feedback(payload: FeedbackTicketCreate, db: Session = Depends(get_db)):
+def create_feedback(
+    payload: FeedbackTicketCreate,
+    current_user: SysUser = Depends(require_token_permission("assistant:student:use")),
+    db: Session = Depends(get_db),
+):
+    scope_response = _ensure_student_scope(db, current_user, payload.student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     try:
         return ok(serialize_feedback_ticket(create_feedback_ticket(db, payload)))
     except ValueError as exc:
@@ -141,7 +235,19 @@ def get_feedback(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/feedback-tickets/{ticket_id}/reply")
-def reply_feedback(ticket_id: int, payload: FeedbackReplyRequest, db: Session = Depends(get_db)):
+def reply_feedback(
+    ticket_id: int,
+    payload: FeedbackReplyRequest,
+    current_user: SysUser = Depends(require_token_permission("assistant:student:use")),
+    db: Session = Depends(get_db),
+):
+    student_id = _ticket_student_id(db, ticket_id)
+    if student_id is None:
+        return fail("反馈工单不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     ticket = reply_feedback_ticket(db, ticket_id, payload)
     if not ticket:
         return fail("反馈工单不存在", 40402)
@@ -149,7 +255,19 @@ def reply_feedback(ticket_id: int, payload: FeedbackReplyRequest, db: Session = 
 
 
 @router.post("/feedback-tickets/{ticket_id}/handle")
-def handle_feedback(ticket_id: int, payload: FeedbackHandleRequest, db: Session = Depends(get_db)):
+def handle_feedback(
+    ticket_id: int,
+    payload: FeedbackHandleRequest,
+    current_user: SysUser = Depends(require_token_permission("student:leave:approve")),
+    db: Session = Depends(get_db),
+):
+    student_id = _ticket_student_id(db, ticket_id)
+    if student_id is None:
+        return fail("反馈工单不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     ticket = handle_feedback_ticket(db, ticket_id, payload)
     if not ticket:
         return fail("反馈工单不存在", 40402)
@@ -157,7 +275,19 @@ def handle_feedback(ticket_id: int, payload: FeedbackHandleRequest, db: Session 
 
 
 @router.post("/feedback-tickets/{ticket_id}/close")
-def close_feedback(ticket_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+def close_feedback(
+    ticket_id: int,
+    payload: StudentServiceActionRequest,
+    current_user: SysUser = Depends(require_token_permission("assistant:student:use")),
+    db: Session = Depends(get_db),
+):
+    student_id = _ticket_student_id(db, ticket_id)
+    if student_id is None:
+        return fail("反馈工单不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     ticket = close_feedback_ticket(db, ticket_id, payload)
     if not ticket:
         return fail("反馈工单不存在", 40402)
@@ -165,7 +295,19 @@ def close_feedback(ticket_id: int, payload: StudentServiceActionRequest, db: Ses
 
 
 @router.post("/feedback-tickets/{ticket_id}/archive")
-def archive_feedback(ticket_id: int, payload: StudentServiceActionRequest, db: Session = Depends(get_db)):
+def archive_feedback(
+    ticket_id: int,
+    payload: StudentServiceActionRequest,
+    current_user: SysUser = Depends(require_token_permission("student:leave:approve")),
+    db: Session = Depends(get_db),
+):
+    student_id = _ticket_student_id(db, ticket_id)
+    if student_id is None:
+        return fail("反馈工单不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     ticket = archive_feedback_ticket(db, ticket_id, payload)
     if not ticket:
         return fail("反馈工单不存在", 40402)
@@ -193,7 +335,15 @@ def grades(student_id: int | None = None, db: Session = Depends(get_db)):
 
 
 @router.post("/grades")
-def create_grade(payload: StudentGradeCreate, db: Session = Depends(get_db)):
+def create_grade(
+    payload: StudentGradeCreate,
+    current_user: SysUser = Depends(require_token_permission("student:leave:approve")),
+    db: Session = Depends(get_db),
+):
+    scope_response = _ensure_student_scope(db, current_user, payload.student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     try:
         return ok(serialize_grade(create_student_grade(db, payload)))
     except ValueError as exc:
@@ -201,7 +351,19 @@ def create_grade(payload: StudentGradeCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/grades/{grade_id}")
-def update_grade(grade_id: int, payload: StudentGradeUpdate, db: Session = Depends(get_db)):
+def update_grade(
+    grade_id: int,
+    payload: StudentGradeUpdate,
+    current_user: SysUser = Depends(require_token_permission("student:leave:approve")),
+    db: Session = Depends(get_db),
+):
+    student_id = _grade_student_id(db, grade_id)
+    if student_id is None:
+        return fail("成绩记录不存在", 40402)
+    scope_response = _ensure_student_scope(db, current_user, student_id)
+    if scope_response:
+        return scope_response
+    payload.actor_username = current_user.username
     try:
         grade = update_student_grade(db, grade_id, payload)
     except ValueError as exc:
@@ -212,5 +374,5 @@ def update_grade(grade_id: int, payload: StudentGradeUpdate, db: Session = Depen
 
 
 @router.get("/teacher-tasks")
-def tasks(db: Session = Depends(get_db)):
+def tasks(current_user: SysUser = Depends(require_token_permission("student:leave:approve")), db: Session = Depends(get_db)):
     return ok(teacher_tasks(db))

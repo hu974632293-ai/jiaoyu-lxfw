@@ -1,8 +1,10 @@
 ﻿"""RBAC和数据范围测试 — 批次一 Task 1 失败用例"""
 from fastapi.testclient import TestClient
 
-from app.core.database import init_db
+from app.core.database import SessionLocal, init_db
 from app.main import app
+from app.models.student import StudentProfile
+from app.models.user import SysUser
 
 init_db()
 client = TestClient(app)
@@ -14,11 +16,51 @@ def _token(username: str, password: str) -> str:
     return response.json()["data"]["access_token"]
 
 
-def test_student_cannot_approve_leave():
+def _scope_students() -> tuple[int, int]:
     client.post("/api/demo/seed")
+    with SessionLocal() as db:
+        student_user = db.query(SysUser).filter_by(username="student").first()
+        teacher_user = db.query(SysUser).filter_by(username="teacher").first()
+        admin_user = db.query(SysUser).filter_by(username="admin").first()
+        assert student_user and teacher_user and admin_user
+
+        own_student = db.query(StudentProfile).filter_by(contact_info="student@example.com").first()
+        if not own_student:
+            own_student = StudentProfile(
+                student_name="RBAC 自助学生",
+                contact_info="student@example.com",
+                enrollment_project="权限范围测试",
+                advisor_user_id=teacher_user.id,
+                status="在读",
+            )
+            db.add(own_student)
+            db.flush()
+        else:
+            own_student.advisor_user_id = teacher_user.id
+
+        admin_student = db.query(StudentProfile).filter_by(contact_info="rbac-admin-scope@example.com").first()
+        if not admin_student:
+            admin_student = StudentProfile(
+                student_name="RBAC 非老师负责学生",
+                contact_info="rbac-admin-scope@example.com",
+                enrollment_project="权限范围测试",
+                advisor_user_id=admin_user.id,
+                status="在读",
+            )
+            db.add(admin_student)
+            db.flush()
+        else:
+            admin_student.advisor_user_id = admin_user.id
+
+        own_student_id = own_student.id
+        admin_student_id = admin_student.id
+        db.commit()
+    return own_student_id, admin_student_id
+
+
+def test_student_cannot_approve_leave():
+    student_id, _ = _scope_students()
     student_token = _token("student", "student123")
-    students = client.get("/api/student-assistant/students", headers={"Authorization": f"Bearer {student_token}"}).json()["data"]
-    student_id = students[0]["id"]
     leave = client.post(
         "/api/student-assistant/leaves",
         headers={"Authorization": f"Bearer {student_token}"},
@@ -190,3 +232,203 @@ def test_crm_write_operations_reject_legacy_actor_header_and_accept_bearer_token
     )
     assert complete.status_code == 200
     assert complete.json()["data"]["status"] == "已完成"
+
+
+def test_student_service_write_operations_reject_legacy_header_and_enforce_scope():
+    own_student_id, admin_student_id = _scope_students()
+    admin_headers = {"Authorization": f"Bearer {_token('admin', 'admin123')}"}
+    student_headers = {"Authorization": f"Bearer {_token('student', 'student123')}"}
+    teacher_headers = {"Authorization": f"Bearer {_token('teacher', 'teacher123')}"}
+    legacy_headers = {"X-Actor-Username": "admin"}
+
+    legacy_leave = client.post(
+        "/api/student-assistant/leaves",
+        headers=legacy_headers,
+        json={
+            "student_id": own_student_id,
+            "reason": "旧 header 不应提交请假",
+            "start_time": "2026-06-24T09:00:00",
+            "end_time": "2026-06-24T18:00:00",
+        },
+    )
+    assert legacy_leave.status_code == 401
+    assert legacy_leave.json()["code"] == 40100
+
+    scoped_leave = client.post(
+        "/api/student-assistant/leaves",
+        headers=student_headers,
+        json={
+            "student_id": admin_student_id,
+            "reason": "学生不应替别人请假",
+            "start_time": "2026-06-25T09:00:00",
+            "end_time": "2026-06-25T18:00:00",
+        },
+    )
+    assert scoped_leave.status_code == 403
+    assert scoped_leave.json()["code"] == 40301
+
+    leave = client.post(
+        "/api/student-assistant/leaves",
+        headers=student_headers,
+        json={
+            "student_id": own_student_id,
+            "reason": "真实学生账号提交请假",
+            "start_time": "2026-06-26T09:00:00",
+            "end_time": "2026-06-26T18:00:00",
+        },
+    )
+    assert leave.status_code == 200
+    leave_id = leave.json()["data"]["id"]
+
+    legacy_leave_actions = [
+        client.patch(
+            f"/api/student-assistant/leaves/{leave_id}",
+            headers=legacy_headers,
+            json={
+                "reason": "旧 header 不应修改请假",
+                "start_time": "2026-06-26T09:00:00",
+                "end_time": "2026-06-26T18:00:00",
+            },
+        ),
+        client.post(
+            f"/api/student-assistant/leaves/{leave_id}/approve",
+            headers=legacy_headers,
+            json={"status": "已同意", "resolution": "旧 header 不应审批"},
+        ),
+        client.post(
+            f"/api/student-assistant/leaves/{leave_id}/cancel",
+            headers=legacy_headers,
+            json={"reason": "旧 header 不应撤销"},
+        ),
+        client.post(
+            f"/api/student-assistant/leaves/{leave_id}/archive",
+            headers=legacy_headers,
+            json={"reason": "旧 header 不应归档"},
+        ),
+    ]
+    for response in legacy_leave_actions:
+        assert response.status_code == 401
+        assert response.json()["code"] == 40100
+
+    teacher_approve = client.post(
+        f"/api/student-assistant/leaves/{leave_id}/approve",
+        headers=teacher_headers,
+        json={"status": "已同意", "resolution": "老师处理本人负责学生"},
+    )
+    assert teacher_approve.status_code == 200
+
+    admin_leave = client.post(
+        "/api/student-assistant/leaves",
+        headers=admin_headers,
+        json={
+            "student_id": admin_student_id,
+            "reason": "非当前老师负责学生请假",
+            "start_time": "2026-06-27T09:00:00",
+            "end_time": "2026-06-27T18:00:00",
+        },
+    )
+    admin_leave_id = admin_leave.json()["data"]["id"]
+    teacher_scoped_approve = client.post(
+        f"/api/student-assistant/leaves/{admin_leave_id}/approve",
+        headers=teacher_headers,
+        json={"status": "已同意", "resolution": "老师不应审批非本人负责学生"},
+    )
+    assert teacher_scoped_approve.status_code == 403
+    assert teacher_scoped_approve.json()["code"] == 40301
+
+    legacy_feedback = client.post(
+        "/api/student-assistant/feedback-tickets",
+        headers=legacy_headers,
+        json={"student_id": own_student_id, "category": "建议", "content": "旧 header 不应提交反馈"},
+    )
+    assert legacy_feedback.status_code == 401
+    assert legacy_feedback.json()["code"] == 40100
+
+    scoped_feedback = client.post(
+        "/api/student-assistant/feedback-tickets",
+        headers=student_headers,
+        json={"student_id": admin_student_id, "category": "建议", "content": "学生不应替别人提交反馈"},
+    )
+    assert scoped_feedback.status_code == 403
+    assert scoped_feedback.json()["code"] == 40301
+
+    ticket = client.post(
+        "/api/student-assistant/feedback-tickets",
+        headers=student_headers,
+        json={"student_id": own_student_id, "category": "建议", "content": "真实学生账号提交反馈"},
+    )
+    assert ticket.status_code == 200
+    ticket_id = ticket.json()["data"]["id"]
+
+    legacy_feedback_actions = [
+        client.post(
+            f"/api/student-assistant/feedback-tickets/{ticket_id}/reply",
+            headers=legacy_headers,
+            json={"content": "旧 header 不应补充反馈"},
+        ),
+        client.post(
+            f"/api/student-assistant/feedback-tickets/{ticket_id}/handle",
+            headers=legacy_headers,
+            json={"resolution": "旧 header 不应处理反馈"},
+        ),
+        client.post(
+            f"/api/student-assistant/feedback-tickets/{ticket_id}/close",
+            headers=legacy_headers,
+            json={"reason": "旧 header 不应关闭反馈"},
+        ),
+        client.post(
+            f"/api/student-assistant/feedback-tickets/{ticket_id}/archive",
+            headers=legacy_headers,
+            json={"reason": "旧 header 不应归档反馈"},
+        ),
+    ]
+    for response in legacy_feedback_actions:
+        assert response.status_code == 401
+        assert response.json()["code"] == 40100
+
+    teacher_handle = client.post(
+        f"/api/student-assistant/feedback-tickets/{ticket_id}/handle",
+        headers=teacher_headers,
+        json={"resolution": "老师处理本人负责学生反馈"},
+    )
+    assert teacher_handle.status_code == 200
+
+    legacy_grade = client.post(
+        "/api/student-assistant/grades",
+        headers=legacy_headers,
+        json={"student_id": own_student_id, "course_name": "旧 header 成绩", "score": 80},
+    )
+    assert legacy_grade.status_code == 401
+    assert legacy_grade.json()["code"] == 40100
+
+    student_grade = client.post(
+        "/api/student-assistant/grades",
+        headers=student_headers,
+        json={"student_id": own_student_id, "course_name": "学生不应录入成绩", "score": 80},
+    )
+    assert student_grade.status_code == 403
+    assert student_grade.json()["code"] == 40300
+
+    grade = client.post(
+        "/api/student-assistant/grades",
+        headers=teacher_headers,
+        json={"student_id": own_student_id, "course_name": "真实老师录入成绩", "score": 88},
+    )
+    assert grade.status_code == 200
+    grade_id = grade.json()["data"]["id"]
+
+    legacy_grade_update = client.patch(
+        f"/api/student-assistant/grades/{grade_id}",
+        headers=legacy_headers,
+        json={"score": 90},
+    )
+    assert legacy_grade_update.status_code == 401
+    assert legacy_grade_update.json()["code"] == 40100
+
+    teacher_scoped_grade = client.post(
+        "/api/student-assistant/grades",
+        headers=teacher_headers,
+        json={"student_id": admin_student_id, "course_name": "老师不应给非本人负责学生录成绩", "score": 82},
+    )
+    assert teacher_scoped_grade.status_code == 403
+    assert teacher_scoped_grade.json()["code"] == 40301
