@@ -127,3 +127,49 @@ def test_final_acceptance_docs_record_automation_evidence_review():
             "Dify 未配置 fallback 与真实 Dify 验收分开记录",
         ]:
             assert required_text in content
+
+
+def test_current_audit_records_final_acceptance_execution_record_batch():
+    audit = read_doc("docs/v3-current-consistency-audit.md")
+
+    for required_text in [
+        "最终 B1-B12 验收执行记录落档",
+        "docs/v3-final-acceptance-execution-record.md",
+        "不替代人工验收结论",
+    ]:
+        assert required_text in audit
+
+
+def test_final_acceptance_execution_record_covers_manual_recording_fields():
+    record_path = PROJECT_ROOT / "docs" / "v3-final-acceptance-execution-record.md"
+
+    assert record_path.exists()
+    content = record_path.read_text(encoding="utf-8")
+
+    for flow_id in [f"B{index}" for index in range(1, 13)]:
+        assert flow_id in content
+
+    for required_text in [
+        "对象 ID",
+        "入口 URL",
+        "截图或说明",
+        "自动化验证",
+        "人工浏览器验收",
+        "SQLite",
+        "MySQL",
+        "Dify 未配置 fallback",
+        "真实 Dify",
+        "不替代人工验收",
+        "阻断问题",
+        "高优先级问题",
+        "python -m pytest tests\\\\test_final_acceptance_readiness.py -v",
+        "python -m pytest -v",
+        "npm.cmd run test:auth",
+        "node tests\\\\navigation_check.js",
+        "node tests\\\\employee_agent_command_check.js",
+        "node tests\\\\employee_guide_layout_check.mjs",
+        "node tests\\\\customer_report_agent_check.js",
+        "npm.cmd run build",
+        "git diff --check",
+    ]:
+        assert required_text in content

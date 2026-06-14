@@ -39,6 +39,7 @@
 | ACTIVE | `docs/test-object-claim-table.md` | 多人验收对象认领、测试账号和管理员边界。 |
 | ACTIVE | `docs/verification-checklist.md` | 最终 B1-B12 验收准备执行清单，区分自动化/人工、SQLite/MySQL、Dify fallback/真实 Dify。 |
 | ACTIVE | `docs/v3-final-acceptance-readiness.md` | 最终 B1-B12 验收准备矩阵，覆盖角色边界、API/对象、上线配置项和风险。 |
+| ACTIVE | `docs/v3-final-acceptance-execution-record.md` | 最终 B1-B12 验收执行记录，承接对象 ID、入口 URL、截图或说明、自动化/人工、SQLite/MySQL、Dify fallback/真实 Dify和问题分级。 |
 | ACTIVE | `docs/mysql-migration-readiness.md` | SQLite 到 MySQL 的迁移准备、Alembic baseline 和空库验证流程。 |
 | ACTIVE | `docs/deployment-delivery-runbook.md` | 部署交付、环境变量、启动、CORS、健康检查、生产初始化、备份恢复和演示 seed 边界。 |
 | ACTIVE | `docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` | Agent 需求覆盖、Dify 批次、资料来源和后续批次范围。Batch 状态需随提交持续更新。 |
@@ -276,11 +277,21 @@ git diff --check
 
 本轮复核曾复现 seed/通知陈旧 ORM 对象导致的 `StaleDataError`：默认通知确保逻辑会加载并改写旧 `Notification` 对象，`CrmTask` 在 demo seed bulk delete 后也可能仍留在同一 Session 中。当前已补 `backend/tests/test_admin_seed_notifications.py`；默认通知改为 SQL 级 update 后按需新增，`seed_demo_data()` 重置业务表后只清理被删除业务模型的 Session 状态。后续不要并行运行多个会调用 `/api/demo/seed` 的 pytest 进程，否则同一个 MySQL 演示库会被并发重置，容易制造非代码缺陷的外键失败。
 
+### 7.11 最终 B1-B12 验收执行记录落档
+
+2026-06-15 新增 `docs/v3-final-acceptance-execution-record.md`，用于后续逐条记录 B1-B12 的对象 ID、入口 URL、截图或说明、自动化验证、人工浏览器验收、SQLite/MySQL 口径、Dify 未配置 fallback/真实 Dify 状态、阻断问题和高优先级问题。
+
+边界：
+
+- 当前执行记录先提供模板、自动化证据槽位和验收边界，不替代人工验收结论。
+- B1-B12 仍需按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 做真实浏览器链路记录。
+- 真实 MySQL 与真实 Dify 配置后必须单独补验，不能用本地自动化或 fallback 结果替代。
+
 ## 8. 后续执行建议
 
 1. 新线程入口先读：`AGENTS.md`、本审计文档、当前要执行的 batch plan 或专项 design。
 2. 每个新 batch 开始前先写三句话：本批假设、取舍、成功标准。
-3. 执行最终验收时先使用 `docs/v3-final-acceptance-readiness.md` 确认 B1-B12 角色边界、入口、API/对象和风险，再用 `docs/verification-checklist.md` 认领证据，并按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 逐项记录对象 ID。
+3. 执行最终验收时先使用 `docs/v3-final-acceptance-readiness.md` 确认 B1-B12 角色边界、入口、API/对象和风险，再用 `docs/verification-checklist.md` 认领证据，并按 `docs/v3-final-acceptance-execution-record.md`、`docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 逐项记录对象 ID。
 4. Dify 批次开始前先清理 Agent 覆盖设计文档的乱码状态行，并决定 YAML 是扩到五类场景还是分阶段补齐。
 5. 企业助手指挥台应单独收口，不要混进 Dify 接入或客服 Agent 验收。
 6. 后续提交仍按当前项目规则：先查 `git status`，只 stage 当前任务相关文件，中文 commit。
