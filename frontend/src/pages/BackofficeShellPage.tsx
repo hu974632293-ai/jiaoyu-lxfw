@@ -91,6 +91,7 @@ export default function BackofficeShellPage({
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
   const shellClass = role === "student" ? "workspace-shell student-shell" : "workspace-shell staff-shell";
   const isAgentPage = activePage === "employeeAgent";
+  const isOrgPage = activePage === "employeeOrg";
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -237,7 +238,7 @@ export default function BackofficeShellPage({
         {accessNotice ? <span className="status-pill warning">{accessNotice}</span> : null}
       </section>
 
-      <div className={`workspace-grid ${role === "student" ? "student-workspace-grid" : ""} ${isAgentPage ? "agent-workspace-grid" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
+      <div className={`workspace-grid ${role === "student" ? "student-workspace-grid" : ""} ${isAgentPage ? "agent-workspace-grid" : ""} ${isOrgPage ? "org-workspace-grid" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
         <aside className="sidebar" aria-label="后台一级导航">
           <div className="sidebar-main">
             <div className="sidebar-head">
