@@ -11,6 +11,8 @@ class KnowledgeChatRequest(BaseModel):
     actor_username: str | None = None
     lead_id: int | None = None
     student_id: int | None = None
+    session_id: int | None = None
+    channel: str = "web"
     conversation_id: str | None = None
     business_context: dict[str, Any] = Field(default_factory=dict)
     action_mode: Literal["answer", "draft", "confirm"] = "answer"

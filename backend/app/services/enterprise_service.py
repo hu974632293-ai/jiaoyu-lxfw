@@ -6,14 +6,16 @@ from typing import Any
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, object_session
 
-from app.models.assistant import AssistantConversation, AssistantIntentLog, Nl2SqlQueryLog
+from app.models.assistant import AgentActionLog, AssistantConversation, AssistantIntentLog, Nl2SqlQueryLog
 from app.models.enterprise import EmployeeDirectory, EmployeeProfile, OrganizationUnit, WorkDailyReport
 from app.models.event import EventLecture
+from app.models.knowledge import ChatMessage
 from app.models.lead import CrmLead
 from app.models.operation import AuditLog
 from app.models.user import SysUser
-from app.schemas.enterprise import DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
-from app.services.lead_service import update_lead_status
+from app.schemas.enterprise import AgentActionConfirmRequest, DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
+from app.schemas.lead import LeadCreate
+from app.services.lead_service import create_lead, update_lead_status
 
 
 def handle_enterprise_chat(db: Session, payload: EnterpriseChatRequest) -> dict[str, Any]:
@@ -338,6 +340,107 @@ def run_controlled_nl2sql(db: Session, payload: Nl2SqlQueryRequest) -> dict[str,
     return result
 
 
+def confirm_agent_action(db: Session, payload: AgentActionConfirmRequest, actor_username: str | None = None) -> dict[str, Any]:
+    actor = _get_actor(db, actor_username or payload.actor_username)
+    existing = _find_confirmed_agent_action(db, actor.id if actor else None, payload.action_type, payload.idempotency_key)
+    if existing:
+        result = _parse_json(existing.payload_json, {})
+        return {
+            "action_log_id": existing.id,
+            "action_type": existing.action_type,
+            "target_type": existing.target_type,
+            "target_id": existing.target_id,
+            "result": result.get("result", {}),
+            "idempotent": True,
+        }
+
+    if payload.action_type == "submit_daily_report":
+        content = str(payload.draft.get("content") or "").strip()
+        if not content:
+            raise ValueError("日报内容不能为空")
+        result = create_daily_report(db, DailyReportCreate(content=content, actor_username=actor.username if actor else payload.actor_username))
+        target_type = "work_daily_report"
+        target_id = result["id"]
+    elif payload.action_type == "create_lead":
+        lead_payload = LeadCreate(
+            customer_name=str(payload.draft.get("customer_name") or "企业助手录入客户"),
+            contact_info=payload.draft.get("contact_info") or "",
+            background_info=payload.draft.get("background_info") or "",
+            source_channel=payload.draft.get("source_channel") or "企业助手",
+            owner_id=actor.id if actor else payload.draft.get("owner_id"),
+        )
+        lead = create_lead(db, lead_payload, owner_id=actor.id if actor else None)
+        result = {
+            "id": lead.id,
+            "customer_name": lead.customer_name,
+            "contact_info": lead.contact_info,
+            "status": lead.status,
+            "owner_id": lead.owner_id,
+        }
+        target_type = "crm_lead"
+        target_id = lead.id
+    elif payload.action_type == "update_lead_status":
+        lead_id = int(payload.draft.get("lead_id") or 0)
+        status = str(payload.draft.get("status") or "").strip()
+        reason = str(payload.draft.get("reason") or "企业助手确认更新").strip()
+        if not lead_id or not status:
+            raise ValueError("缺少客户或目标状态")
+        lead = update_lead_status(db, lead_id, status, reason, actor.username if actor else payload.actor_username)
+        if not lead:
+            raise ValueError("客户不存在")
+        result = {"id": lead.id, "customer_name": lead.customer_name, "status": lead.status}
+        target_type = "crm_lead"
+        target_id = lead.id
+    else:
+        raise ValueError("不支持的动作类型")
+
+    action_log = AgentActionLog(
+        user_id=actor.id if actor else None,
+        assistant_type="employee_agent",
+        action_type=payload.action_type,
+        target_type=target_type,
+        target_id=target_id,
+        payload_json=json.dumps(
+            {
+                "idempotency_key": payload.idempotency_key,
+                "session_id": payload.session_id,
+                "draft": payload.draft,
+                "result": result,
+            },
+            ensure_ascii=False,
+        ),
+        status="success",
+    )
+    db.add(action_log)
+    if payload.session_id:
+        db.add(
+            ChatMessage(
+                session_id=payload.session_id,
+                role="assistant",
+                content=f"已同步到业务记录，编号 #{target_id}。",
+                status="success",
+            )
+        )
+    _create_audit_log(
+        db,
+        actor,
+        "企业助手确认业务动作",
+        target_type,
+        str(target_id),
+        {"action_type": payload.action_type, "idempotency_key": payload.idempotency_key},
+    )
+    db.commit()
+    db.refresh(action_log)
+    return {
+        "action_log_id": action_log.id,
+        "action_type": payload.action_type,
+        "target_type": target_type,
+        "target_id": target_id,
+        "result": result,
+        "idempotent": False,
+    }
+
+
 def serialize_daily_report(item: WorkDailyReport) -> dict[str, Any]:
     employee_context = _employee_context(object_session(item), item.user_id)
     return {
@@ -542,6 +645,23 @@ def _record_intent(db: Session, conversation_id: int, intent: str, result: dict[
             status=status,
         )
     )
+
+
+def _find_confirmed_agent_action(db: Session, user_id: int | None, action_type: str, idempotency_key: str) -> AgentActionLog | None:
+    query = db.query(AgentActionLog).filter(
+        AgentActionLog.assistant_type == "employee_agent",
+        AgentActionLog.action_type == action_type,
+        AgentActionLog.status == "success",
+    )
+    if user_id is None:
+        query = query.filter(AgentActionLog.user_id.is_(None))
+    else:
+        query = query.filter(AgentActionLog.user_id == user_id)
+    for item in query.order_by(AgentActionLog.id.desc()).limit(50).all():
+        payload = _parse_json(item.payload_json, {})
+        if payload.get("idempotency_key") == idempotency_key:
+            return item
+    return None
 
 
 def _extract_customer_name(message: str) -> str:

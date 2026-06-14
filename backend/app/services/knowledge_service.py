@@ -1,10 +1,11 @@
 import json
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.models.assistant import KnowledgeSource, KnowledgeSyncJob
-from app.models.knowledge import KnowledgeChatLog
+from app.models.knowledge import ChatMessage, ChatSession, KnowledgeChatLog
 from app.models.operation import AuditLog
 from app.models.user import SysUser
 from app.schemas.knowledge import KnowledgeSourceCreate, KnowledgeSourceUpdate, KnowledgeSyncJobCreate
@@ -31,6 +32,7 @@ async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
     }
     question = payload.question
     conversation_id = payload.conversation_id
+    session = _resolve_chat_session(db, payload)
     try:
         result = await client.chat(question, conversation_id=conversation_id, inputs=request_context, user=payload.actor_username or payload.role or "anonymous")
     except Exception as exc:
@@ -46,19 +48,26 @@ async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
     # ? Dify ???????????????????
     if result["status"] in {"fallback", "error"}:
         result["answer"] = match_scene_answer(payload.scene, question)
+    citations_json = json.dumps(result["citations"], ensure_ascii=False)
     log = KnowledgeChatLog(
         lead_id=payload.lead_id,
         scene=payload.scene,
         question=question,
         answer=result["answer"],
-        citations=json.dumps(result["citations"], ensure_ascii=False),
+        citations=citations_json,
         dify_conversation_id=result["conversation_id"],
         status=result["status"],
         fallback_reason=fallback_reason,
     )
     db.add(log)
+    if session:
+        session.updated_at = datetime.utcnow()
+        db.add(ChatMessage(session_id=session.id, role="user", content=question, status="success"))
+        db.add(ChatMessage(session_id=session.id, role="assistant", content=result["answer"], citations=citations_json, status=result["status"]))
     db.commit()
     db.refresh(log)
+    if session:
+        db.refresh(session)
     return {
         "id": log.id,
         "scene": log.scene,
@@ -67,8 +76,30 @@ async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
         "answer": log.answer,
         "citations": result["citations"],
         "conversation_id": log.dify_conversation_id,
+        "session_id": session.id if session else None,
+        "messages": _serialize_session_messages(db, session.id) if session else [],
         "status": log.status,
         "fallback_reason": log.fallback_reason,
+    }
+
+
+def get_latest_chat_session(db: Session, scene: str, channel: str = "web", actor_username: str | None = None) -> dict[str, Any]:
+    actor = _get_actor(db, actor_username)
+    query = db.query(ChatSession).filter(ChatSession.scene == scene, ChatSession.channel == channel, ChatSession.status == "active")
+    if actor:
+        query = query.filter(ChatSession.user_id == actor.id)
+    elif actor_username:
+        return {"session_id": None, "scene": scene, "channel": channel, "messages": []}
+    else:
+        query = query.filter(ChatSession.user_id.is_(None))
+    session = query.order_by(ChatSession.updated_at.desc(), ChatSession.id.desc()).first()
+    if not session:
+        return {"session_id": None, "scene": scene, "channel": channel, "messages": []}
+    return {
+        "session_id": session.id,
+        "scene": session.scene,
+        "channel": session.channel,
+        "messages": _serialize_session_messages(db, session.id),
     }
 
 
@@ -230,6 +261,64 @@ def serialize_chat_detail(item: KnowledgeChatLog) -> dict[str, Any]:
         "fallback_reason": item.fallback_reason,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
+
+
+def _resolve_chat_session(db: Session, payload) -> ChatSession | None:
+    if not payload.actor_username and payload.channel == "web" and not payload.session_id:
+        return None
+    actor = _get_actor(db, payload.actor_username)
+    if payload.session_id:
+        query = db.query(ChatSession).filter(ChatSession.id == payload.session_id, ChatSession.status == "active")
+        if actor:
+            query = query.filter(ChatSession.user_id == actor.id)
+        session = query.first()
+        if session:
+            return session
+    session = (
+        db.query(ChatSession)
+        .filter(
+            ChatSession.user_id == (actor.id if actor else None),
+            ChatSession.scene == payload.scene,
+            ChatSession.channel == payload.channel,
+            ChatSession.status == "active",
+        )
+        .order_by(ChatSession.updated_at.desc(), ChatSession.id.desc())
+        .first()
+    )
+    if session:
+        return session
+    session = ChatSession(
+        user_id=actor.id if actor else None,
+        student_id=payload.student_id,
+        lead_id=payload.lead_id,
+        scene=payload.scene,
+        channel=payload.channel,
+        status="active",
+    )
+    db.add(session)
+    db.flush()
+    return session
+
+
+def _serialize_session_messages(db: Session, session_id: int) -> list[dict[str, Any]]:
+    items = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.id.asc()).limit(100).all()
+    return [
+        {
+            "id": item.id,
+            "role": item.role,
+            "content": item.content,
+            "citations": _parse_json_list(item.citations),
+            "status": item.status,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+        }
+        for item in items
+    ]
+
+
+def _get_actor(db: Session, username: str | None) -> SysUser | None:
+    if not username:
+        return None
+    return db.query(SysUser).filter_by(username=username).first()
 
 
 def _fallback_reason(status: str) -> str:

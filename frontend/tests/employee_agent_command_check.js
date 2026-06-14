@@ -15,6 +15,12 @@ const requiredComponentTokens = [
   "enterprise-agent-conversation",
   "enterprise-agent-execution",
   "enterprise-agent-tabs",
+  "/api/knowledge/sessions/latest",
+  "/api/enterprise-assistant/actions/confirm",
+  "employee_agent",
+  "session_id",
+  "actor_username",
+  "confirmAgentAction",
   "当前任务",
   "处理状态",
   "下一步",
@@ -44,6 +50,8 @@ const requiredStyleTokens = [
   "grid-template-areas:",
   '"conversation rail"',
   "grid-template-rows: auto minmax(0, 1fr) auto",
+  "overflow-wrap: anywhere",
+  "flex: 0 0 auto",
 ];
 
 for (const token of requiredStyleTokens) {

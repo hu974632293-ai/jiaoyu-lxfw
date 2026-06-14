@@ -4787,11 +4787,13 @@ textarea {
 }
 
 .enterprise-agent-message {
+  flex: 0 0 auto;
   max-width: min(78%, 720px);
   padding: 13px 16px;
   border-radius: 16px;
   font-size: 15px;
   line-height: 1.62;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -4807,6 +4809,51 @@ textarea {
   color: #fff;
   background: #0d4b3e;
   box-shadow: 0 14px 30px rgba(13, 75, 62, 0.18);
+}
+
+.enterprise-agent-action-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 152, 61, 0.26);
+  border-radius: 14px;
+  background: #fff8ea;
+}
+
+.enterprise-agent-action-strip div {
+  display: grid;
+  gap: 3px;
+}
+
+.enterprise-agent-action-strip strong {
+  color: #17261f;
+  font-size: 14px;
+}
+
+.enterprise-agent-action-strip span {
+  color: #68766f;
+  font-size: 12px;
+}
+
+.enterprise-agent-action-strip button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: #0d4b3e;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.enterprise-agent-action-strip button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
 .enterprise-panel-heading {

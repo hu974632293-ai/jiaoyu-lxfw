@@ -9,6 +9,7 @@ from app.services.knowledge_service import (
     create_source,
     create_sync_job,
     get_chat_log,
+    get_latest_chat_session,
     list_chat_logs,
     list_sources,
     list_sync_jobs,
@@ -30,6 +31,11 @@ async def chat(payload: KnowledgeChatRequest, db: Session = Depends(get_db)):
 @router.get("/logs")
 def logs(scene: str | None = None, db: Session = Depends(get_db)):
     return ok(list_chat_logs(db, scene))
+
+
+@router.get("/sessions/latest")
+def latest_session(scene: str, channel: str = "web", actor_username: str | None = None, db: Session = Depends(get_db)):
+    return ok(get_latest_chat_session(db, scene, channel, actor_username))
 
 
 @router.get("/logs/{log_id}")
