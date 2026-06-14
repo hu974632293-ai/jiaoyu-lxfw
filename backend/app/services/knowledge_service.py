@@ -21,6 +21,8 @@ SCENE_LABELS = {
     "customer_service": "客服咨询",
     "enterprise_guide": "企业新人指南",
     "student_life": "学生生活支持",
+    "customer_assessment": "客户研判",
+    "report_assistant": "报告解释",
     "policy": "留学政策",
 }
 
@@ -30,10 +32,12 @@ async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
     request_context = {
         "scene": payload.scene,
         "role": payload.role,
+        "actor_username": payload.actor_username,
         "lead_id": payload.lead_id,
         "student_id": payload.student_id,
         "business_context": payload.business_context,
         "action_mode": payload.action_mode,
+        "dify_app_id": _resolve_dify_app_id(payload.scene),
     }
     question = payload.question
     conversation_id = payload.conversation_id
@@ -60,7 +64,7 @@ async def ask_knowledge(db: Session, payload) -> dict[str, Any]:
 
     fallback_reason = _fallback_reason(result["status"])
 
-    # ? Dify ???????????????????
+    # Dify 未配置或调用异常时，用场景化模板兜底，避免阻断主业务。
     if result["status"] in {"fallback", "error"}:
         result["answer"] = match_scene_answer(payload.scene, question)
     citations_json = json.dumps(result["citations"], ensure_ascii=False)
@@ -120,6 +124,16 @@ def get_latest_chat_session(db: Session, scene: str, channel: str = "web", actor
         "messages": _serialize_session_messages(db, session.id),
         "latest_action": _latest_pending_agent_action(db, actor.id if actor else None, session.id),
     }
+
+
+def _resolve_dify_app_id(scene: str) -> str:
+    from app.core.config import settings
+
+    for item in settings.dify_app_id_map.split(","):
+        key, _, value = item.partition(":")
+        if key.strip() == scene:
+            return value.strip()
+    return ""
 
 
 def list_chat_logs(db: Session, scene: str | None = None) -> list[dict[str, Any]]:

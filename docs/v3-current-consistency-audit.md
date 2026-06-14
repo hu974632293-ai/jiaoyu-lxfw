@@ -93,8 +93,8 @@
 
 ## 6. 仍是设计或待实现的内容
 
-1. Dify 真实接入还未完成最终验收。当前已有 YAML 初版和 Dify client 输入基础，但需要继续验证真实 Dify 配置、scene 路由、调用状态和 fallback 记录。
-2. `docs/dify/education-service-agent.yml` 当前只定义 3 个 app 场景：公开客服、企业新人指南、学生生活支持；而 Agent 覆盖设计要求覆盖客服、企业新人指南、学生生活支持、客户研判、报告解释等核心场景。客户研判和报告解释需要后续扩展或明确拆到后续批次。
+1. Dify 真实接入还未完成最终验收。当前已有 YAML 五类场景、Dify client 输入基础、内部场景权限边界和 fallback 记录，但真实 Dify key、app、dataset 仍需上线配置后验收。
+2. `docs/dify/education-service-agent.yml` 已覆盖 5 个 app 场景：公开客服、企业新人指南、学生生活支持、客户研判、报告解释。客户研判和报告解释后续仍需与对应业务 Agent 面板、报告解释入口和真实 Dify 数据集继续联调。
 3. 官网客服 Agent 7 类公开咨询覆盖、活动报名联动和业务化来源展示仍需按验收计划跑真实链路。
 4. 企业新人指南真实资料接入需要继续确认，不能只停留在静态新人指南页面。
 5. 学生/老师 Agent、客户研判 Agent、报告 Agent 仍属于后续批次，不应被当作 Batch 1 已完成范围。
@@ -121,14 +121,16 @@ node tests\employee_agent_command_check.js
 
 判断：企业助手不是完全未实现，但当前实现和最新专项验收规则未完全对齐。后续应单独开企业助手指挥台收口任务，先确认最新设计是否以 `agent-workspace-grid` 专用外壳为准，再最小修改 `BackofficeShellPage.tsx` 和 `styles.css`。
 
-### 7.2 Dify YAML 覆盖范围与设计目标不一致
+### 7.2 Dify YAML 覆盖范围已收口，真实同步仍待配置
 
-当前 YAML 是 3 个 app 场景；设计文档要求五类核心场景。后续继续做 Dify 批次时，需要明确：
+2026-06-15 批次二已将 YAML 扩展为 5 个 app 场景，并补充后端 scene inputs、内部场景权限边界、客户研判/报告解释 fallback 和知识来源默认登记。
 
-- 是先把 YAML 扩成五类场景；
-- 还是保留 3 个 app，把客户研判和报告解释暂时路由到后续业务 Agent。
+后续继续做 Dify 真实同步批次时，重点不再是“是否扩成五类场景”，而是：
 
-这个决策不应留给实现线程临场猜。
+- 配置真实 Dify key、app 和 dataset；
+- 校验各场景是否命中对应知识来源；
+- 在系统治理页呈现同步状态、失败原因和重试入口；
+- 保持 Dify 不可用时的可解释 fallback，不阻断 CRM、研判、活动和报告主业务。
 
 ### 7.3 Agent 覆盖设计文档存在乱码状态行
 

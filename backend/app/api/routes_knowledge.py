@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
+from app.core.auth import _resolve_bearer_user
 from app.core.database import get_db
+from app.core.permissions import PermissionDeniedError
 from app.core.response import fail, ok
 from app.schemas.knowledge import KnowledgeChatRequest, KnowledgeSourceCreate, KnowledgeSourceUpdate, KnowledgeSyncJobCreate
 from app.services.knowledge_service import (
@@ -21,9 +23,38 @@ from app.services.knowledge_service import (
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
+PUBLIC_AGENT_SCENES = {"customer_service", "policy"}
+INTERNAL_AGENT_SCENE_ROLES = {
+    "enterprise_guide": {"admin", "manager", "employee"},
+    "student_life": {"admin", "teacher", "student"},
+    "customer_assessment": {"admin", "manager", "consultant"},
+    "report_assistant": {"admin", "manager"},
+}
+
+
+def _bind_agent_scene_actor(payload: KnowledgeChatRequest, authorization: str | None, db: Session) -> KnowledgeChatRequest:
+    if payload.scene in PUBLIC_AGENT_SCENES:
+        return payload
+
+    allowed_roles = INTERNAL_AGENT_SCENE_ROLES.get(payload.scene)
+    if not allowed_roles:
+        return payload
+
+    user = _resolve_bearer_user(authorization, db)
+    if user.role not in allowed_roles:
+        raise PermissionDeniedError(f"knowledge:{payload.scene}:use")
+    payload.role = user.role
+    payload.actor_username = user.username
+    return payload
+
 
 @router.post("/chat")
-async def chat(payload: KnowledgeChatRequest, db: Session = Depends(get_db)):
+async def chat(
+    payload: KnowledgeChatRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    db: Session = Depends(get_db),
+):
+    payload = _bind_agent_scene_actor(payload, authorization, db)
     result = await ask_knowledge(db, payload)
     return ok(result)
 
