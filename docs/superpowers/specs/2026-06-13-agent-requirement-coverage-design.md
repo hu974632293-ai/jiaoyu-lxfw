@@ -453,12 +453,16 @@ YAML 应至少覆盖这些场景：
 1. 2026-06-15 已完成报告导出子批次：后端新增 `GET /api/reports/{report_id}/export?format=pdf|docx`，复用 `report:snapshot:read` 权限，返回文件名、content type、base64 内容和 `export_id`。
 2. 导出记录落入审计日志，动作为“导出报告快照”，记录报告 ID、格式和文件名；不新增导出表，避免本批引入迁移。
 3. 前端报告中心已在报告详情中提供“导出 PDF”“导出 Word”动作，生成或打开报告后可下载文件。
-4. 部署文档、环境变量说明、生产初始化、备份恢复和最终 B1-B12 验收仍在后续批次。
+4. 2026-06-15 已完成部署交付子批次：新增 `docs/deployment-delivery-runbook.md`，覆盖后端启动、前端启动、环境变量、Dify、MySQL、Alembic、CORS/域名、健康检查、生产初始化、演示 seed 边界、备份和恢复。
+5. 后端 CORS 已改为读取 `CORS_ORIGINS` 配置；`backend/.env.example` 补齐生产域名说明和五类 Dify app 映射，`frontend/.env.example` 补齐 `VITE_API_BASE`。
+6. 部署交付有轻量验证测试 `backend/tests/test_deployment_delivery.py`，用于检查 CORS 配置解析和 runbook 必要主题覆盖。
+7. 最终 B1-B12 验收仍在后续批次。
 
 验证：
 
 1. `cd backend && python -m pytest tests/test_report_center_api.py -v`
 2. `cd frontend && node tests\customer_report_agent_check.js`
+3. `cd backend && python -m pytest tests/test_deployment_delivery.py -v`
 
 ### 6.8 第八批：最终验收
 

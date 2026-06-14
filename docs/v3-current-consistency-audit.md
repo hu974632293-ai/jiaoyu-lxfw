@@ -38,11 +38,12 @@
 | ACTIVE | `docs/business-flow-test-plan.md` | 最终业务链路验收和 B1-B12 闭环验收口径。 |
 | ACTIVE | `docs/test-object-claim-table.md` | 多人验收对象认领、测试账号和管理员边界。 |
 | ACTIVE | `docs/mysql-migration-readiness.md` | SQLite 到 MySQL 的迁移准备、Alembic baseline 和空库验证流程。 |
+| ACTIVE | `docs/deployment-delivery-runbook.md` | 部署交付、环境变量、启动、CORS、健康检查、生产初始化、备份恢复和演示 seed 边界。 |
 | ACTIVE | `docs/superpowers/specs/2026-06-13-agent-requirement-coverage-design.md` | Agent 需求覆盖、Dify 批次、资料来源和后续批次范围。Batch 状态需随提交持续更新。 |
 | ACTIVE | `docs/superpowers/specs/2026-06-14-enterprise-agent-command-design.md` | 企业助手 AI 指挥台专项设计和验收方向。 |
 | REFERENCE | `docs/superpowers/plans/2026-06-13-v3-production-foundation-batch1.md` | Batch 1 执行轨迹和文件清单。批次一已标记完成，后续不应把未勾选框当作当前未完成事实。 |
 | REFERENCE | `docs/superpowers/plans/2026-06-14-enterprise-agent-command-implementation.md` | 企业助手指挥台专项计划。当前需与最新专项检查结果一起使用。 |
-| ACTIVE | `docs/dify/education-service-agent.yml` | Dify YAML 初版配置来源，但当前只覆盖 3 个 app 场景。 |
+| ACTIVE | `docs/dify/education-service-agent.yml` | Dify YAML 初版配置来源，当前覆盖公开客服、企业新人指南、学生生活支持、客户研判、报告解释 5 个 app 场景。 |
 
 ## 4. 当前最新共识
 
@@ -101,7 +102,8 @@
 6. 客户研判 Agent 和报告 Agent 已完成前端承接：客户增长页通过 `customer_assessment` scene 生成研判依据与跟进建议，报告中心通过 `report_assistant` scene 解释本期变化并定位待处理对象；真实 Dify 数据集命中率仍需上线配置后验收。
 7. 业务闭环补洞已完成通知部分：通知列表返回业务对象跳转地址，后端支持标记已读和处理完成，系统治理通知页已接入对应动作和打开对象入口；报告历史筛选、负责人分配联动、归档或软删除策略仍需继续补。
 8. Dify 同步预留已完成配置健康、同步任务重试和治理页状态承接；真实 Dify key、app、dataset 配置后仍需验收真实同步命中率。
-9. PDF/Word 报告导出已完成接口、前端动作和审计记录；部署交付和最终 B1-B12 全链路验收仍是后续工作。
+9. PDF/Word 报告导出已完成接口、前端动作和审计记录；部署交付文档、环境变量说明、CORS 配置承接、健康检查说明、生产初始化边界、备份恢复流程和轻量验证测试已完成。
+10. 最终 B1-B12 全链路验收仍是后续工作。
 
 ## 7. 当前发现的不一致和返工风险
 
@@ -178,7 +180,25 @@ node tests\customer_report_agent_check.js
 
 结果：全部通过。
 
-### 7.6 历史计划 checkbox 不应再作为唯一事实
+### 7.6 部署交付已收口
+
+2026-06-15 部署交付批次已完成：
+
+- 新增 `docs/deployment-delivery-runbook.md`，覆盖后端启动、前端启动、环境变量、Dify、MySQL、Alembic、CORS/域名、健康检查、生产初始化、演示 seed 边界、备份和恢复。
+- `backend/app/main.py` 的 CORS 允许来源已改为读取 `backend/app/core/config.py` 中的 `settings.cors_origin_list`，生产域名通过 `CORS_ORIGINS` 配置。
+- `backend/.env.example` 已补生产 CORS 示例和五类 Dify app 映射；`frontend/.env.example` 已补 `VITE_API_BASE`。
+- 新增 `backend/tests/test_deployment_delivery.py`，验证 CORS 环境变量解析和部署 runbook 必要主题覆盖。
+
+复核命令：
+
+```powershell
+cd D:\00_Project\jiaoyu_lxfw\backend
+python -m pytest tests/test_deployment_delivery.py -v
+```
+
+结果：2 passed。
+
+### 7.7 历史计划 checkbox 不应再作为唯一事实
 
 `docs/superpowers/plans/2026-06-13-v3-production-foundation-batch1.md` 内仍有大量 `- [ ]` 步骤，这是执行计划模板痕迹。当前事实应以最近提交、测试结果和 `agent-requirement-coverage-design.md` 中的批次完成状态为准。
 

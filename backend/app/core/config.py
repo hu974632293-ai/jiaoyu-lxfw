@@ -1,6 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def parse_cors_origins(value: str) -> list[str]:
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+
 class Settings(BaseSettings):
     app_name: str = "教育服务客户增长闭环 Demo"
     database_url: str = "sqlite:///./app.db"
@@ -19,6 +23,10 @@ class Settings(BaseSettings):
     dify_app_id_map: str = "customer_service:,enterprise_guide:,student_life:,customer_assessment:,report_assistant:,policy:"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return parse_cors_origins(self.cors_origins)
 
 
 settings = Settings()
