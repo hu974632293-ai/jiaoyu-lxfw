@@ -1,11 +1,7 @@
 import {
   Bot,
-  Building2,
   ClipboardCheck,
-  FileText,
-  Search,
   SendHorizonal,
-  UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../api/client";
@@ -23,34 +19,6 @@ type KnowledgeChatResult = {
   scene: string;
   answer: string;
   status: string;
-};
-
-type DailyReportVoiceDraft = {
-  content: string;
-  structured_summary: {
-    progress?: string;
-    next_action?: string;
-  };
-  risks: string[];
-};
-
-type VoiceDraftResponse<TDraft> = {
-  draft: TDraft;
-  requires_confirmation: boolean;
-  confirmation_endpoint: string;
-};
-
-type DailyReport = {
-  id: number;
-  status: string;
-};
-
-type AgentArtifact = {
-  title: string;
-  state: string;
-  tone: "ready" | "working" | "success";
-  items: { label: string; value: string }[];
-  note: string;
 };
 
 type TaskSummary = {
@@ -98,18 +66,6 @@ const scenes: Array<{
   },
 ];
 
-const defaultArtifact: AgentArtifact = {
-  title: "业务结果待生成",
-  state: "等待指令",
-  tone: "ready",
-  items: [
-    { label: "今日完成", value: "说出目标后自动整理" },
-    { label: "风险事项", value: "识别材料、投诉、跟进阻塞" },
-    { label: "下一步", value: "生成可确认的业务动作" },
-  ],
-  note: "你可以直接说业务目标，助手会把问题转成可确认、可跳转、可追踪的动作。",
-};
-
 const taskSummaries: Record<AgentScene, TaskSummary> = {
   daily: {
     taskType: "日报草稿",
@@ -141,7 +97,9 @@ const taskSummaries: Record<AgentScene, TaskSummary> = {
   },
 };
 
-export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
+type TaskState = "idle" | "answered" | "error";
+
+export default function EmployeeAgentPanel(_props: PageProps) {
   const [activeScene, setActiveScene] = useState<AgentScene>("daily");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -149,30 +107,18 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
       text: "你可以直接说业务目标，例如“帮我整理今天日报”“查询学生服务投诉负责人”“客户阶段更新前需要确认什么”。",
     },
   ]);
-  const [artifact, setArtifact] = useState<AgentArtifact>(defaultArtifact);
-  const [dailyContent, setDailyContent] = useState("");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [taskState, setTaskState] = useState<TaskState>("idle");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, artifact]);
+  }, [messages]);
 
-  function applyAssistantAnswer(question: string, answer: string, scene: AgentScene) {
-    const sceneCopy = scenes.find((item) => item.key === scene) ?? scenes[0];
+  function applyAssistantAnswer(answer: string) {
     setMessages((prev) => [...prev, { role: "assistant", text: answer }]);
-    setArtifact({
-      title: `${sceneCopy.label}查询结果`,
-      state: "可继续追问",
-      tone: "success",
-      items: [
-        { label: "用户目标", value: question },
-        { label: "场景", value: `${sceneCopy.label} · ${sceneCopy.hint}` },
-        { label: "处理状态", value: "已返回建议" },
-      ],
-      note: answer,
-    });
+    setTaskState("answered");
   }
 
   async function sendPrompt(text: string, scene: AgentScene = activeScene) {
@@ -182,13 +128,8 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
     setActiveScene(scene);
     setInput("");
     setSending(true);
+    setTaskState("idle");
     setMessages((prev) => [...prev, { role: "user", text: question }]);
-    setArtifact((current) => ({
-      ...current,
-      state: "处理中",
-      tone: "working",
-      note: "正在整理业务结果。",
-    }));
 
     try {
       const data = await apiRequest<KnowledgeChatResult>("/api/knowledge/chat", {
@@ -198,122 +139,29 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
           question,
         }),
       });
-      applyAssistantAnswer(question, data.answer, scene);
+      applyAssistantAnswer(data.answer);
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       setMessages((prev) => [
         ...prev,
         { role: "assistant", text: `暂时无法完成，请稍后再试。${message}` },
       ]);
-      setArtifact((current) => ({
-        ...current,
-        state: "需要重试",
-        tone: "ready",
-        note: "当前指令没有完成，可以调整问题后重新发送。",
-      }));
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function generateDailyDraft() {
-    if (sending) return;
-
-    const transcript = scenes[0].prompt;
-    setActiveScene("daily");
-    setSending(true);
-    setMessages((prev) => [...prev, { role: "user", text: "帮我生成今天的日报草稿。" }]);
-
-    try {
-      const data = await apiRequest<VoiceDraftResponse<DailyReportVoiceDraft>>(
-        "/api/enterprise-assistant/voice-drafts",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            target_type: "daily_report",
-            transcript,
-            actor_username: "admin",
-          }),
-        },
-      );
-      const draft = data.draft;
-      const content = draft.content || transcript;
-      setDailyContent(content);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: "日报草稿已生成，请确认重点、风险和下一步后提交。" },
-      ]);
-      setArtifact({
-        title: "日报草稿已生成",
-        state: data.requires_confirmation ? "需要本人确认后提交" : "可继续编辑",
-        tone: "success",
-        items: [
-          { label: "今日完成", value: draft.structured_summary.progress || "申请材料跟进；家长预算确认" },
-          { label: "风险事项", value: draft.risks.join("；") || "签证材料缺少资产证明" },
-          { label: "明日计划", value: draft.structured_summary.next_action || "补齐证明并同步顾问" },
-        ],
-        note: content,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "请求失败";
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: `日报草稿生成失败：${message}` },
-      ]);
-      setArtifact((current) => ({
-        ...current,
-        state: "需要重试",
-        tone: "ready",
-        note: "日报草稿没有生成，可以稍后重试。",
-      }));
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function submitDailyReport() {
-    if (!dailyContent.trim() || sending) return;
-
-    setSending(true);
-    try {
-      const data = await apiRequest<DailyReport>("/api/enterprise-assistant/daily-reports", {
-        method: "POST",
-        body: JSON.stringify({ content: dailyContent, actor_username: "admin" }),
-      });
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: `日报已提交，记录编号 #${data.id}。` },
-      ]);
-      setArtifact((current) => ({
-        ...current,
-        state: "已提交",
-        tone: "success",
-        note: "日报已经保存，可在员工工作台查看。",
-      }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "请求失败";
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: `提交日报失败：${message}` },
-      ]);
+      setTaskState("error");
     } finally {
       setSending(false);
     }
   }
 
   const activeSceneCopy = scenes.find((item) => item.key === activeScene) ?? scenes[0];
-  const canSubmitDaily = Boolean(dailyContent.trim()) && !sending;
-  const hasArtifact = artifact.title !== defaultArtifact.title;
   const taskSummary = taskSummaries[activeScene];
-  const taskStatus = sending ? "处理中" : hasArtifact ? artifact.state : "等待输入";
+  const hasAnswer = taskState === "answered";
+  const taskStatus = sending ? "处理中" : taskState === "error" ? "需要重试" : hasAnswer ? "已返回建议" : "等待输入";
   const nextAction = sending
     ? "等待结果返回"
-    : hasArtifact
-      ? activeScene === "daily"
-        ? "编辑草稿 / 提交日报 / 进入日报页"
-        : "继续追问 / 进入工作台"
+    : hasAnswer
+      ? "继续追问 / 按建议进入对应业务页"
       : "选择场景或直接输入问题";
-  const resultStatus = hasArtifact ? taskSummary.resultLabel : taskSummary.waitingFor;
+  const resultStatus = hasAnswer ? taskSummary.resultLabel : taskSummary.waitingFor;
 
   return (
     <div className="enterprise-agent-shell">
@@ -336,6 +184,7 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
               onClick={() => {
                 setActiveScene(scene.key);
                 setInput(scene.prompt);
+                setTaskState("idle");
               }}
             >
               {scene.label}
@@ -352,25 +201,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
             <em>{activeSceneCopy.hint}</em>
           </div>
 
-          <div className="enterprise-agent-quickbar" aria-label="快捷启动">
-            <button type="button" className="enterprise-agent-tool-chip primary" onClick={generateDailyDraft}>
-              <FileText size={16} aria-hidden="true" />
-              生成日报
-            </button>
-            <button type="button" className="enterprise-agent-tool-chip" onClick={() => void sendPrompt(scenes[1].prompt, "org")}>
-              <Building2 size={16} aria-hidden="true" />
-              查负责人
-            </button>
-            <button type="button" className="enterprise-agent-tool-chip" onClick={() => void sendPrompt(scenes[2].prompt, "customer")}>
-              <Search size={16} aria-hidden="true" />
-              查客户
-            </button>
-            <button type="button" className="enterprise-agent-tool-chip" onClick={() => void sendPrompt(scenes[3].prompt, "guide")}>
-              <UserRound size={16} aria-hidden="true" />
-              新人指南
-            </button>
-          </div>
-
           <div className="enterprise-agent-dialog">
             {messages.map((msg, index) => (
               <div key={`${msg.role}-${index}`} className={`enterprise-agent-message ${msg.role}`}>
@@ -380,37 +210,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
             {sending && <div className="enterprise-agent-message assistant">正在处理...</div>}
             <div ref={bottomRef} />
           </div>
-
-          {hasArtifact && (
-            <article className={`enterprise-agent-artifact ${artifact.tone}`}>
-              <div className="enterprise-agent-artifact-head">
-                <div>
-                  <span>当前结果</span>
-                  <h2>{artifact.title}</h2>
-                </div>
-                <strong>{artifact.state}</strong>
-              </div>
-              <div className="enterprise-agent-artifact-grid">
-                {artifact.items.map((item) => (
-                  <div key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                  </div>
-                ))}
-              </div>
-              <p>{artifact.note}</p>
-              <div className="enterprise-agent-artifact-actions">
-                <button type="button" onClick={submitDailyReport} disabled={!canSubmitDaily}>
-                  <ClipboardCheck size={16} aria-hidden="true" />
-                  提交日报
-                </button>
-                <button type="button" onClick={() => onNavigate("employeeWorkspace")}>
-                  <Building2 size={16} aria-hidden="true" />
-                  进入工作台
-                </button>
-              </div>
-            </article>
-          )}
 
           <form
             className="enterprise-agent-input"
@@ -464,7 +263,7 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
               <strong>{taskSummary.related}</strong>
             </div>
             <div>
-              <span>{hasArtifact ? "处理结果" : "需要确认"}</span>
+              <span>{hasAnswer ? "处理结果" : "需要确认"}</span>
               <strong>{resultStatus}</strong>
             </div>
           </div>
