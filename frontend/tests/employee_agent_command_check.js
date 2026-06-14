@@ -17,9 +17,12 @@ const requiredComponentTokens = [
   "enterprise-agent-quickbar",
   "enterprise-agent-tool-chip",
   "日报草稿已生成",
-  "执行队列",
-  "快捷启动",
-  "当前上下文",
+  "当前任务",
+  "处理状态",
+  "下一步",
+  "本次事项",
+  "正在处理",
+  "关联内容",
   "提交日报",
 ];
 
@@ -36,13 +39,16 @@ const requiredStyleTokens = [
   ".enterprise-agent-execution",
   ".enterprise-agent-quickbar",
   ".enterprise-agent-tool-chip",
-  "position: absolute",
+  ".enterprise-agent-task-card",
+  "position: static",
   "grid-template-columns: minmax(0, 1fr) 236px",
   ".agent-workspace-grid",
   ".agent-content-frame",
   "height: calc(100vh - 8px)",
   "grid-template-areas:",
   '"conversation rail"',
+  "grid-template-rows: auto auto minmax(0, 1fr) auto",
+  "max-height: min(300px, 42vh)",
 ];
 
 for (const token of requiredStyleTokens) {
@@ -59,6 +65,14 @@ const forbiddenTokens = [
   "OpenAPI",
   "后续 V2",
   "后续 V3",
+  "执行队列",
+  "当前上下文",
+  "识别意图",
+  "生成草稿",
+  "写入记录",
+  "跳转处理",
+  "匹配员工业务场景",
+  "等待业务指令",
 ];
 
 for (const token of forbiddenTokens) {

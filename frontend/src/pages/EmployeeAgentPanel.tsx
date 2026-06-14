@@ -1,7 +1,6 @@
 import {
   Bot,
   Building2,
-  CheckCircle2,
   ClipboardCheck,
   FileText,
   Search,
@@ -46,19 +45,20 @@ type DailyReport = {
   status: string;
 };
 
-type ExecutionStep = {
-  id: number;
-  title: string;
-  desc: string;
-  status: "done" | "active" | "pending";
-};
-
 type AgentArtifact = {
   title: string;
   state: string;
   tone: "ready" | "working" | "success";
   items: { label: string; value: string }[];
   note: string;
+};
+
+type TaskSummary = {
+  taskType: string;
+  subject: string;
+  related: string;
+  waitingFor: string;
+  resultLabel: string;
 };
 
 const scenes: Array<{
@@ -98,13 +98,6 @@ const scenes: Array<{
   },
 ];
 
-const initialExecutionSteps: ExecutionStep[] = [
-  { id: 1, title: "识别意图", desc: "匹配员工业务场景", status: "done" },
-  { id: 2, title: "生成草稿", desc: "等待业务指令", status: "active" },
-  { id: 3, title: "写入记录", desc: "确认后提交", status: "pending" },
-  { id: 4, title: "跳转处理", desc: "可进入工作台", status: "pending" },
-];
-
 const defaultArtifact: AgentArtifact = {
   title: "业务结果待生成",
   state: "等待指令",
@@ -117,6 +110,37 @@ const defaultArtifact: AgentArtifact = {
   note: "你可以直接说业务目标，助手会把问题转成可确认、可跳转、可追踪的动作。",
 };
 
+const taskSummaries: Record<AgentScene, TaskSummary> = {
+  daily: {
+    taskType: "日报草稿",
+    subject: "我的日报",
+    related: "今日跟进记录",
+    waitingFor: "风险事项和明日计划",
+    resultLabel: "日报草稿",
+  },
+  org: {
+    taskType: "查找负责人",
+    subject: "负责人查询",
+    related: "学生服务投诉",
+    waitingFor: "负责人和处理入口",
+    resultLabel: "负责人建议",
+  },
+  customer: {
+    taskType: "客户查询",
+    subject: "受控客户信息",
+    related: "本周高潜客户",
+    waitingFor: "重点跟进名单",
+    resultLabel: "客户摘要",
+  },
+  guide: {
+    taskType: "新人指南",
+    subject: "新人流程",
+    related: "入职第一周事项",
+    waitingFor: "步骤和联系人",
+    resultLabel: "流程指引",
+  },
+};
+
 export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
   const [activeScene, setActiveScene] = useState<AgentScene>("daily");
   const [messages, setMessages] = useState<Message[]>([
@@ -126,7 +150,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
     },
   ]);
   const [artifact, setArtifact] = useState<AgentArtifact>(defaultArtifact);
-  const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>(initialExecutionSteps);
   const [dailyContent, setDailyContent] = useState("");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -135,22 +158,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, artifact]);
-
-  function updateStep(id: number, status: ExecutionStep["status"]) {
-    setExecutionSteps((steps) =>
-      steps.map((step) => (step.id === id ? { ...step, status } : step)),
-    );
-  }
-
-  function markCommandRunning() {
-    setExecutionSteps((steps) =>
-      steps.map((step) => {
-        if (step.id === 1) return { ...step, status: "done" };
-        if (step.id === 2) return { ...step, status: "active" };
-        return { ...step, status: "pending" };
-      }),
-    );
-  }
 
   function applyAssistantAnswer(question: string, answer: string, scene: AgentScene) {
     const sceneCopy = scenes.find((item) => item.key === scene) ?? scenes[0];
@@ -166,8 +173,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
       ],
       note: answer,
     });
-    updateStep(2, "done");
-    updateStep(3, "active");
   }
 
   async function sendPrompt(text: string, scene: AgentScene = activeScene) {
@@ -177,7 +182,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
     setActiveScene(scene);
     setInput("");
     setSending(true);
-    markCommandRunning();
     setMessages((prev) => [...prev, { role: "user", text: question }]);
     setArtifact((current) => ({
       ...current,
@@ -207,7 +211,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
         tone: "ready",
         note: "当前指令没有完成，可以调整问题后重新发送。",
       }));
-      updateStep(2, "active");
     } finally {
       setSending(false);
     }
@@ -219,7 +222,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
     const transcript = scenes[0].prompt;
     setActiveScene("daily");
     setSending(true);
-    markCommandRunning();
     setMessages((prev) => [...prev, { role: "user", text: "帮我生成今天的日报草稿。" }]);
 
     try {
@@ -252,8 +254,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
         ],
         note: content,
       });
-      updateStep(2, "done");
-      updateStep(3, "active");
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       setMessages((prev) => [
@@ -275,7 +275,6 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
     if (!dailyContent.trim() || sending) return;
 
     setSending(true);
-    updateStep(3, "active");
     try {
       const data = await apiRequest<DailyReport>("/api/enterprise-assistant/daily-reports", {
         method: "POST",
@@ -289,10 +288,8 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
         ...current,
         state: "已提交",
         tone: "success",
-        note: "日报已经写入记录，可在员工工作台查看。",
+        note: "日报已经保存，可在员工工作台查看。",
       }));
-      updateStep(3, "done");
-      updateStep(4, "active");
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       setMessages((prev) => [
@@ -307,6 +304,16 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
   const activeSceneCopy = scenes.find((item) => item.key === activeScene) ?? scenes[0];
   const canSubmitDaily = Boolean(dailyContent.trim()) && !sending;
   const hasArtifact = artifact.title !== defaultArtifact.title;
+  const taskSummary = taskSummaries[activeScene];
+  const taskStatus = sending ? "处理中" : hasArtifact ? artifact.state : "等待输入";
+  const nextAction = sending
+    ? "等待结果返回"
+    : hasArtifact
+      ? activeScene === "daily"
+        ? "编辑草稿 / 提交日报 / 进入日报页"
+        : "继续追问 / 进入工作台"
+      : "选择场景或直接输入问题";
+  const resultStatus = hasArtifact ? taskSummary.resultLabel : taskSummary.waitingFor;
 
   return (
     <div className="enterprise-agent-shell">
@@ -424,34 +431,41 @@ export default function EmployeeAgentPanel({ onNavigate }: PageProps) {
           </form>
         </section>
 
-        <aside className="enterprise-agent-execution" aria-label="执行队列">
+        <aside className="enterprise-agent-execution" aria-label="当前任务">
           <div className="enterprise-panel-heading">
             <div>
-              <h2>执行队列</h2>
-              <span>靠近结果，便于确认</span>
+              <h2>当前任务</h2>
+              <span>处理状态</span>
             </div>
-            <CheckCircle2 size={18} aria-hidden="true" />
+            <ClipboardCheck size={18} aria-hidden="true" />
           </div>
-          <ol>
-            {executionSteps.map((step) => (
-              <li key={step.id} className={step.status}>
-                <span>{step.id}</span>
-                <div>
-                  <strong>{step.title}</strong>
-                  <small>{step.desc}</small>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <div className="enterprise-agent-context">
-            <h3>当前上下文</h3>
+          <div className="enterprise-agent-task-card">
             <div>
-              <span>场景</span>
-              <strong>{activeSceneCopy.label}</strong>
+              <span>任务类型</span>
+              <strong>{taskSummary.taskType}</strong>
             </div>
             <div>
-              <span>状态</span>
-              <strong>{artifact.state}</strong>
+              <span>处理状态</span>
+              <strong>{taskStatus}</strong>
+            </div>
+            <div>
+              <span>下一步</span>
+              <strong>{nextAction}</strong>
+            </div>
+          </div>
+          <div className="enterprise-agent-context">
+            <h3>本次事项</h3>
+            <div>
+              <span>正在处理</span>
+              <strong>{taskSummary.subject}</strong>
+            </div>
+            <div>
+              <span>关联内容</span>
+              <strong>{taskSummary.related}</strong>
+            </div>
+            <div>
+              <span>{hasArtifact ? "处理结果" : "需要确认"}</span>
+              <strong>{resultStatus}</strong>
             </div>
           </div>
         </aside>
