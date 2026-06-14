@@ -2,7 +2,7 @@ import { ArrowLeft, Building2, GraduationCap, KeyRound, LockKeyhole, ShieldCheck
 import { useState } from "react";
 import { apiRequest, setAccessToken } from "../api/client";
 import { loginAccounts, loginShortcuts } from "../authRules";
-import type { LoginAccountKey, LoginShortcutKey } from "../authRules";
+import type { LoginAccountKey, LoginAccountProfile, LoginShortcutKey } from "../authRules";
 
 type LoginPageProps = {
   onLogin: (accountKey: LoginAccountKey) => void;
@@ -13,7 +13,7 @@ type LoginResult = {
   access_token: string;
   user: {
     username: string;
-    role: string;
+    role: LoginAccountProfile["role"];
     real_name: string;
   };
 };
@@ -23,6 +23,18 @@ const shortcutIcons: Record<LoginShortcutKey, typeof Building2> = {
   student: GraduationCap,
   test: ShieldCheck,
 };
+
+export async function loginWithCredentials(username: string, password: string): Promise<LoginAccountKey> {
+  const result = await apiRequest<LoginResult>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+  setAccessToken(result.access_token);
+  const account =
+    Object.values(loginAccounts).find((item) => item.username === result.user.username) ||
+    Object.values(loginAccounts).find((item) => item.role === result.user.role);
+  return account?.key ?? "employee";
+}
 
 export default function LoginPage({ onLogin, onBackToPortal }: LoginPageProps) {
   const [username, setUsername] = useState("");
@@ -40,16 +52,7 @@ export default function LoginPage({ onLogin, onBackToPortal }: LoginPageProps) {
     event.preventDefault();
     setError("");
     try {
-      const result = await apiRequest<LoginResult>("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      });
-      setAccessToken(result.access_token);
-      // ??????????? role ????????? test ? admin????
-      const account =
-        Object.values(loginAccounts).find((item) => item.username === result.user.username) ||
-        Object.values(loginAccounts).find((item) => item.role === result.user.role);
-      onLogin(account?.key ?? "consultant");
+      onLogin(await loginWithCredentials(username, password));
     } catch (err) {
       setError(err instanceof Error ? err.message : "账号或密码不正确，请检查后再登录。");
     }
