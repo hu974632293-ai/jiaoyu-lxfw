@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions import require_permission
+from app.core.permissions import require_permission, require_token_permission
 from app.core.response import ok
 from app.models.user import SysUser
 from app.schemas.enterprise import AgentActionConfirmRequest, DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
@@ -33,7 +33,7 @@ def chat(payload: EnterpriseChatRequest, _permission: None = Depends(require_per
 @router.post("/daily-reports")
 def create_report(
     payload: DailyReportCreate,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(create_daily_report(db, payload))
@@ -62,7 +62,7 @@ def reports(
     end_date: date | None = None,
     employee: str | None = None,
     department: str | None = None,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(list_daily_reports(db, start_date, end_date, employee, department))
@@ -74,7 +74,7 @@ def report_summary(
     date: date | None = None,
     week_start: date | None = None,
     department: str | None = None,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(daily_report_summary(db, summary_type, date, week_start, department))
@@ -83,7 +83,7 @@ def report_summary(
 @router.get("/daily-reports/{report_id}")
 def report_detail(
     report_id: int,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(get_daily_report(db, report_id))
@@ -102,7 +102,7 @@ def org_units(
 def directory(
     keyword: str | None = None,
     department: str | None = None,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(list_directory_contacts(db, keyword, department))
@@ -111,7 +111,7 @@ def directory(
 @router.get("/directory/{contact_id}")
 def directory_detail(
     contact_id: int,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(get_directory_contact(db, contact_id))
@@ -120,7 +120,7 @@ def directory_detail(
 @router.post("/nl2sql/query")
 def nl2sql_query(
     payload: Nl2SqlQueryRequest,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(run_controlled_nl2sql(db, payload))

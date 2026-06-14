@@ -45,6 +45,10 @@ def handle_enterprise_chat(db: Session, payload: EnterpriseChatRequest) -> dict[
         result = _update_lead_status_from_message(db, message, payload.actor_username)
         answer = f"已更新客户 #{result['lead_id']} 状态为 {result['status']}。"
         status = "success"
+    elif intent == "query_lead":
+        result = _query_leads(db, message)
+        answer = f"已查询到 {len(result['leads'])} 条客户记录。"
+        status = "success"
     else:
         result = _guide_answer(db)
         answer = result["answer"]

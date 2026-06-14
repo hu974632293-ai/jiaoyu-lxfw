@@ -54,3 +54,44 @@ def test_consultant_cannot_update_unowned_lead_status():
     )
     assert response.status_code == 403
     assert response.json()["code"] != 0
+
+
+def test_enterprise_assistant_core_queries_reject_legacy_actor_header():
+    client.post("/api/demo/seed")
+    legacy_headers = {"X-Actor-Username": "admin"}
+
+    daily_response = client.get("/api/enterprise-assistant/daily-reports", headers=legacy_headers)
+    directory_response = client.get("/api/enterprise-assistant/directory", headers=legacy_headers)
+    nl2sql_response = client.post(
+        "/api/enterprise-assistant/nl2sql/query",
+        headers=legacy_headers,
+        json={"question": "查询本周高潜线索数量", "actor_username": "admin"},
+    )
+
+    for response in [daily_response, directory_response, nl2sql_response]:
+        assert response.status_code == 401
+        assert response.json()["code"] == 40100
+
+
+def test_enterprise_assistant_core_queries_accept_bearer_token_and_enforce_role_permission():
+    client.post("/api/demo/seed")
+    employee_token = _token("employee", "employee123")
+    student_token = _token("student", "student123")
+
+    allowed_headers = {"Authorization": f"Bearer {employee_token}"}
+    denied_headers = {"Authorization": f"Bearer {student_token}"}
+
+    assert client.get("/api/enterprise-assistant/daily-reports", headers=allowed_headers).status_code == 200
+    assert client.get("/api/enterprise-assistant/directory", headers=allowed_headers).status_code == 200
+    assert (
+        client.post(
+            "/api/enterprise-assistant/nl2sql/query",
+            headers=allowed_headers,
+            json={"question": "查询本周高潜线索数量", "actor_username": "employee"},
+        ).status_code
+        == 200
+    )
+
+    response = client.get("/api/enterprise-assistant/daily-reports", headers=denied_headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == 40300

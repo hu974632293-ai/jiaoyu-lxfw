@@ -9,6 +9,12 @@ init_db()
 client = TestClient(app)
 
 
+def _auth_headers(username: str = "admin", password: str = "admin123") -> dict[str, str]:
+    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['data']['access_token']}"}
+
+
 def test_health():
     response = client.get("/health")
 
@@ -39,14 +45,15 @@ def test_permission_role_audit_and_notification_api():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
     assert seed_response.json()["code"] == 0
+    headers = _auth_headers()
 
-    users_response = client.get("/api/users")
+    users_response = client.get("/api/users", headers=headers)
     assert users_response.status_code == 200
     users_payload = users_response.json()
     assert users_payload["code"] == 0
     assert any(item["username"] == "admin" for item in users_payload["data"])
 
-    permissions_response = client.get("/api/roles/permissions")
+    permissions_response = client.get("/api/roles/permissions", headers=headers)
     assert permissions_response.status_code == 200
     permissions_payload = permissions_response.json()
     assert permissions_payload["code"] == 0
@@ -54,6 +61,7 @@ def test_permission_role_audit_and_notification_api():
 
     create_role_response = client.post(
         "/api/roles",
+        headers=headers,
         json={
             "role_code": "stage2_test_role",
             "role_name": "阶段二测试角色",
@@ -66,7 +74,7 @@ def test_permission_role_audit_and_notification_api():
     assert create_role_payload["code"] == 0
     assert "system:audit:read" in create_role_payload["data"]["permission_codes"]
 
-    roles_response = client.get("/api/roles")
+    roles_response = client.get("/api/roles", headers=headers)
     assert roles_response.status_code == 200
     roles_payload = roles_response.json()
     assert roles_payload["code"] == 0
@@ -74,6 +82,7 @@ def test_permission_role_audit_and_notification_api():
 
     audit_response = client.post(
         "/api/audit/logs",
+        headers=headers,
         json={
             "actor_username": "admin",
             "action": "创建测试角色",
@@ -85,13 +94,13 @@ def test_permission_role_audit_and_notification_api():
     assert audit_response.status_code == 200
     assert audit_response.json()["code"] == 0
 
-    audit_logs_response = client.get("/api/audit/logs")
+    audit_logs_response = client.get("/api/audit/logs", headers=headers)
     assert audit_logs_response.status_code == 200
     audit_logs_payload = audit_logs_response.json()
     assert audit_logs_payload["code"] == 0
     assert any(item["action"] == "创建测试角色" for item in audit_logs_payload["data"])
 
-    notifications_response = client.get("/api/notifications")
+    notifications_response = client.get("/api/notifications", headers=headers)
     assert notifications_response.status_code == 200
     notifications_payload = notifications_response.json()
     assert notifications_payload["code"] == 0
@@ -125,9 +134,10 @@ def test_permission_dependencies_reject_user_without_required_permission():
     assert denied_users_payload["code"] == 40300
     assert "权限" in denied_users_payload["msg"]
 
+    student_headers = _auth_headers("stage7_student", "demo")
     denied_daily_response = client.post(
         "/api/enterprise-assistant/daily-reports",
-        headers={"X-Actor-Username": "stage7_student"},
+        headers=student_headers,
         json={"content": "尝试提交无权限日报", "actor_username": "stage7_student"},
     )
     assert denied_daily_response.status_code == 403

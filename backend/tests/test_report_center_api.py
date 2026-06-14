@@ -8,10 +8,17 @@ init_db()
 client = TestClient(app)
 
 
+def _auth_headers(username: str = "admin", password: str = "admin123") -> dict[str, str]:
+    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['data']['access_token']}"}
+
+
 def test_report_center_generates_four_report_snapshots_and_audit_logs():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
     assert seed_response.json()["code"] == 0
+    client.headers.update(_auth_headers())
 
     daily_response = client.post(
         "/api/enterprise-assistant/daily-reports",

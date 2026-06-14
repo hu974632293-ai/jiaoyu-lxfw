@@ -15,13 +15,21 @@ init_db()
 client = TestClient(app)
 
 
+def _auth_headers(username: str = "admin", password: str = "admin123") -> dict[str, str]:
+    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['data']['access_token']}"}
+
+
 def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
     assert seed_response.json()["code"] == 0
+    headers = _auth_headers()
 
     create_lead_response = client.post(
         "/api/enterprise-assistant/chat",
+        headers=headers,
         json={
             "message": "帮我录入一个客户：阶段六企业助手客户，高三，想去新加坡读本科，家长关注费用，电话 13900006666",
             "actor_username": "admin",
@@ -31,11 +39,24 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
     create_lead_payload = create_lead_response.json()
     assert create_lead_payload["code"] == 0
     assert create_lead_payload["data"]["intent"] == "create_lead"
-    lead_id = create_lead_payload["data"]["result"]["lead_id"]
-    assert create_lead_payload["data"]["result"]["customer_name"] == "阶段六企业助手客户"
+    assert create_lead_payload["data"]["requires_confirmation"] is True
+    assert create_lead_payload["data"]["result"]["draft"]["customer_name"] == "阶段六企业助手客户"
+    confirm_lead_response = client.post(
+        "/api/enterprise-assistant/actions/confirm",
+        headers=headers,
+        json={
+            "action_type": "create_lead",
+            "actor_username": "admin",
+            "idempotency_key": "enterprise-api-create-lead-stage6",
+            "draft": create_lead_payload["data"]["result"]["draft"],
+        },
+    )
+    assert confirm_lead_response.status_code == 200
+    lead_id = confirm_lead_response.json()["data"]["target_id"]
 
     query_response = client.post(
         "/api/enterprise-assistant/chat",
+        headers=headers,
         json={"message": "查询客户 阶段六企业助手客户", "actor_username": "admin"},
     )
     assert query_response.status_code == 200
@@ -46,6 +67,7 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
 
     update_status_response = client.post(
         "/api/enterprise-assistant/chat",
+        headers=headers,
         json={"message": f"把客户 {lead_id} 状态更新为 high_potential，原因：已确认预算", "actor_username": "admin"},
     )
     assert update_status_response.status_code == 200
@@ -56,6 +78,7 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
 
     daily_response = client.post(
         "/api/enterprise-assistant/daily-reports",
+        headers=headers,
         json={
             "content": "今天跟进 8 个客户，2 个高潜进入活动邀约，风险是德国项目材料不齐，明天补齐材料清单。",
             "actor_username": "admin",
@@ -67,20 +90,20 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
     assert daily_payload["data"]["structured_summary"]["progress"].startswith("今天跟进")
     assert daily_payload["data"]["risks"]
 
-    reports_response = client.get("/api/enterprise-assistant/daily-reports")
+    reports_response = client.get("/api/enterprise-assistant/daily-reports", headers=headers)
     assert reports_response.status_code == 200
     reports_payload = reports_response.json()
     assert reports_payload["code"] == 0
     assert any(item["id"] == daily_payload["data"]["id"] for item in reports_payload["data"])
 
-    summary_response = client.get("/api/enterprise-assistant/daily-reports/summary")
+    summary_response = client.get("/api/enterprise-assistant/daily-reports/summary", headers=headers)
     assert summary_response.status_code == 200
     summary_payload = summary_response.json()
     assert summary_payload["code"] == 0
     assert summary_payload["data"]["report_count"] >= 1
     assert "德国项目材料不齐" in summary_payload["data"]["risks_text"]
 
-    org_response = client.get("/api/enterprise-assistant/org-units")
+    org_response = client.get("/api/enterprise-assistant/org-units", headers=headers)
     assert org_response.status_code == 200
     org_payload = org_response.json()
     assert org_payload["code"] == 0
@@ -88,6 +111,7 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
 
     guide_response = client.post(
         "/api/enterprise-assistant/chat",
+        headers=headers,
         json={"message": "查一下双元制事业部负责人和新人入职流程", "actor_username": "admin"},
     )
     assert guide_response.status_code == 200
@@ -99,6 +123,7 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
 
     nl2sql_response = client.post(
         "/api/enterprise-assistant/nl2sql/query",
+        headers=headers,
         json={"question": "查询本周高潜线索数量", "actor_username": "admin"},
     )
     assert nl2sql_response.status_code == 200
@@ -109,6 +134,7 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
 
     blocked_response = client.post(
         "/api/enterprise-assistant/nl2sql/query",
+        headers=headers,
         json={"question": "删除所有客户", "actor_username": "admin"},
     )
     assert blocked_response.status_code == 200
@@ -116,10 +142,10 @@ def test_enterprise_assistant_chat_daily_org_nl2sql_and_audit_api():
     assert blocked_payload["code"] == 0
     assert blocked_payload["data"]["status"] == "blocked"
 
-    audit_response = client.get("/api/audit/logs")
+    audit_response = client.get("/api/audit/logs", headers=headers)
     assert audit_response.status_code == 200
     audit_actions = [item["action"] for item in audit_response.json()["data"]]
-    assert "企业助手创建客户" in audit_actions
+    assert "企业助手确认业务动作" in audit_actions
     assert "企业助手更新客户状态" in audit_actions
     assert "提交企业日报" in audit_actions
 
@@ -128,6 +154,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
     assert seed_response.json()["code"] == 0
+    headers = _auth_headers()
 
     report_day = date(2026, 6, 12)
     other_day = report_day - timedelta(days=1)
@@ -151,6 +178,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
 
     filtered_response = client.get(
         "/api/enterprise-assistant/daily-reports",
+        headers=headers,
         params={
             "start_date": report_day.isoformat(),
             "end_date": report_day.isoformat(),
@@ -167,7 +195,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
     assert filtered_report["department"] == "升学规划部"
     assert filtered_report["report_date"] == report_day.isoformat()
 
-    detail_response = client.get(f"/api/enterprise-assistant/daily-reports/{filtered_report['id']}")
+    detail_response = client.get(f"/api/enterprise-assistant/daily-reports/{filtered_report['id']}", headers=headers)
     assert detail_response.status_code == 200
     detail_payload = detail_response.json()
     assert detail_payload["code"] == 0
@@ -176,6 +204,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
 
     daily_summary_response = client.get(
         "/api/enterprise-assistant/daily-reports/summary",
+        headers=headers,
         params={"summary_type": "daily", "date": report_day.isoformat(), "department": "升学规划部"},
     )
     assert daily_summary_response.status_code == 200
@@ -189,6 +218,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
 
     weekly_summary_response = client.get(
         "/api/enterprise-assistant/daily-reports/summary",
+        headers=headers,
         params={"summary_type": "weekly", "week_start": weekly_start.isoformat()},
     )
     assert weekly_summary_response.status_code == 200
@@ -199,7 +229,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
     assert weekly_summary["report_count"] >= 3
     assert any(item["employee_name"] == "阶段六顾问" for item in weekly_summary["employees"])
 
-    org_response = client.get("/api/enterprise-assistant/org-units", params={"keyword": "学生服务"})
+    org_response = client.get("/api/enterprise-assistant/org-units", headers=headers, params={"keyword": "学生服务"})
     assert org_response.status_code == 200
     org_payload = org_response.json()
     assert org_payload["code"] == 0
@@ -207,6 +237,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
 
     directory_response = client.get(
         "/api/enterprise-assistant/directory",
+        headers=headers,
         params={"keyword": "周老师", "department": "学生服务部"},
     )
     assert directory_response.status_code == 200
@@ -214,7 +245,7 @@ def test_daily_report_filters_detail_summary_and_directory_api():
     assert directory_payload["code"] == 0
     assert any(item["id"] == contact_id and item["unit_name"] == "学生服务部" for item in directory_payload["data"])
 
-    directory_detail_response = client.get(f"/api/enterprise-assistant/directory/{contact_id}")
+    directory_detail_response = client.get(f"/api/enterprise-assistant/directory/{contact_id}", headers=headers)
     assert directory_detail_response.status_code == 200
     directory_detail_payload = directory_detail_response.json()
     assert directory_detail_payload["code"] == 0
@@ -226,6 +257,7 @@ def test_voice_draft_structures_lead_and_daily_report_without_writing():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
     assert seed_response.json()["code"] == 0
+    headers = _auth_headers()
 
     with SessionLocal() as db:
         lead_count_before = db.query(CrmLead).count()
@@ -233,6 +265,7 @@ def test_voice_draft_structures_lead_and_daily_report_without_writing():
 
     lead_response = client.post(
         "/api/enterprise-assistant/voice-drafts",
+        headers=headers,
         json={
             "target_type": "lead",
             "transcript": "客户：陈语，电话 13900008888，高三，想申请新加坡本科，家长关注预算和就业。",
@@ -251,6 +284,7 @@ def test_voice_draft_structures_lead_and_daily_report_without_writing():
 
     daily_response = client.post(
         "/api/enterprise-assistant/voice-drafts",
+        headers=headers,
         json={
             "target_type": "daily_report",
             "transcript": "今天跟进 6 个客户，风险是德国项目材料不齐，明天补齐材料清单。",

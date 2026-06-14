@@ -8,10 +8,17 @@ init_db()
 client = TestClient(app)
 
 
+def _auth_headers(username: str = "admin", password: str = "admin123") -> dict[str, str]:
+    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['data']['access_token']}"}
+
+
 def test_student_assistant_chat_leave_feedback_psych_and_progress_api():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
     assert seed_response.json()["code"] == 0
+    client.headers.update(_auth_headers())
 
     students_response = client.get("/api/student-assistant/students")
     assert students_response.status_code == 200
@@ -119,6 +126,7 @@ def test_student_assistant_chat_leave_feedback_psych_and_progress_api():
 def test_student_leave_request_supports_student_and_teacher_lifecycle():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
+    client.headers.update(_auth_headers())
     student_id = client.get("/api/student-assistant/students").json()["data"][0]["id"]
 
     create_response = client.post(
@@ -198,6 +206,7 @@ def test_student_leave_request_supports_student_and_teacher_lifecycle():
 def test_student_feedback_ticket_supports_reply_close_archive_and_history():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
+    client.headers.update(_auth_headers())
     student_id = client.get("/api/student-assistant/students").json()["data"][0]["id"]
 
     create_response = client.post(
@@ -257,6 +266,7 @@ def test_student_feedback_ticket_supports_reply_close_archive_and_history():
 def test_student_grade_supports_teacher_entry_update_and_student_readonly_query():
     seed_response = client.post("/api/demo/seed")
     assert seed_response.status_code == 200
+    client.headers.update(_auth_headers())
     student_id = client.get("/api/student-assistant/students").json()["data"][0]["id"]
 
     create_response = client.post(
