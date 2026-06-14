@@ -14,6 +14,48 @@ def _token(username: str, password: str) -> str:
     return response.json()["data"]["access_token"]
 
 
+def test_enterprise_agent_base_permission_allows_internal_roles_to_confirm_daily_report():
+    client.post("/api/demo/seed")
+    internal_accounts = [
+        ("admin", "admin123"),
+        ("manager", "manager123"),
+        ("consultant", "consultant123"),
+        ("employee", "employee123"),
+        ("teacher", "teacher123"),
+    ]
+
+    for username, password in internal_accounts:
+        token = _token(username, password)
+        response = client.post(
+            "/api/enterprise-assistant/actions/confirm",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "action_type": "submit_daily_report",
+                "actor_username": username,
+                "idempotency_key": f"agent-daily-base-permission-{username}",
+                "draft": {"content": f"{username} 企业版基础权限日报确认。"},
+            },
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["code"] == 0
+        assert payload["data"]["target_type"] == "work_daily_report"
+
+    student_token = _token("student", "student123")
+    student_response = client.post(
+        "/api/enterprise-assistant/actions/confirm",
+        headers={"Authorization": f"Bearer {student_token}"},
+        json={
+            "action_type": "submit_daily_report",
+            "actor_username": "student",
+            "idempotency_key": "agent-daily-base-permission-student",
+            "draft": {"content": "学生不应使用企业版日报确认。"},
+        },
+    )
+    assert student_response.status_code == 403
+    assert "assistant:enterprise:use" in student_response.json()["msg"]
+
+
 def test_knowledge_chat_accepts_agent_context_without_breaking_legacy_request():
     client.post("/api/demo/seed")
     token = _token("employee", "employee123")
@@ -138,13 +180,33 @@ def test_employee_agent_confirm_actions_sync_business_tables_and_are_idempotent(
     reports = client.get("/api/enterprise-assistant/daily-reports", headers=headers).json()["data"]
     assert sum(1 for item in reports if item["content"].startswith("Agent确认日报")) == 1
 
-    lead_response = client.post(
+    employee_lead_response = client.post(
         "/api/enterprise-assistant/actions/confirm",
         headers=headers,
         json={
             "action_type": "create_lead",
             "actor_username": "employee",
             "idempotency_key": "agent-lead-contract-001",
+            "draft": {
+                "customer_name": "Agent确认客户",
+                "contact_info": "13900008888",
+                "background_info": "高三，关注新加坡本科和预算",
+                "source_channel": "企业助手",
+            },
+        },
+    )
+    assert employee_lead_response.status_code == 403
+    assert "crm:lead:write" in employee_lead_response.json()["msg"]
+
+    consultant_token = _token("consultant", "consultant123")
+    consultant_headers = {"Authorization": f"Bearer {consultant_token}"}
+    lead_response = client.post(
+        "/api/enterprise-assistant/actions/confirm",
+        headers=consultant_headers,
+        json={
+            "action_type": "create_lead",
+            "actor_username": "consultant",
+            "idempotency_key": "agent-lead-contract-consultant-001",
             "draft": {
                 "customer_name": "Agent确认客户",
                 "contact_info": "13900008888",
@@ -161,11 +223,11 @@ def test_employee_agent_confirm_actions_sync_business_tables_and_are_idempotent(
 
     status_response = client.post(
         "/api/enterprise-assistant/actions/confirm",
-        headers=headers,
+        headers=consultant_headers,
         json={
             "action_type": "update_lead_status",
-            "actor_username": "employee",
-            "idempotency_key": "agent-status-contract-001",
+            "actor_username": "consultant",
+            "idempotency_key": "agent-status-contract-consultant-001",
             "draft": {"lead_id": lead_id, "status": "high_potential", "reason": "Agent确认高潜"},
         },
     )
@@ -311,9 +373,9 @@ def test_employee_agent_knowledge_chat_only_returns_draft_for_write_intent():
     assert confirmed_restore_response.json()["data"]["latest_action"] is None
 
 
-def test_employee_agent_customer_write_intents_return_backend_drafts():
+def test_consultant_agent_customer_write_intents_return_backend_drafts():
     client.post("/api/demo/seed")
-    token = _token("employee", "employee123")
+    token = _token("consultant", "consultant123")
     headers = {"Authorization": f"Bearer {token}"}
 
     create_response = client.post(
@@ -321,8 +383,8 @@ def test_employee_agent_customer_write_intents_return_backend_drafts():
         headers=headers,
         json={
             "scene": "enterprise_customer",
-            "role": "employee",
-            "actor_username": "employee",
+            "role": "consultant",
+            "actor_username": "consultant",
             "channel": "employee_agent",
             "question": "帮我新增客户：后端草稿客户，电话 13900009999，关注新加坡本科。",
             "business_context": {"agent_scene": "customer"},
@@ -342,7 +404,7 @@ def test_employee_agent_customer_write_intents_return_backend_drafts():
         headers=headers,
         json={
             "action_type": "create_lead",
-            "actor_username": "employee",
+            "actor_username": "consultant",
             "idempotency_key": create_data["idempotency_key"],
             "draft": create_data["draft"],
             "session_id": create_data["session_id"],
@@ -356,8 +418,8 @@ def test_employee_agent_customer_write_intents_return_backend_drafts():
         headers=headers,
         json={
             "scene": "enterprise_customer",
-            "role": "employee",
-            "actor_username": "employee",
+            "role": "consultant",
+            "actor_username": "consultant",
             "channel": "employee_agent",
             "question": f"把客户 {lead_id} 状态更新为 high_potential，原因是预算明确。",
             "business_context": {"agent_scene": "customer"},

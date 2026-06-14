@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, object_session
 
+from app.core.permissions import PermissionDeniedError
 from app.models.assistant import AgentActionLog, AssistantConversation, AssistantIntentLog, Nl2SqlQueryLog
 from app.models.enterprise import EmployeeDirectory, EmployeeProfile, OrganizationUnit, WorkDailyReport
 from app.models.event import EventLecture
@@ -15,7 +16,9 @@ from app.models.operation import AuditLog
 from app.models.user import SysUser
 from app.schemas.enterprise import AgentActionConfirmRequest, DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
 from app.schemas.lead import LeadCreate
+from app.services.admin_service import user_has_permission
 from app.services.lead_service import create_lead, update_lead_status
+from app.services.scope_service import DataScopeError, ensure_can_access_lead
 
 
 def handle_enterprise_chat(db: Session, payload: EnterpriseChatRequest) -> dict[str, Any]:
@@ -362,6 +365,7 @@ def confirm_agent_action(db: Session, payload: AgentActionConfirmRequest, actor_
         target_type = "work_daily_report"
         target_id = result["id"]
     elif payload.action_type == "create_lead":
+        _ensure_agent_action_permission(db, actor, payload)
         lead_payload = LeadCreate(
             customer_name=str(payload.draft.get("customer_name") or "企业助手录入客户"),
             contact_info=payload.draft.get("contact_info") or "",
@@ -385,6 +389,7 @@ def confirm_agent_action(db: Session, payload: AgentActionConfirmRequest, actor_
         reason = str(payload.draft.get("reason") or "企业助手确认更新").strip()
         if not lead_id or not status:
             raise ValueError("缺少客户或目标状态")
+        _ensure_agent_action_permission(db, actor, payload)
         lead = update_lead_status(db, lead_id, status, reason, actor.username if actor else payload.actor_username)
         if not lead:
             raise ValueError("客户不存在")
@@ -447,6 +452,19 @@ def confirm_agent_action(db: Session, payload: AgentActionConfirmRequest, actor_
         "result": result,
         "idempotent": False,
     }
+
+
+def _ensure_agent_action_permission(db: Session, actor: SysUser | None, payload: AgentActionConfirmRequest) -> None:
+    if payload.action_type not in {"create_lead", "update_lead_status"}:
+        return
+    if not actor or not user_has_permission(db, actor.username, "crm:lead:write"):
+        raise PermissionDeniedError("crm:lead:write")
+    if payload.action_type == "update_lead_status":
+        lead_id = int(payload.draft.get("lead_id") or 0)
+        try:
+            ensure_can_access_lead(db, actor, lead_id)
+        except (DataScopeError, ValueError) as exc:
+            raise PermissionDeniedError("crm:lead:write") from exc
 
 
 def serialize_daily_report(item: WorkDailyReport) -> dict[str, Any]:

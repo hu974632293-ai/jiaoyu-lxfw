@@ -27,10 +27,33 @@ DEFAULT_PERMISSIONS = [
 
 DEFAULT_ROLES = [
     ("admin", "管理员", "系统治理、权限、审计", [item[0] for item in DEFAULT_PERMISSIONS]),
-    ("manager", "管理者", "经营报告、团队日报、风险", ["dashboard:read", "crm:lead:read", "report:snapshot:read", "system:audit:read"]),
-    ("consultant", "顾问", "CRM、跟进、活动报名", ["dashboard:read", "crm:lead:read", "crm:lead:write", "project:course:read", "event:operation:write", "knowledge:chat:use"]),
+    (
+        "manager",
+        "管理者",
+        "经营报告、团队日报、风险",
+        ["dashboard:read", "crm:lead:read", "assistant:enterprise:use", "report:snapshot:read", "system:audit:read"],
+    ),
+    (
+        "consultant",
+        "顾问",
+        "CRM、跟进、活动报名",
+        [
+            "dashboard:read",
+            "crm:lead:read",
+            "crm:lead:write",
+            "project:course:read",
+            "event:operation:write",
+            "assistant:enterprise:use",
+            "knowledge:chat:use",
+        ],
+    ),
     ("employee", "员工", "企业助手、日报、新人指南", ["dashboard:read", "assistant:enterprise:use", "knowledge:chat:use"]),
-    ("teacher", "老师", "学生服务、审批、预警", ["dashboard:read", "assistant:student:use", "student:leave:approve", "knowledge:chat:use", "report:snapshot:read"]),
+    (
+        "teacher",
+        "老师",
+        "学生服务、审批、预警",
+        ["dashboard:read", "assistant:enterprise:use", "assistant:student:use", "student:leave:approve", "knowledge:chat:use", "report:snapshot:read"],
+    ),
     ("student", "学生", "请假、反馈、进度、生活支持", ["assistant:student:use", "knowledge:chat:use"]),
 ]
 
@@ -62,9 +85,21 @@ def ensure_default_admin_data(db: Session) -> None:
             role = SysRole(role_code=code, role_name=name, description=description)
             db.add(role)
             db.flush()
-        existing_permissions = db.query(SysRolePermission).filter_by(role_id=role.id).count()
-        if existing_permissions == 0:
-            set_role_permissions(db, role, permission_codes)
+        current_permission_codes = {
+            permission.permission_code
+            for permission in (
+                db.query(SysPermission)
+                .join(SysRolePermission, SysRolePermission.permission_id == SysPermission.id)
+                .filter(SysRolePermission.role_id == role.id)
+                .all()
+            )
+        }
+        for permission_code in permission_codes:
+            if permission_code in current_permission_codes:
+                continue
+            permission = db.query(SysPermission).filter_by(permission_code=permission_code).first()
+            if permission:
+                db.add(SysRolePermission(role_id=role.id, permission_id=permission.id))
 
     admin = db.query(SysUser).filter_by(username="admin").first()
     admin_role = db.query(SysRole).filter_by(role_code="admin").first()
