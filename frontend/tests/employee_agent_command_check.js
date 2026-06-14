@@ -32,7 +32,7 @@ const requiredStyleTokens = [
   ".enterprise-agent-conversation",
   ".enterprise-agent-execution",
   ".enterprise-agent-side",
-  "grid-template-columns: minmax(0, 1fr) 340px",
+  "grid-template-columns: minmax(0, 1fr) 300px",
   "grid-template-areas:",
   '"conversation rail"',
   '"conversation side"',
@@ -62,6 +62,7 @@ for (const token of forbiddenTokens) {
 
 const forbiddenStyleTokens = [
   "grid-template-columns: minmax(0, 1fr) 270px 292px",
+  "min-height: calc(100vh - 190px)",
 ];
 
 for (const token of forbiddenStyleTokens) {
