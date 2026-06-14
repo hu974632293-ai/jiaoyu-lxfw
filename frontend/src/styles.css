@@ -2362,8 +2362,8 @@ textarea {
 }
 
 .employee-guide-workspace {
-  grid-template-columns: minmax(360px, 0.82fr) minmax(420px, 1fr);
-  align-items: start;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  align-items: stretch;
 }
 
 .employee-org-workspace,
@@ -2389,6 +2389,30 @@ textarea {
 
 .employee-guide-panel {
   min-height: clamp(320px, calc(100vh - 390px), 560px);
+}
+
+.employee-guide-workspace .employee-guide-panel {
+  min-height: 0;
+}
+
+.employee-guide-workspace .employee-guide-contact-panel {
+  min-height: 0;
+}
+
+.employee-guide-workspace .guide-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.employee-guide-contact-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.employee-guide-contact-list {
+  max-height: clamp(220px, calc(100vh - 500px), 360px);
+  overflow: auto;
+  align-content: start;
+  padding-right: 2px;
 }
 
 .compact-scroll-list {

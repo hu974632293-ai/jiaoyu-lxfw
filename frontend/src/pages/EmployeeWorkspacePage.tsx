@@ -345,6 +345,7 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
   const showCustomerQuery = initialView === "overview" || initialView === "customerQuery";
   const queryCount = typeof queryResult?.result.count === "number" ? queryResult.result.count : null;
   const queryReason = typeof queryResult?.result.reason === "string" ? queryResult.result.reason : "";
+  const guideDirectoryContacts = directoryContacts.slice(0, 4);
   const hasEmployeeSidePanel = showOrg || showGuide || showCustomerQuery;
   const employeeSectionCount = Number(showReports) + Number(hasEmployeeSidePanel);
   const employeeWorkbenchClass =
@@ -619,7 +620,31 @@ export default function EmployeeWorkspacePage({ onNavigate, initialView = "overv
             </div>
           </section> : null}
 
-          {showOrg || showGuide ? <section className="panel-block employee-directory-panel">
+          {initialView === "guide" ? <section className="panel-block employee-guide-contact-panel">
+            <div className="section-title">
+              <h3>协作联系人</h3>
+              <span className="status-pill">{guideDirectoryContacts.length} 人</span>
+            </div>
+            <div className="source-list employee-guide-contact-list">
+              {guideDirectoryContacts.length ? guideDirectoryContacts.map((item) => (
+                <article className={selectedContact?.id === item.id ? "is-highlighted" : ""} key={item.id} onClick={() => openDirectoryContact(item.id)}>
+                  <strong>{item.display_name}</strong>
+                  <span>{item.role_title} / {item.unit_name || item.department}</span>
+                  <em>{item.responsibilities || item.contact_info}</em>
+                </article>
+              )) : <div className="empty-state">暂无常用联系人。</div>}
+            </div>
+            {selectedContact ? (
+              <dl className="detail-list">
+                <div>
+                  <dt>当前联系人</dt>
+                  <dd>{selectedContact.display_name} / {selectedContact.contact_info || "暂无联系方式"}</dd>
+                </div>
+              </dl>
+            ) : null}
+          </section> : null}
+
+          {showOrg ? <section className="panel-block employee-directory-panel">
             <div className="section-title">
               <h3>通讯录</h3>
               <span className="status-pill">{directoryContacts.length} 人</span>
