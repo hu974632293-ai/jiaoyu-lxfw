@@ -102,24 +102,27 @@
 
 ## 7. 当前发现的不一致和返工风险
 
-### 7.1 企业助手 AI 指挥台专项检查失败
+### 7.1 企业助手 AI 指挥台专项检查已收口
 
-本次复核命令：
+2026-06-15 复核命令：
 
 ```powershell
 cd D:\00_Project\jiaoyu_lxfw\frontend
 node tests\employee_agent_command_check.js
+node tests\navigation_check.js
+node tests\employee_guide_layout_check.mjs
+npm.cmd run build
 ```
 
-结果：失败，错误为 `企业助手样式缺少布局规则: .agent-workspace-grid`。
+结果：全部通过。
 
 当前状态：
 
-- `frontend/src/pages/EmployeeAgentPanel.tsx` 已有 `enterprise-agent-shell`、`enterprise-agent-main`、对话区、任务侧栏、确认同步等结构。
-- `frontend/src/styles.css` 已有 `.enterprise-agent-*` 样式和 `.agent-content-frame`，也有通用 `.workspace-grid` 的 `height: calc(100vh - 8px)`。
-- 当前专项测试还要求后台外壳和样式存在 `.agent-workspace-grid`、`.agent-content-frame`、`grid-template-areas:`、`"conversation rail"` 等整屏布局约束。
+- `frontend/src/pages/EmployeeAgentPanel.tsx` 已有 `enterprise-agent-shell`、`enterprise-agent-main`、对话区、当前任务队列、确认同步等结构。
+- `frontend/src/pages/BackofficeShellPage.tsx` 已在企业助手页使用 `agent-workspace-grid` 和 `agent-content-frame`。
+- `frontend/src/styles.css` 已补齐 `.agent-workspace-grid` 专用窄导航布局，保留中央 AI 工作区和右侧当前任务队列的两列结构。
 
-判断：企业助手不是完全未实现，但当前实现和最新专项验收规则未完全对齐。后续应单独开企业助手指挥台收口任务，先确认最新设计是否以 `agent-workspace-grid` 专用外壳为准，再最小修改 `BackofficeShellPage.tsx` 和 `styles.css`。
+判断：企业助手专项验收规则已对齐，后续学生/老师 Agent、客户研判 Agent 和报告 Agent 可复用“窄导航 + 中央 AI 工作区 + 贴近结果的任务队列”结构，不需要在本批重做新人指南布局或整体视觉。
 
 ### 7.2 Dify YAML 覆盖范围已收口，真实同步仍待配置
 

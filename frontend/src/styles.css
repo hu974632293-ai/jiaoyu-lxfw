@@ -1046,6 +1046,32 @@ button:disabled {
   overflow: hidden;
 }
 
+.agent-workspace-grid,
+.agent-workspace-grid.sidebar-expanded,
+.agent-workspace-grid.sidebar-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.agent-workspace-grid .sidebar-head {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.agent-workspace-grid .sidebar-title,
+.agent-workspace-grid .sidebar-foot,
+.agent-workspace-grid .nav-item span {
+  display: none;
+}
+
+.agent-workspace-grid .sidebar-toggle {
+  width: 42px;
+  height: 34px;
+}
+
+.agent-workspace-grid .nav-item {
+  justify-content: center;
+}
+
 .workspace-grid .sidebar {
   height: 100%;
   max-height: 100%;
