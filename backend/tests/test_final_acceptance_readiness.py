@@ -173,3 +173,21 @@ def test_final_acceptance_execution_record_covers_manual_recording_fields():
         "git diff --check",
     ]:
         assert required_text in content
+
+
+def test_final_acceptance_execution_record_has_local_object_level_sample_or_reason():
+    content = read_doc("docs/v3-final-acceptance-execution-record.md")
+
+    for flow_id in [f"B{index}" for index in range(1, 13)]:
+        assert f"{flow_id} 本地样例" in content
+
+    for required_text in [
+        "本地对象级验收样例",
+        "当前运行库",
+        "本地浏览器入口",
+        "对象级证据",
+        "待补原因",
+        "真实 MySQL 待上线配置后补验",
+        "真实 Dify 待 key/app/dataset 配置后补验",
+    ]:
+        assert required_text in content

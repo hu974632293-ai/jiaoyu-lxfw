@@ -31,8 +31,8 @@
 
 | 范围 | 命令 | 当前记录 |
 | --- | --- | --- |
-| 最终验收文档覆盖 | `python -m pytest tests\\test_final_acceptance_readiness.py -v` | 本批复核：8 passed |
-| 后端完整回归 | `python -m pytest -v` | 本批复核：70 passed |
+| 最终验收文档覆盖 | `python -m pytest tests\\test_final_acceptance_readiness.py -v` | 本批复核：9 passed |
+| 后端完整回归 | `python -m pytest -v` | 本批复核：71 passed |
 | 前端登录与权限 | `npm.cmd run test:auth` | 本批复核：15 passed |
 | 后台导航结构 | `node tests\\navigation_check.js` | 本批复核：passed |
 | 企业助手指挥台 | `node tests\\employee_agent_command_check.js` | 本批复核：passed |
@@ -57,6 +57,31 @@
 | B10 | 报告生成到详情查看 | 待记录 | 待记录 | 待记录 | 待复核 | 待执行 | SQLite 待记录；MySQL 待记录 | 报告解释真实 Dify 待复核 | 待执行 |
 | B11 | 活动创建到官网报名 | 待记录 | 待记录 | 待记录 | 待复核 | 待执行 | SQLite 待记录；MySQL 待记录 | 公开客服真实 Dify 待复核 | 待执行 |
 | B12 | 项目维护到顾问推荐 | 待记录 | 待记录 | 待记录 | 待复核 | 待执行 | SQLite 待记录；MySQL 待记录 | 客户研判真实 Dify 待复核 | 待执行 |
+
+### 3.1 本地对象级验收样例
+
+本轮采集时间：2026-06-15；采集批次：`20260615023729-a0b4a5`。
+
+当前运行库：`mysql+pymysql://127.0.0.1:3306/jiaoyu_lxfw?charset=utf8mb4`。本轮只记录本机 MySQL 演示库对象级 API 证据和本地浏览器入口，不代表生产真实 MySQL 上线验收已经完成；真实 MySQL 待上线配置后补验。
+
+本地浏览器入口：统一以 `http://localhost:5173` 为前端入口记录。当前对象级证据由 FastAPI `TestClient` 调用现有接口采集，未启动长驻前端 dev server；人工浏览器步骤仍需验收人按下表 URL 打开、截图并复核刷新恢复。
+
+待补原因：真实 Dify key/app/dataset 未配置，不能验证真实知识库命中率；真实 Dify 待 key/app/dataset 配置后补验。截图、三档视口、跨账号人工浏览器点击仍待执行。
+
+| 编号 | 本地样例 | 对象级证据 | 本地浏览器入口 | 数据库口径 | Dify 状态 | 结论 |
+| --- | --- | --- | --- | --- | --- | --- |
+| B1 | B1 本地样例 | 活动 `14114`；报名 `55850`；自动生成线索 `56420`；已通过 `/api/events/{event_id}/registrations` 和 `/api/leads?source_channel=官网活动报名` 复核 | `http://localhost:5173/?public=events&eventId=14114` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | Dify 未配置 fallback 不阻断报名；真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工浏览器截图和顾问侧回显复核 |
+| B2 | B2 本地样例 | 顾问线索 `56421`；已通过 `/api/leads/{lead_id}` 和客户时间线复核 | `http://localhost:5173/backoffice?role=consultant&page=customer-growth&leadId=56421` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 客户研判真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认客户 360 URL 恢复 |
+| B3 | B3 本地样例 | 线索 `56421`；跟进 `55892`；任务 `37310`；阶段 `high_potential`；已通过时间线复核 | `http://localhost:5173/backoffice?role=manager&page=growth&leadId=56421` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 报告解释真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认管理者增长指标或报告回显 |
+| B4 | B4 本地样例 | 企业 Agent 确认动作日志 `525`；生成线索 `56422`；通过 `/api/enterprise-assistant/actions/confirm` 写入 | `http://localhost:5173/backoffice?role=employee&page=agent&leadId=56422` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 企业新人指南真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认员工入口、顾问承接和管理侧非孤立记录 |
+| B5 | B5 本地样例 | 员工日报 `668`；日报汇总 `report_count=1`；已通过 `/api/enterprise-assistant/daily-reports/summary` 复核 | `http://localhost:5173/backoffice?role=manager&page=daily-reports&reportId=668` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 报告解释真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认管理者日报汇总页面回显 |
+| B6 | B6 本地样例 | 学生 `23294`；请假 `23508`；审批状态 `已同意`；已通过请假详情复核 | `http://localhost:5173/backoffice?role=teacher&page=student-service&studentId=23294&leaveId=23508` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 学生生活支持真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认学生侧状态和老师队列同步 |
+| B7 | B7 本地样例 | 学生 `23294`；反馈 `23428`；处理状态 `已处理`；已通过反馈详情复核 | `http://localhost:5173/backoffice?role=teacher&page=student-service&studentId=23294&ticketId=23428` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 学生生活支持真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认学生侧处理记录和通知跳转 |
+| B8 | B8 本地样例 | 学生 `23294`；成绩 `69618`；已通过 `/api/student-assistant/students/{student_id}/grades` 复核 | `http://localhost:5173/backoffice?role=student&page=student-service&studentId=23294&gradeId=69618` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 不适用 | 有条件通过：待人工确认学生只读成绩查询和刷新恢复 |
+| B9 | B9 本地样例 | 学生 `23294`；学生助手意图 `psych_support`；风险等级 `中`；已通过老师任务队列复核 | `http://localhost:5173/backoffice?role=manager&page=reports&studentId=23294` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 学生生活支持和报告解释真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认管理者周报不出现诊断性表述 |
+| B10 | B10 本地样例 | 报告 `9608` 客户经营、`9609` 日报汇总、`9610` 心理周报、`9611` 投诉周报；均已通过详情接口复核 | `http://localhost:5173/backoffice?role=manager&page=reports&reportId=9608` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 报告解释真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认详情展开、导出和刷新恢复 |
+| B11 | B11 本地样例 | 后台活动 `14115`；官网报名 `55851`；自动生成线索 `56423`；已通过活动名单复核 | `http://localhost:5173/?public=events&eventId=14115` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 公开客服真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认官网可见、报名和后台名单同步 |
+| B12 | B12 本地样例 | 项目 `14363`；复用线索 `56421`；已通过 `/api/projects/recommendations?tags=升学&tags=低成本` 命中推荐 | `http://localhost:5173/backoffice?role=consultant&page=customer-growth&leadId=56421&projectId=14363` | 本机 MySQL 演示库对象级 API 通过；真实 MySQL 待上线配置后补验 | 客户研判真实 Dify 待 key/app/dataset 配置后补验 | 有条件通过：待人工确认客户研判面板引用最新项目方向 |
 
 ## 4. 单条记录模板
 

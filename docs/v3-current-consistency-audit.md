@@ -287,6 +287,19 @@ git diff --check
 - B1-B12 仍需按 `docs/business-flow-test-plan.md` 和 `docs/test-object-claim-table.md` 做真实浏览器链路记录。
 - 真实 MySQL 与真实 Dify 配置后必须单独补验，不能用本地自动化或 fallback 结果替代。
 
+### 7.12 最终 B1-B12 本地对象级验收样例登记
+
+2026-06-15 本地对象级采集批次 `20260615023729-a0b4a5` 已写入 `docs/v3-final-acceptance-execution-record.md`。
+
+边界：
+
+- 本轮不调用 `/api/demo/seed`，不重置演示库，只新增 `FINAL-B` 前缀验收样例对象。
+- 当前运行库为本机 MySQL 演示库：`mysql+pymysql://127.0.0.1:3306/jiaoyu_lxfw?charset=utf8mb4`。
+- 本轮记录覆盖 B1-B12 的活动、报名、线索、跟进、任务、日报、请假、反馈、成绩、心理辅助、报告和项目推荐对象 ID，并登记本地浏览器入口 URL。
+- 本轮对象级 API 证据不替代人工浏览器截图、三档视口、跨账号点击、真实 Dify key/app/dataset 命中率或生产 MySQL 上线验收。
+
+当前状态：B1-B12 均已有本地对象级样例或待补原因；后续应继续按执行记录中的 URL 做人工浏览器复核，并把截图或说明补回执行记录。
+
 ## 8. 后续执行建议
 
 1. 新线程入口先读：`AGENTS.md`、本审计文档、当前要执行的 batch plan 或专项 design。
