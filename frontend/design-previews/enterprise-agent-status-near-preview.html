@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>企业助手状态贴近主区预览</title>
+  <style>
+    :root {
+      --ink: #17231f;
+      --deep: #0f3d35;
+      --green: #247b64;
+      --mint: #dff4ec;
+      --paper: #fffdf8;
+      --ivory: #f6f1e7;
+      --line: rgba(23, 35, 31, 0.12);
+      --muted: #68766f;
+      --gold: #c9953d;
+      --red: #c85f4c;
+      --blue: #2b6f9a;
+      --shadow: 0 28px 72px rgba(23, 35, 31, 0.14);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(15,61,53,0.045) 1px, transparent 1px),
+        linear-gradient(rgba(15,61,53,0.045) 1px, transparent 1px),
+        linear-gradient(135deg, #f7f1e6 0%, #eef6f0 46%, #f8f3e9 100%);
+      background-size: 28px 28px, 28px 28px, auto;
+    }
+
+    .frame {
+      width: 1440px;
+      height: 960px;
+      padding: 24px;
+      display: grid;
+      grid-template-rows: 72px 1fr;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .topbar {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,253,248,0.86);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: var(--deep);
+      color: #fff8ec;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 21px; letter-spacing: 0; }
+    .sub, .muted { color: var(--muted); }
+    .sub { margin-top: 3px; font-size: 13px; }
+
+    .chips {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .chip {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0 12px;
+      background: rgba(255,255,255,0.64);
+      color: #4d5e58;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .chip.primary {
+      border-color: transparent;
+      background: var(--deep);
+      color: #fff8ec;
+      font-weight: 800;
+      padding: 0 16px;
+    }
+
+    .app {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr) 292px;
+      gap: 14px;
+    }
+
+    .rail,
+    .main,
+    .side {
+      border: 1px solid var(--line);
+      background: rgba(255,253,248,0.82);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+    }
+
+    .rail {
+      border-radius: 24px;
+      padding: 11px 8px;
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .rail button {
+      width: 48px;
+      height: 48px;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      background: transparent;
+      color: #52675f;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .rail button.active {
+      background: var(--deep);
+      color: #fff8ec;
+      box-shadow: 0 16px 34px rgba(15, 61, 53, 0.28);
+    }
+
+    .main {
+      min-width: 0;
+      min-height: 0;
+      border-radius: 26px;
+      display: grid;
+      grid-template-rows: 92px 1fr;
+      overflow: hidden;
+    }
+
+    .command-title {
+      border-bottom: 1px solid var(--line);
+      padding: 17px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(36,123,100,0.12), transparent 28%),
+        linear-gradient(110deg, rgba(255,253,248,0.92), rgba(223,244,236,0.58));
+    }
+
+    .title-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .ai-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      color: #fff8ec;
+      background: linear-gradient(145deg, #0f3d35, #247b64);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .command-title h2 {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .scenario-tabs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .scenario-tabs span {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: rgba(255,255,255,0.72);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .scenario-tabs .active {
+      border-color: transparent;
+      background: var(--gold);
+      color: #fffdf8;
+      font-weight: 800;
+    }
+
+    .command-body {
+      min-height: 0;
+      padding: 18px 20px 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 270px;
+      gap: 14px;
+    }
+
+    .conversation {
+      min-height: 0;
+      border: 1px solid rgba(23,35,31,0.1);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,253,248,0.98), rgba(255,253,248,0.86));
+      padding: 18px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 14px;
+    }
+
+    .stream {
+      min-height: 0;
+      display: grid;
+      align-content: start;
+      gap: 13px;
+      overflow: hidden;
+    }
+
+    .bubble {
+      max-width: 82%;
+      border-radius: 18px;
+      padding: 14px 16px;
+      line-height: 1.62;
+      font-size: 14px;
+    }
+
+    .bubble.ai {
+      background: #edf8f3;
+      border: 1px solid rgba(36,123,100,0.18);
+    }
+
+    .bubble.user {
+      justify-self: end;
+      background: var(--deep);
+      color: #fff8ec;
+      box-shadow: 0 16px 36px rgba(15,61,53,0.22);
+    }
+
+    .artifact {
+      width: min(800px, 94%);
+      border: 1px solid rgba(15,61,53,0.16);
+      border-radius: 24px;
+      background: #fffdf8;
+      box-shadow: 0 18px 46px rgba(23,35,31,0.08);
+      padding: 16px;
+      display: grid;
+      gap: 13px;
+    }
+
+    .artifact-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .artifact-head strong { font-size: 18px; }
+    .artifact-head span { color: var(--red); font-size: 12px; font-weight: 900; }
+
+    .artifact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    .artifact-item {
+      min-height: 86px;
+      border-radius: 17px;
+      background: #f6f1e7;
+      padding: 12px;
+    }
+
+    .artifact-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .artifact-item strong { font-size: 14px; line-height: 1.45; }
+
+    .artifact-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .artifact-actions button,
+    .composer button {
+      border: 0;
+      border-radius: 14px;
+      background: var(--deep);
+      color: #fff8ec;
+      font-weight: 900;
+      padding: 11px 14px;
+      font-size: 14px;
+    }
+
+    .artifact-actions .soft {
+      background: var(--mint);
+      color: var(--deep);
+    }
+
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr 94px;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 13px;
+    }
+
+    .composer input {
+      height: 50px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(255,255,255,0.88);
+      padding: 0 15px;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .status-near {
+      min-height: 0;
+      border: 1px solid rgba(15,61,53,0.12);
+      border-radius: 24px;
+      background: rgba(255,253,248,0.74);
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 13px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      font-size: 16px;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .status {
+      border: 1px solid rgba(15,61,53,0.1);
+      border-radius: 17px;
+      background: #fffdf8;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 9px;
+      align-items: center;
+      min-height: 64px;
+    }
+
+    .status.active {
+      background: #102f29;
+      color: #fff8ec;
+    }
+
+    .num {
+      width: 30px;
+      height: 30px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: var(--mint);
+      color: var(--deep);
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .status.active .num {
+      background: rgba(255,248,236,0.14);
+      color: #fff8ec;
+    }
+
+    .status strong { font-size: 14px; display: block; margin-bottom: 3px; }
+    .status small { color: var(--muted); line-height: 1.35; }
+    .status.active small { color: rgba(255,248,236,0.7); }
+
+    .context-box {
+      border: 1px solid rgba(15,61,53,0.1);
+      border-radius: 18px;
+      background: #fffdf8;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .context-row {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 9px;
+      align-items: center;
+      min-height: 42px;
+    }
+
+    .ctx-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: var(--mint);
+      color: var(--deep);
+      font-weight: 900;
+    }
+
+    .context-row strong { font-size: 13px; display: block; }
+    .context-row small { color: var(--muted); }
+
+    .side {
+      min-height: 0;
+      border-radius: 26px;
+      padding: 15px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .quick-light {
+      display: grid;
+      gap: 8px;
+    }
+
+    .quick-btn {
+      border: 1px solid rgba(15,61,53,0.1);
+      border-radius: 16px;
+      background: rgba(255,253,248,0.86);
+      padding: 10px 11px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 52px;
+    }
+
+    .quick-btn.active {
+      background: var(--deep);
+      color: #fff8ec;
+    }
+
+    .q-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: var(--mint);
+      color: var(--deep);
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .quick-btn.active .q-icon {
+      background: rgba(255,248,236,0.14);
+      color: #fff8ec;
+    }
+
+    .quick-btn strong { display: block; font-size: 13px; }
+    .quick-btn small { display: block; margin-top: 2px; color: var(--muted); }
+    .quick-btn.active small { color: rgba(255,248,236,0.68); }
+
+    .feed {
+      display: grid;
+      gap: 10px;
+    }
+
+    .feed-item {
+      border-left: 3px solid var(--gold);
+      padding-left: 11px;
+      display: grid;
+      gap: 3px;
+    }
+
+    .feed-item strong { font-size: 14px; }
+    .feed-item span { color: var(--muted); font-size: 12px; }
+
+    .principle {
+      align-self: end;
+      border-radius: 20px;
+      padding: 14px;
+      background: #251e18;
+      color: #fff8ec;
+      line-height: 1.56;
+      font-size: 13px;
+    }
+
+    .principle strong {
+      display: block;
+      color: #f4c36d;
+      margin-bottom: 5px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">企</div>
+        <div>
+          <h1>教育服务运营中枢</h1>
+          <p class="sub">企业助手 / AI 指挥台 / 员工工作区</p>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip">张员工 / 员工视角</span>
+        <span class="chip">待确认 3</span>
+        <span class="chip">今日处理 6</span>
+        <span class="chip primary">新建日报草稿</span>
+      </div>
+    </header>
+
+    <main class="app">
+      <nav class="rail">
+        <button>录</button>
+        <button>日</button>
+        <button>组</button>
+        <button>客</button>
+        <button>新</button>
+        <button class="active">AI</button>
+      </nav>
+
+      <section class="main">
+        <div class="command-title">
+          <div class="title-left">
+            <div class="ai-mark">AI</div>
+            <div>
+              <h2>企业助手</h2>
+              <p class="muted">把员工问题转成可确认、可跳转、可追踪的业务动作</p>
+            </div>
+          </div>
+          <div class="scenario-tabs">
+            <span class="active">日报</span>
+            <span>组织</span>
+            <span>客户</span>
+            <span>指南</span>
+          </div>
+        </div>
+
+        <div class="command-body">
+          <section class="conversation">
+            <div class="stream">
+              <div class="bubble ai">你可以直接说业务目标，例如“帮我整理今天日报”“查询学生服务投诉负责人”“客户阶段更新前需要确认什么”。</div>
+              <div class="bubble user">今天跟进了王同学申请材料，联系家长确认预算，发现签证材料还缺资产证明。帮我生成日报草稿。</div>
+              <div class="artifact">
+                <div class="artifact-head">
+                  <strong>日报草稿已生成</strong>
+                  <span>需要本人确认后提交</span>
+                </div>
+                <div class="artifact-grid">
+                  <div class="artifact-item"><span>今日完成</span><strong>申请材料跟进；家长预算确认</strong></div>
+                  <div class="artifact-item"><span>风险事项</span><strong>签证材料缺少资产证明</strong></div>
+                  <div class="artifact-item"><span>明日计划</span><strong>补齐证明并同步顾问</strong></div>
+                </div>
+                <div class="artifact-actions">
+                  <button class="soft">编辑内容</button>
+                  <button>提交日报</button>
+                </div>
+              </div>
+              <div class="bubble user">学生服务投诉现在谁负责？</div>
+              <div class="artifact">
+                <div class="artifact-head">
+                  <strong>组织查询结果</strong>
+                  <span>可跳转处理队列</span>
+                </div>
+                <div class="artifact-grid">
+                  <div class="artifact-item"><span>负责部门</span><strong>学生服务组</strong></div>
+                  <div class="artifact-item"><span>主负责人</span><strong>周老师</strong></div>
+                  <div class="artifact-item"><span>下一步</span><strong>查看待处理反馈</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="composer">
+              <input value="输入问题，例如：把张三更新为已签约前需要确认什么？" readonly />
+              <button>发送</button>
+            </div>
+          </section>
+
+          <aside class="status-near">
+            <h3 class="section-title">执行队列 <span>贴近结果</span></h3>
+            <div class="status-list">
+              <div class="status"><div class="num">1</div><div><strong>识别意图</strong><small>日报场景</small></div></div>
+              <div class="status active"><div class="num">2</div><div><strong>生成草稿</strong><small>等待本人确认</small></div></div>
+              <div class="status"><div class="num">3</div><div><strong>写入记录</strong><small>提交后同步</small></div></div>
+              <div class="status"><div class="num">4</div><div><strong>跳转处理</strong><small>可进入队列</small></div></div>
+            </div>
+            <div class="context-box">
+              <h3 class="section-title">当前上下文 <span>本轮</span></h3>
+              <div class="context-row"><div class="ctx-icon">王</div><div><strong>王同学</strong><small>申请材料跟进中</small></div></div>
+              <div class="context-row"><div class="ctx-icon">签</div><div><strong>签证材料</strong><small>缺少资产证明</small></div></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div>
+          <h3 class="section-title">快捷启动 <span>轻入口</span></h3>
+          <div class="quick-light">
+            <div class="quick-btn active"><div class="q-icon">日</div><div><strong>生成日报</strong><small>整理口述为草稿</small></div></div>
+            <div class="quick-btn"><div class="q-icon">组</div><div><strong>查负责人</strong><small>按事项定位联系人</small></div></div>
+            <div class="quick-btn"><div class="q-icon">客</div><div><strong>查客户</strong><small>受控客户视图</small></div></div>
+            <div class="quick-btn"><div class="q-icon">新</div><div><strong>新人指南</strong><small>制度与流程</small></div></div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="section-title">最近结果 <span>团队可复盘</span></h3>
+          <div class="feed">
+            <div class="feed-item"><strong>生成日报草稿</strong><span>2 分钟前 / 张员工</span></div>
+            <div class="feed-item"><strong>查询投诉负责人</strong><span>8 分钟前 / 周老师</span></div>
+            <div class="feed-item"><strong>打开新人清单</strong><span>23 分钟前 / 李顾问</span></div>
+          </div>
+        </div>
+
+        <div class="principle">
+          <strong>视觉权重</strong>
+          快捷入口保留可用性，但降为辅助；执行状态靠近 AI 产物，帮助员工理解当前动作到哪一步。
+        </div>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>
