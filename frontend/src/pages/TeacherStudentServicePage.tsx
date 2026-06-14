@@ -586,6 +586,32 @@ export default function TeacherStudentServicePage() {
         </button>
       </section>
 
+      <section className="teacher-agent-panel" aria-label="老师处理助手">
+        <div>
+          <p className="eyebrow">老师处理助手</p>
+          <h3>先定位待办，再确认处理</h3>
+          <span>面向请假审批、反馈工单、心理预警跟进和学业节点查询。</span>
+        </div>
+        <div className="teacher-agent-work-queue">
+          <article>
+            <strong>待审批请假</strong>
+            <span>{selectedLeave ? `#${selectedLeave.id} ${selectedLeave.status}` : "暂无待审批"}</span>
+          </article>
+          <article>
+            <strong>待处理反馈</strong>
+            <span>{selectedTicket ? `#${selectedTicket.id} ${selectedTicket.status}` : "暂无待处理"}</span>
+          </article>
+          <article>
+            <strong>心理预警跟进</strong>
+            <span>{tasks.psych_alerts.length || psychAlerts.length} 条需关注</span>
+          </article>
+        </div>
+        <div className="teacher-agent-confirmation">
+          <button onClick={approveLeave} disabled={hasPendingOperation || !selectedLeave}>确认处理请假</button>
+          <button className="ghost-button" onClick={handleFeedback} disabled={hasPendingOperation || !selectedTicket}>确认处理反馈</button>
+        </div>
+      </section>
+
       <section className="role-workbench-grid teacher-workbench-grid">
         <aside className="panel-block teacher-roster-panel">
           <div className="section-title">

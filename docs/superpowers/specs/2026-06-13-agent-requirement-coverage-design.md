@@ -361,7 +361,10 @@ YAML 应至少覆盖这些场景：
 
 1. 2026-06-15 已收紧 `/api/student-assistant/chat` 后端身份边界：对话入口必须携带登录 token，并使用当前 token 用户覆盖请求中的 `actor_username`。
 2. 学生账号只允许访问自己的学生档案；演示学生账号仅额外允许访问 `student01@student.demo`，不放开全量学生数据。
-3. 当前已完成后端 token、数据范围和身份回显测试；学生/老师前端 Agent 面板、动作草稿确认和老师处理型入口仍在本批后续范围。
+3. 当前已完成后端 token、数据范围和身份回显测试。
+4. 2026-06-15 已在学生服务台补 `student-agent-panel`，承接请假草稿、反馈草稿、进度查询和生活支持，并提示确认后提交。
+5. 2026-06-15 已在老师学生服务工作台补 `teacher-agent-panel`，承接待审批请假、待处理反馈、心理预警跟进和确认处理入口。
+6. 本批前端验证命令为 `cd frontend && node tests\student_teacher_agent_check.js`、`node tests\navigation_check.js`、`node tests\verify-student-workflow-pages.mjs`、`npm.cmd run build`、`git diff --check`。
 
 范围：
 

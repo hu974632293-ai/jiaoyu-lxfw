@@ -4472,7 +4472,7 @@ textarea {
 
 .student-chat-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.36fr) minmax(260px, 0.32fr);
   gap: 12px;
   align-items: stretch;
 }
@@ -4505,6 +4505,96 @@ textarea {
 .student-chat-panel .message.user {
   background: #eef8f4;
   border-color: #cce7dc;
+}
+
+.student-agent-panel,
+.teacher-agent-panel {
+  border: 1px solid rgba(24, 64, 50, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 253, 249, 0.88);
+  box-shadow: 0 14px 34px rgba(31, 44, 38, 0.08);
+  overflow-wrap: anywhere;
+}
+
+.student-agent-panel {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.student-agent-scope,
+.student-agent-draft-queue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.student-agent-scope {
+  grid-template-columns: minmax(0, 0.74fr) minmax(0, 1fr);
+}
+
+.student-agent-scope span,
+.student-agent-draft-queue span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.student-agent-scope strong,
+.student-agent-draft-queue strong {
+  font-size: 13px;
+}
+
+.student-agent-draft-queue {
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.student-agent-draft-queue article {
+  display: grid;
+  gap: 4px;
+}
+
+.teacher-agent-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.teacher-agent-panel h3 {
+  margin: 3px 0 6px;
+  font-size: 18px;
+}
+
+.teacher-agent-panel span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.teacher-agent-work-queue {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.teacher-agent-work-queue article {
+  display: grid;
+  gap: 5px;
+  min-height: 76px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(247, 250, 246, 0.86);
+}
+
+.teacher-agent-confirmation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .student-progress-panel .guide-list article,

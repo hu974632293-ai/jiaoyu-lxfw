@@ -560,6 +560,31 @@ export default function StudentServicePage() {
               {isSending ? "正在发送" : "发送给服务台"}
             </button>
           </div>
+          <aside className="student-agent-panel" aria-label="学生服务助手">
+            <div className="section-title">
+              <h3>学生服务助手</h3>
+              <span className="status-pill">只处理本人事项</span>
+            </div>
+            <div className="student-agent-scope">
+              <span>请假草稿</span>
+              <strong>{latestLeave ? `#${latestLeave.id} ${latestLeave.status}` : "待填写"}</strong>
+              <span>反馈草稿</span>
+              <strong>{latestTicket ? `#${latestTicket.id} ${latestTicket.status}` : "待填写"}</strong>
+              <span>进度查询</span>
+              <strong>{progressItems[0]?.stage ?? "材料进度"}</strong>
+              <span>生活支持</span>
+              <strong>住宿、行前、就医</strong>
+            </div>
+            <div className="student-agent-draft-queue">
+              <article>
+                <strong>确认后提交</strong>
+                <span>服务助手先整理请假或反馈内容，再由学生确认提交到对应记录。</span>
+              </article>
+              <button className="tiny-button" onClick={() => sendChat(input)} disabled={hasPendingOperation}>
+                生成服务建议
+              </button>
+            </div>
+          </aside>
         </div>
 
         <aside className="side-stack">
