@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions import require_permission, require_token_permission
+from app.core.permissions import require_token_permission
 from app.core.response import ok
 from app.models.user import SysUser
 from app.schemas.enterprise import AgentActionConfirmRequest, DailyReportCreate, EnterpriseChatRequest, Nl2SqlQueryRequest, VoiceDraftRequest
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/enterprise-assistant", tags=["enterprise-assista
 
 
 @router.post("/chat")
-def chat(payload: EnterpriseChatRequest, _permission: None = Depends(require_permission("assistant:enterprise:use")), db: Session = Depends(get_db)):
+def chat(payload: EnterpriseChatRequest, _permission: None = Depends(require_token_permission("assistant:enterprise:use")), db: Session = Depends(get_db)):
     return ok(handle_enterprise_chat(db, payload))
 
 
@@ -42,7 +42,7 @@ def create_report(
 @router.post("/voice-drafts")
 def voice_draft(
     payload: VoiceDraftRequest,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
 ):
     return ok(build_voice_draft(payload))
 
@@ -50,7 +50,7 @@ def voice_draft(
 @router.post("/actions/confirm")
 def confirm_action(
     payload: AgentActionConfirmRequest,
-    current_user: SysUser = Depends(require_permission("assistant:enterprise:use")),
+    current_user: SysUser = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(confirm_agent_action(db, payload, current_user.username))
@@ -92,7 +92,7 @@ def report_detail(
 @router.get("/org-units")
 def org_units(
     keyword: str | None = None,
-    _permission: None = Depends(require_permission("assistant:enterprise:use")),
+    _permission: None = Depends(require_token_permission("assistant:enterprise:use")),
     db: Session = Depends(get_db),
 ):
     return ok(list_org_units(db, keyword))

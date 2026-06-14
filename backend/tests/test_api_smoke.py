@@ -129,12 +129,15 @@ def test_permission_dependencies_reject_user_without_required_permission():
         db.commit()
 
     denied_users_response = client.get("/api/users", headers={"X-Actor-Username": "stage7_student"})
-    assert denied_users_response.status_code == 403
+    assert denied_users_response.status_code == 401
     denied_users_payload = denied_users_response.json()
-    assert denied_users_payload["code"] == 40300
-    assert "权限" in denied_users_payload["msg"]
+    assert denied_users_payload["code"] == 40100
 
     student_headers = _auth_headers("stage7_student", "demo")
+    token_denied_users_response = client.get("/api/users", headers=student_headers)
+    assert token_denied_users_response.status_code == 403
+    assert token_denied_users_response.json()["code"] == 40300
+
     denied_daily_response = client.post(
         "/api/enterprise-assistant/daily-reports",
         headers=student_headers,
@@ -143,7 +146,7 @@ def test_permission_dependencies_reject_user_without_required_permission():
     assert denied_daily_response.status_code == 403
     assert denied_daily_response.json()["code"] == 40300
 
-    admin_response = client.get("/api/users", headers={"X-Actor-Username": "admin"})
+    admin_response = client.get("/api/users", headers=_auth_headers("admin", "admin123"))
     assert admin_response.status_code == 200
     assert admin_response.json()["code"] == 0
 

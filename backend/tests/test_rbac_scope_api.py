@@ -139,6 +139,55 @@ def test_enterprise_assistant_core_queries_accept_bearer_token_and_enforce_role_
     assert response.json()["code"] == 40300
 
 
+def test_remaining_protected_backoffice_routes_reject_legacy_actor_header_and_accept_token():
+    client.post("/api/demo/seed")
+    admin_headers = {"Authorization": f"Bearer {_token('admin', 'admin123')}"}
+    legacy_headers = {"X-Actor-Username": "admin"}
+
+    legacy_requests = [
+        client.post("/api/enterprise-assistant/chat", headers=legacy_headers, json={"message": "提交今日日报"}),
+        client.post(
+            "/api/enterprise-assistant/voice-drafts",
+            headers=legacy_headers,
+            json={"target_type": "daily_report", "transcript": "今天完成客户回访"},
+        ),
+        client.post(
+            "/api/enterprise-assistant/actions/confirm",
+            headers=legacy_headers,
+            json={"action_type": "submit_daily_report", "idempotency_key": "legacy-confirm", "draft": {"content": "旧 header 不应确认"}},
+        ),
+        client.get("/api/enterprise-assistant/org-units", headers=legacy_headers),
+        client.get("/api/users", headers=legacy_headers),
+        client.get("/api/roles", headers=legacy_headers),
+        client.get("/api/roles/permissions", headers=legacy_headers),
+        client.get("/api/audit/logs", headers=legacy_headers),
+        client.post("/api/audit/logs", headers=legacy_headers, json={"action": "旧 header 不应写审计"}),
+        client.get("/api/reports", headers=legacy_headers),
+        client.post("/api/reports/generate", headers=legacy_headers, json={"report_type": "customer_operation"}),
+    ]
+    for response in legacy_requests:
+        assert response.status_code == 401
+        assert response.json()["code"] == 40100
+
+    allowed_requests = [
+        client.post("/api/enterprise-assistant/chat", headers=admin_headers, json={"message": "查询组织架构"}),
+        client.post(
+            "/api/enterprise-assistant/voice-drafts",
+            headers=admin_headers,
+            json={"target_type": "daily_report", "transcript": "今天完成客户回访"},
+        ),
+        client.get("/api/enterprise-assistant/org-units", headers=admin_headers),
+        client.get("/api/users", headers=admin_headers),
+        client.get("/api/roles", headers=admin_headers),
+        client.get("/api/roles/permissions", headers=admin_headers),
+        client.get("/api/audit/logs", headers=admin_headers),
+        client.get("/api/reports", headers=admin_headers),
+    ]
+    for response in allowed_requests:
+        assert response.status_code == 200
+        assert response.json()["code"] == 0
+
+
 def test_crm_write_operations_reject_legacy_actor_header_and_accept_bearer_token():
     client.post("/api/demo/seed")
     admin_headers = {"Authorization": f"Bearer {_token('admin', 'admin123')}"}

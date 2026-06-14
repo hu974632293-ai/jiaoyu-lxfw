@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions import require_permission
+from app.core.permissions import require_token_permission
 from app.core.response import ok
 from app.models.permission import SysRole
 from app.schemas.admin import AuditLogCreate, RoleCreate, RolePermissionUpdate
@@ -20,13 +20,13 @@ router = APIRouter(prefix="/api/roles", tags=["roles"])
 
 
 @router.get("")
-def list_all(_permission: None = Depends(require_permission("system:role:manage")), db: Session = Depends(get_db)):
+def list_all(_permission: None = Depends(require_token_permission("system:role:manage")), db: Session = Depends(get_db)):
     ensure_default_admin_data(db)
     return ok(list_roles(db))
 
 
 @router.post("")
-def create(payload: RoleCreate, _permission: None = Depends(require_permission("system:role:manage")), db: Session = Depends(get_db)):
+def create(payload: RoleCreate, _permission: None = Depends(require_token_permission("system:role:manage")), db: Session = Depends(get_db)):
     ensure_default_admin_data(db)
     role = create_role(db, payload)
     create_audit_log(
@@ -43,7 +43,7 @@ def create(payload: RoleCreate, _permission: None = Depends(require_permission("
 
 
 @router.get("/permissions")
-def permissions(_permission: None = Depends(require_permission("system:role:manage")), db: Session = Depends(get_db)):
+def permissions(_permission: None = Depends(require_token_permission("system:role:manage")), db: Session = Depends(get_db)):
     ensure_default_admin_data(db)
     return ok(list_permissions(db))
 
@@ -52,7 +52,7 @@ def permissions(_permission: None = Depends(require_permission("system:role:mana
 def update_permissions(
     role_id: int,
     payload: RolePermissionUpdate,
-    _permission: None = Depends(require_permission("system:role:manage")),
+    _permission: None = Depends(require_token_permission("system:role:manage")),
     db: Session = Depends(get_db),
 ):
     ensure_default_admin_data(db)

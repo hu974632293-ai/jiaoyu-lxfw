@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions import require_permission
+from app.core.permissions import require_token_permission
 from app.core.response import fail, ok
 from app.models.report import ReportSnapshot
 from app.schemas.report import CustomerOperationReportRequest, ReportGenerateRequest
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 @router.post("/customer-operation")
 def customer_operation(
     payload: CustomerOperationReportRequest,
-    _permission: None = Depends(require_permission("report:snapshot:read")),
+    _permission: None = Depends(require_token_permission("report:snapshot:read")),
     db: Session = Depends(get_db),
 ):
     report = generate_customer_operation_report(db, generated_by=payload.generated_by)
@@ -29,7 +29,7 @@ def customer_operation(
 @router.post("/generate")
 def generate(
     payload: ReportGenerateRequest,
-    _permission: None = Depends(require_permission("report:snapshot:read")),
+    _permission: None = Depends(require_token_permission("report:snapshot:read")),
     db: Session = Depends(get_db),
 ):
     try:
@@ -39,13 +39,13 @@ def generate(
 
 
 @router.get("")
-def list_reports(_permission: None = Depends(require_permission("report:snapshot:read")), db: Session = Depends(get_db)):
+def list_reports(_permission: None = Depends(require_token_permission("report:snapshot:read")), db: Session = Depends(get_db)):
     reports = db.query(ReportSnapshot).order_by(ReportSnapshot.id.desc()).all()
     return ok([serialize_report_summary(item) for item in reports])
 
 
 @router.get("/{report_id}")
-def detail(report_id: int, _permission: None = Depends(require_permission("report:snapshot:read")), db: Session = Depends(get_db)):
+def detail(report_id: int, _permission: None = Depends(require_token_permission("report:snapshot:read")), db: Session = Depends(get_db)):
     report = db.query(ReportSnapshot).filter(ReportSnapshot.id == report_id).first()
     if not report:
         return fail("报告不存在", 40403)
