@@ -32,7 +32,10 @@ const requiredStyleTokens = [
   ".enterprise-agent-conversation",
   ".enterprise-agent-execution",
   ".enterprise-agent-side",
-  "grid-template-columns: minmax(0, 1fr) 270px",
+  "grid-template-columns: minmax(0, 1fr) 340px",
+  "grid-template-areas:",
+  '"conversation rail"',
+  '"conversation side"',
 ];
 
 for (const token of requiredStyleTokens) {
@@ -54,6 +57,16 @@ const forbiddenTokens = [
 for (const token of forbiddenTokens) {
   if (component.includes(token)) {
     throw new Error(`企业助手页面不应出现实现话术: ${token}`);
+  }
+}
+
+const forbiddenStyleTokens = [
+  "grid-template-columns: minmax(0, 1fr) 270px 292px",
+];
+
+for (const token of forbiddenStyleTokens) {
+  if (styles.includes(token)) {
+    throw new Error(`企业助手不应继续使用三列或伪两列布局: ${token}`);
   }
 }
 

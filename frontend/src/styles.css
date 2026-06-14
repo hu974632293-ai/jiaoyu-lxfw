@@ -4702,9 +4702,12 @@ textarea {
 
 .enterprise-agent-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 270px 292px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas:
+    "conversation rail"
+    "conversation side";
   gap: 16px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .enterprise-agent-conversation,
@@ -4717,9 +4720,10 @@ textarea {
 }
 
 .enterprise-agent-conversation {
+  grid-area: conversation;
   display: grid;
   grid-template-rows: auto minmax(240px, 1fr) auto auto;
-  min-height: 690px;
+  min-height: calc(100vh - 190px);
   padding: 18px;
   gap: 16px;
 }
@@ -4937,6 +4941,14 @@ textarea {
   align-self: start;
 }
 
+.enterprise-agent-execution {
+  grid-area: rail;
+}
+
+.enterprise-agent-side {
+  grid-area: side;
+}
+
 .enterprise-panel-heading {
   margin-bottom: 14px;
 }
@@ -5081,11 +5093,7 @@ textarea {
 
 @media (max-width: 1280px) {
   .enterprise-agent-main {
-    grid-template-columns: minmax(0, 1fr) 260px;
-  }
-
-  .enterprise-agent-side {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) 320px;
   }
 }
 
@@ -5097,6 +5105,10 @@ textarea {
   .enterprise-agent-header,
   .enterprise-agent-main {
     display: block;
+  }
+
+  .enterprise-agent-conversation {
+    min-height: auto;
   }
 
   .enterprise-agent-tabs {
