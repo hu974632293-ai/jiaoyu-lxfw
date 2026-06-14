@@ -5,16 +5,18 @@ from app.core.auth import _resolve_bearer_user
 from app.core.database import get_db
 from app.core.permissions import PermissionDeniedError
 from app.core.response import fail, ok
-from app.schemas.knowledge import KnowledgeChatRequest, KnowledgeSourceCreate, KnowledgeSourceUpdate, KnowledgeSyncJobCreate
+from app.schemas.knowledge import KnowledgeChatRequest, KnowledgeSourceCreate, KnowledgeSourceUpdate, KnowledgeSyncJobCreate, KnowledgeSyncRetryRequest
 from app.services.knowledge_service import (
     ask_knowledge,
     create_source,
     create_sync_job,
+    get_dify_health,
     get_chat_log,
     get_latest_chat_session,
     list_chat_logs,
     list_sources,
     list_sync_jobs,
+    retry_sync_job,
     serialize_chat_detail,
     serialize_source,
     serialize_sync_job,
@@ -64,6 +66,11 @@ def logs(scene: str | None = None, db: Session = Depends(get_db)):
     return ok(list_chat_logs(db, scene))
 
 
+@router.get("/dify-health")
+def dify_health():
+    return ok(get_dify_health())
+
+
 @router.get("/sessions/latest")
 def latest_session(scene: str, channel: str = "web", actor_username: str | None = None, db: Session = Depends(get_db)):
     return ok(get_latest_chat_session(db, scene, channel, actor_username))
@@ -106,4 +113,12 @@ def create_knowledge_sync_job(payload: KnowledgeSyncJobCreate, db: Session = Dep
     job, error = create_sync_job(db, payload)
     if not job:
         return fail(error or "知识同步任务创建失败", 40406)
+    return ok(serialize_sync_job(job))
+
+
+@router.post("/sync-jobs/{job_id}/retry")
+def retry_knowledge_sync_job(job_id: int, payload: KnowledgeSyncRetryRequest, db: Session = Depends(get_db)):
+    job, error = retry_sync_job(db, job_id, payload.triggered_by)
+    if not job:
+        return fail(error or "知识同步任务不存在", 40406)
     return ok(serialize_sync_job(job))

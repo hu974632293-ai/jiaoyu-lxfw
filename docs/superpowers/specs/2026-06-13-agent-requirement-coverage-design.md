@@ -417,6 +417,13 @@ YAML 应至少覆盖这些场景：
 
 ### 6.6 第六批：Dify 真实同步
 
+当前状态：
+
+1. 2026-06-15 已补 `/api/knowledge/dify-health`，返回 Dify 配置健康、缺失配置项、已登记 app scene 和可解释状态。
+2. 2026-06-15 已补 `/api/knowledge/sync-jobs/{job_id}/retry`，真实配置未完成时不出网，只记录重试请求、失败原因和审计日志。
+3. 2026-06-15 已在知识库治理页补 `dify-health-panel`，展示配置待完善、缺失项、同步任务状态和重试同步入口。
+4. 本批验证命令为 `cd backend && python -m pytest tests\test_knowledge_api.py -v`、`cd frontend && node tests\dify_sync_readiness_check.js`、`npm.cmd run build`、`git diff --check`。
+
 范围：
 
 1. 知识来源同步到 Dify 数据集。

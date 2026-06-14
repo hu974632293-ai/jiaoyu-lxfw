@@ -76,6 +76,20 @@ def test_knowledge_sources_sync_jobs_scene_logs_and_fallback_api():
     assert sync_payload["data"]["status"] == "fallback_recorded"
     assert "未执行真实 Dify 同步" in sync_payload["data"]["message"]
 
+    health_response = client.get("/api/knowledge/dify-health")
+    assert health_response.status_code == 200
+    health_payload = health_response.json()
+    assert health_payload["code"] == 0
+    assert health_payload["data"]["configured"] is False
+    assert "dify_api_key" in health_payload["data"]["missing"]
+
+    retry_response = client.post(f"/api/knowledge/sync-jobs/{sync_payload['data']['id']}/retry", json={"triggered_by": "admin"})
+    assert retry_response.status_code == 200
+    retry_payload = retry_response.json()
+    assert retry_payload["code"] == 0
+    assert retry_payload["data"]["status"] == "retry_fallback_recorded"
+    assert "Dify 配置未完成" in retry_payload["data"]["message"]
+
     jobs_response = client.get("/api/knowledge/sync-jobs")
     assert jobs_response.status_code == 200
     jobs_payload = jobs_response.json()

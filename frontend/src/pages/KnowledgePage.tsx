@@ -47,6 +47,14 @@ type SyncJob = {
   message: string;
   created_at: string | null;
 };
+type DifyHealth = {
+  configured: boolean;
+  missing: string[];
+  api_base_configured: boolean;
+  api_key_configured: boolean;
+  app_scenes: string[];
+  ready_message: string;
+};
 type KnowledgeOperation = "ask" | "source" | "sync" | null;
 
 const sceneOptions: Array<{ key: SceneKey; label: string; sample: string }> = [
@@ -79,6 +87,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
   const [logs, setLogs] = useState<ChatLog[]>([]);
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
   const [syncJobs, setSyncJobs] = useState<SyncJob[]>([]);
+  const [difyHealth, setDifyHealth] = useState<DifyHealth | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<number | null>(null);
   const [sourceForm, setSourceForm] = useState(defaultSourceForm);
   const [message, setMessage] = useState("等待提问");
@@ -173,6 +182,21 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
       setSyncJobs(await apiRequest<SyncJob[]>("/api/knowledge/sync-jobs"));
     } catch {
       setSyncJobs([]);
+    }
+  }
+
+  async function loadDifyHealth() {
+    try {
+      setDifyHealth(await apiRequest<DifyHealth>("/api/knowledge/dify-health"));
+    } catch {
+      setDifyHealth({
+        configured: false,
+        missing: ["health_check"],
+        api_base_configured: false,
+        api_key_configured: false,
+        app_scenes: [],
+        ready_message: "Dify 配置健康暂时无法读取。",
+      });
     }
   }
 
@@ -275,6 +299,42 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
     }
   }
 
+  async function retrySyncJob(item: SyncJob) {
+    setPendingOperation("sync");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在重试同步任务",
+      detail: `同步任务 #${item.id} 将重新记录状态。`,
+      target: `同步任务 #${item.id}`,
+    });
+    try {
+      const updated = await apiRequest<SyncJob>(`/api/knowledge/sync-jobs/${item.id}/retry`, {
+        method: "POST",
+        body: JSON.stringify({ triggered_by: "admin" }),
+      });
+      setHighlightSyncJobId(updated.id);
+      await loadSyncJobs();
+      await loadDifyHealth();
+      setOperationFeedback({
+        phase: updated.status.includes("fallback") ? "fallback" : "success",
+        title: "同步任务重试已记录",
+        detail: updated.message,
+        target: `同步任务 #${updated.id}`,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "同步任务重试失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "同步任务暂时无法重试。",
+        target: `同步任务 #${item.id}`,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
   function changeScene(nextScene: SceneKey) {
     setScene(nextScene);
     const nextOption = sceneOptions.find((item) => item.key === nextScene);
@@ -289,6 +349,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
     loadLogs();
     loadSources();
     loadSyncJobs();
+    loadDifyHealth();
   }, []);
 
   const hasPendingOperation = pendingOperation !== null;
@@ -381,6 +442,14 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
           </section>
 
           <section className="panel-block">
+            <div className="dify-health-panel">
+              <div>
+                <strong>{difyHealth?.configured ? "Dify 配置已就绪" : "配置待完善"}</strong>
+                <span>{difyHealth?.ready_message ?? "正在读取配置健康..."}</span>
+              </div>
+              <button className="tiny-button" onClick={loadDifyHealth}>刷新状态</button>
+              <em>{difyHealth?.missing.length ? `缺失：${difyHealth.missing.join("、")}` : "可进入同步预留流程"}</em>
+            </div>
             <div className="section-title">
               <h3>同步任务</h3>
               <button className="tiny-button" onClick={createSyncJob} disabled={hasPendingOperation}>
@@ -394,6 +463,9 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
                   <strong>#{item.id} / {item.status}</strong>
                   <span>来源 #{item.source_id ?? "-"} / {item.job_type}</span>
                   <em>{item.message}</em>
+                  <button className="tiny-button" onClick={() => retrySyncJob(item)} disabled={hasPendingOperation}>
+                    重试同步
+                  </button>
                 </article>
               ))}
               {!syncJobs.length && <div className="empty-state">暂无同步任务记录。</div>}

@@ -246,6 +246,53 @@ def create_sync_job(db: Session, payload: KnowledgeSyncJobCreate) -> tuple[Knowl
     return job, None
 
 
+def get_dify_health() -> dict[str, Any]:
+    from app.core.config import settings
+
+    app_map = _parse_dify_app_map(settings.dify_app_id_map)
+    missing = []
+    if not settings.dify_api_base:
+        missing.append("dify_api_base")
+    if not settings.dify_api_key:
+        missing.append("dify_api_key")
+    if not any(app_map.values()) and not settings.dify_app_id:
+        missing.append("dify_app_id_map")
+    return {
+        "configured": not missing,
+        "missing": missing,
+        "api_base_configured": bool(settings.dify_api_base),
+        "api_key_configured": bool(settings.dify_api_key),
+        "app_scenes": sorted(app_map.keys()),
+        "ready_message": "Dify 配置已具备同步预留条件" if not missing else "Dify 配置未完成，当前仅记录同步任务并保留可解释兜底。",
+    }
+
+
+def retry_sync_job(db: Session, job_id: int, triggered_by: str = "system") -> tuple[KnowledgeSyncJob | None, str | None]:
+    job = db.get(KnowledgeSyncJob, job_id)
+    if not job:
+        return None, "知识同步任务不存在"
+    health = get_dify_health()
+    if health["configured"]:
+        job.status = "retry_ready"
+        job.message = "Dify 配置已具备条件，当前记录重试请求，等待真实同步执行器接入。"
+    else:
+        job.status = "retry_fallback_recorded"
+        job.message = f"Dify 配置未完成，已记录重试请求；缺失：{', '.join(health['missing'])}。"
+    job.finished_at = datetime.utcnow()
+    db.flush()
+    _create_audit_log(
+        db,
+        triggered_by,
+        "重试知识同步任务",
+        "knowledge_sync_job",
+        str(job.id),
+        {"source_id": job.source_id, "status": job.status, "missing": health["missing"]},
+    )
+    db.commit()
+    db.refresh(job)
+    return job, None
+
+
 def list_sync_jobs(db: Session) -> list[dict[str, Any]]:
     jobs = db.query(KnowledgeSyncJob).order_by(KnowledgeSyncJob.id.desc()).limit(50).all()
     return [serialize_sync_job(item) for item in jobs]
@@ -294,6 +341,15 @@ def serialize_chat_detail(item: KnowledgeChatLog) -> dict[str, Any]:
         "fallback_reason": item.fallback_reason,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
+
+
+def _parse_dify_app_map(raw: str) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for item in raw.split(","):
+        key, _, value = item.partition(":")
+        if key.strip():
+            result[key.strip()] = value.strip()
+    return result
 
 
 def _resolve_chat_session(db: Session, payload) -> ChatSession | None:

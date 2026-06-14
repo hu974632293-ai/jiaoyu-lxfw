@@ -46,3 +46,7 @@ class KnowledgeSyncJobCreate(BaseModel):
     source_id: int | None = None
     job_type: str = "manual_record"
     triggered_by: str = "system"
+
+
+class KnowledgeSyncRetryRequest(BaseModel):
+    triggered_by: str = "system"
