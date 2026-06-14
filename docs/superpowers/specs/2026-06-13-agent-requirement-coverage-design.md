@@ -379,6 +379,12 @@ YAML 应至少覆盖这些场景：
 
 ### 6.4 第四批：客户研判 Agent 和报告 Agent
 
+当前状态：
+
+1. 2026-06-15 已在客户增长页补 `customer-assessment-agent`，通过 `/api/knowledge/chat` 携带 `customer_assessment` scene、当前线索和业务上下文生成研判依据与跟进建议。
+2. 2026-06-15 已在报告中心补 `report-assistant-panel`，通过 `/api/knowledge/chat` 携带 `report_assistant` scene、当前报告类型和报告上下文解释本期变化并定位待处理对象。
+3. 本批前端验证命令为 `cd frontend && node tests\customer_report_agent_check.js`、`node tests\customer_growth_check.js`、`node tests\navigation_check.js`、`npm.cmd run build`、`git diff --check`。
+
 范围：
 
 1. 客户研判 Agent 支持粘贴客户资料、解释画像规则、推荐项目、生成跟进建议。

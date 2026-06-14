@@ -28,7 +28,7 @@ for (const { label, pattern } of requiredApiPatterns) {
   }
 }
 
-if (!/onNavigate\("customer360",\s*(createdId|lead\.id)/.test(growth)) {
+if (!/onNavigate\("(?:customer360|consultantCustomer360)",\s*(createdId|lead\.id)/.test(growth)) {
   throw new Error("新建或列表客户应可进入客户 360");
 }
 

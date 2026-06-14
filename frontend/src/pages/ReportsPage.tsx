@@ -19,7 +19,11 @@ type ReportDetail = ReportCreated & {
 type ReportListItem = ReportCreated & {
   created_at: string | null;
 };
-type ReportOperation = "load" | "generate" | "open" | null;
+type ReportAgentResult = {
+  answer: string;
+  status: string;
+};
+type ReportOperation = "load" | "generate" | "open" | "agent" | null;
 
 function formatOperationTime() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -41,6 +45,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
   });
   const [pendingOperation, setPendingOperation] = useState<ReportOperation>(null);
   const [highlightReportId, setHighlightReportId] = useState<number | null>(null);
+  const [agentResult, setAgentResult] = useState<ReportAgentResult | null>(null);
 
   async function loadReports(options: { preserveFeedback?: boolean } = {}) {
     if (!options.preserveFeedback) {
@@ -157,6 +162,47 @@ export default function ReportsPage({ onNavigate }: PageProps) {
     }
   }
 
+  async function askReportAssistant() {
+    const report = detail ?? created;
+    const targetTitle = report?.title ?? active.title;
+    setPendingOperation("agent");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在解释报告变化",
+      detail: `围绕 ${targetTitle} 提炼变化原因和待处理对象。`,
+      target: targetTitle,
+    });
+    try {
+      const result = await apiRequest<ReportAgentResult>("/api/knowledge/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          scene: "report_assistant",
+          question: `请解释本期变化，并定位待处理对象：${targetTitle}`,
+          actor_username: "manager",
+          business_context: { report_type: activeType, report_id: report?.id ?? null, title: targetTitle },
+        }),
+      });
+      setAgentResult(result);
+      setOperationFeedback({
+        phase: result.status === "success" ? "success" : "fallback",
+        title: "报告解释已返回",
+        detail: "解释结果已显示在报告解释助手面板，可继续查看报告列表或跳转相关客户。",
+        target: targetTitle,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "报告解释生成失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "暂时无法生成解释，可稍后重试。",
+        target: targetTitle,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
   useEffect(() => {
     loadReports();
   }, []);
@@ -242,6 +288,24 @@ export default function ReportsPage({ onNavigate }: PageProps) {
           ) : (
             <div className="empty-state">点击生成报告后展示业务摘要。</div>
           )}
+          <section className="report-assistant-panel" aria-label="报告解释助手">
+            <div className="section-title">
+              <h3>报告解释助手</h3>
+              <span className="status-pill">管理者可见</span>
+            </div>
+            <div className="report-agent-actions">
+              <button className="tiny-button" onClick={askReportAssistant} disabled={hasPendingOperation}>
+                解释本期变化
+              </button>
+              <button className="ghost-button" onClick={askReportAssistant} disabled={hasPendingOperation}>
+                定位待处理对象
+              </button>
+            </div>
+            <article className="report-agent-result">
+              <strong>{agentResult ? "解释摘要" : "待生成解释"}</strong>
+              <span>{agentResult?.answer ?? "生成或打开报告后，可解释增长、日报、心理和投诉变化，并提示需要跟进的对象。"}</span>
+            </article>
+          </section>
         </div>
 
         <aside className="panel-block">

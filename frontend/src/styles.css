@@ -4022,6 +4022,42 @@ textarea {
   white-space: normal;
 }
 
+.customer-assessment-agent,
+.report-assistant-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(26, 92, 132, 0.14);
+  border-radius: 12px;
+  background: #f8fbfe;
+  overflow-wrap: anywhere;
+}
+
+.customer-agent-actions,
+.report-agent-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 8px;
+}
+
+.customer-agent-result,
+.report-agent-result {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #dfe8f2;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.customer-agent-result span,
+.report-agent-result span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .advisor-queue-title {
   align-items: flex-start;
 }

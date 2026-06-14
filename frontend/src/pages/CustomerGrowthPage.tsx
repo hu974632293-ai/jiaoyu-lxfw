@@ -36,6 +36,10 @@ type AssessmentResult = {
   germany_score: number;
   missing_fields: string[];
 };
+type AdvisorAgentResult = {
+  answer: string;
+  status: string;
+};
 type LeadVoiceDraft = {
   customer_name: string;
   contact_info?: string;
@@ -56,7 +60,7 @@ type CustomerGrowthPageProps = {
 };
 
 type AdvisorPanel = "create" | "insight" | "today" | "tasks" | null;
-type OperationKey = "load" | "createLead" | "assessLead" | "voiceDraft" | null;
+type OperationKey = "load" | "createLead" | "assessLead" | "voiceDraft" | "agent" | null;
 
 const statusMap: Record<string, string> = {
   new: "新线索",
@@ -103,6 +107,7 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
   const [highlightLeadId, setHighlightLeadId] = useState<number | null>(null);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
   const [activePanel, setActivePanel] = useState<AdvisorPanel>(initialPanel);
+  const [agentResult, setAgentResult] = useState<AdvisorAgentResult | null>(null);
 
   const leadFilters = useMemo(
     () => ({
@@ -368,6 +373,48 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
     }
   }
 
+  async function askAssessmentAssistant() {
+    const lead = spotlightLead;
+    setPendingOperation("agent");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在整理客户研判建议",
+      detail: `围绕 ${lead.customer_name} 的资料补齐、项目匹配和下一步跟进生成建议。`,
+      target: lead.customer_name,
+    });
+    try {
+      const result = await apiRequest<AdvisorAgentResult>("/api/knowledge/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          scene: "customer_assessment",
+          question: `请基于当前客户资料，补齐研判依据并生成跟进建议：${lead.customer_name}，${lead.project}，${lead.recent}`,
+          lead_id: lead.id,
+          actor_username: "advisor",
+          business_context: { customer_name: lead.customer_name, status: lead.statusLabel, project: lead.project },
+        }),
+      });
+      setAgentResult(result);
+      setOperationFeedback({
+        phase: result.status === "success" ? "success" : "fallback",
+        title: "客户研判建议已返回",
+        detail: "建议已显示在研判助手面板，可继续进入客户 360 记录跟进。",
+        target: lead.customer_name,
+        targetId: lead.id,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "客户研判建议生成失败",
+        detail: error instanceof Error ? `${error.message}。可稍后重试。` : "暂时无法生成建议，可稍后重试。",
+        target: lead.customer_name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
   const queueRows = useMemo(() => {
     const realRows = leads.map((lead) => {
       const mock = crmPrototypeRows.find((item) => item.id === lead.id);
@@ -600,7 +647,7 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
               </label>
             </div>
             <label className="stacked-input">
-              <span>客户背景资料</span>
+              <span>粘贴资料</span>
               <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={4} />
             </label>
             <div className="inline-actions">
@@ -609,7 +656,7 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
               </button>
               <button className="icon-button secondary" onClick={assessLead} disabled={hasPendingOperation}>
                 <Sparkles className={isAssessing ? "spin-icon" : ""} size={16} aria-hidden="true" />
-                {isAssessing ? "正在研判" : "触发画像研判"}
+                {isAssessing ? "正在研判" : "触发研判"}
               </button>
               {createdId ? (
                 <button className="ghost-button" onClick={() => onNavigate("consultantCustomer360", createdId)}>
@@ -652,6 +699,24 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
                 <span>优先补齐预算、目标国家和入学时间后触发画像研判。</span>
               </div>
             )}
+            <div className="customer-assessment-agent">
+              <div className="section-title">
+                <h3>客户研判助手</h3>
+                <span className="status-pill">顾问可见</span>
+              </div>
+              <div className="customer-agent-actions">
+                <button className="tiny-button" onClick={askAssessmentAssistant} disabled={hasPendingOperation}>
+                  补齐研判依据
+                </button>
+                <button className="ghost-button" onClick={askAssessmentAssistant} disabled={hasPendingOperation}>
+                  生成跟进建议
+                </button>
+              </div>
+              <article className="customer-agent-result">
+                <strong>{agentResult ? "建议摘要" : "待生成建议"}</strong>
+                <span>{agentResult?.answer ?? "选择当前高潜客户后，可生成项目匹配、资料缺口和下一步跟进建议。"}</span>
+              </article>
+            </div>
           </aside>
         ) : null}
 
