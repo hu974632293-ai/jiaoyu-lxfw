@@ -238,6 +238,85 @@ def test_employee_agent_confirm_actions_sync_business_tables_and_are_idempotent(
     assert lead_detail["status"] == "high_potential"
 
 
+def test_consultant_agent_golden_path_creates_confirmable_actions_and_timeline_records():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "黄金链路客户",
+            "contact_info": "13900006666",
+            "background_info": "高三，计划申请英国本科，预算35万，雅思6.0，家长关注安全和就业。",
+            "source_channel": "官网报名",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={
+            "lead_id": lead_id,
+            "message": "帮我给这个客户准备今天的跟进，并安排三天后回访，阶段如果合适就推进到已初步研判。",
+        },
+    )
+    assert chat_response.status_code == 200
+    chat_payload = chat_response.json()
+    assert chat_payload["code"] == 0
+    draft = chat_payload["data"]
+    assert draft["intent"] == "consultant_followup"
+    assert draft["idempotency_key"].startswith(f"consultant-agent-{lead_id}-")
+    assert draft["requires_confirmation"] is True
+    assert draft["lead_context"]["id"] == lead_id
+    assert draft["lead_context"]["customer_name"] == "黄金链路客户"
+    assert [item["action_type"] for item in draft["pending_actions"]] == [
+        "create_follow_up",
+        "create_task",
+        "update_lead_status",
+    ]
+
+    confirm_response = client.post(
+        "/api/consultant-agent/actions/confirm",
+        headers=headers,
+        json={
+            "lead_id": lead_id,
+            "idempotency_key": draft["idempotency_key"],
+            "pending_actions": draft["pending_actions"],
+        },
+    )
+    assert confirm_response.status_code == 200
+    confirm_payload = confirm_response.json()
+    assert confirm_payload["code"] == 0
+    assert confirm_payload["data"]["lead_id"] == lead_id
+    assert [item["target_type"] for item in confirm_payload["data"]["results"]] == [
+        "crm_follow_up",
+        "crm_task",
+        "crm_lead",
+    ]
+
+    duplicate_response = client.post(
+        "/api/consultant-agent/actions/confirm",
+        headers=headers,
+        json={
+            "lead_id": lead_id,
+            "idempotency_key": draft["idempotency_key"],
+            "pending_actions": draft["pending_actions"],
+        },
+    )
+    assert duplicate_response.status_code == 200
+    assert duplicate_response.json()["data"]["idempotent"] is True
+
+    timeline = client.get(f"/api/leads/{lead_id}/timeline", headers=headers).json()["data"]
+    timeline_titles = [item["title"] for item in timeline]
+    assert "新增跟进" in timeline_titles
+    assert "创建任务" in timeline_titles
+    assert "阶段流转" in timeline_titles
+
+
 def test_employee_agent_knowledge_chat_returns_structured_read_results():
     client.post("/api/demo/seed")
     token = _token("employee", "employee123")

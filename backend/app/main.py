@@ -19,6 +19,7 @@ from app.api import (
     routes_student_assistant,
     routes_users,
     routes_auth,
+    routes_consultant_agent,
 )
 from app.core.config import settings
 from app.core.database import init_db
@@ -62,6 +63,7 @@ app.include_router(routes_demo.router)
 app.include_router(routes_profile.router)
 app.include_router(routes_leads.router)
 app.include_router(routes_crm.router)
+app.include_router(routes_consultant_agent.router)
 app.include_router(routes_enterprise_assistant.router)
 app.include_router(routes_student_assistant.router)
 app.include_router(routes_projects.router)

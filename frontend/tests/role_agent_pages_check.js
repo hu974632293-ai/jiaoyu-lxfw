@@ -85,7 +85,17 @@ for (const [label, file, tokens, forbiddenPattern] of [
   [
     "顾问客户研判助手",
     "src/pages/ConsultantAgentPage.tsx",
-    ["LeadItem", 'apiRequest<LeadItem[]>("/api/leads")', "selectedLead", "selectedLead.id"],
+    [
+      "LeadItem",
+      'apiRequest<LeadItem[]>("/api/leads")',
+      "selectedLead",
+      "selectedLead.id",
+      'apiRequest<AgentDraft>("/api/consultant-agent/chat"',
+      'apiRequest<ConfirmResult>("/api/consultant-agent/actions/confirm"',
+      "pending_actions",
+      "confirmAgentActions",
+      "确认写入CRM",
+    ],
     /const\s+lead\s*=\s*crmPrototypeRows\[0\]|lead_id:\s*lead\.id/,
   ],
   [

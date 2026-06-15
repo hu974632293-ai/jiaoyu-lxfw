@@ -3,9 +3,31 @@ import { apiRequest } from "../api/client";
 import { crmPrototypeRows } from "../data/prototype";
 import { RoleAgentShell } from "./roleAgentShell";
 
-type AgentResult = {
+type PendingAction = {
+  action_type: "create_follow_up" | "create_task" | "update_lead_status";
+  label: string;
+  draft: Record<string, string | number | null>;
+};
+
+type AgentDraft = {
   answer: string;
-  status: string;
+  intent: string;
+  idempotency_key: string;
+  requires_confirmation: boolean;
+  confirmation_endpoint: string;
+  lead_context: {
+    id: number;
+    customer_name: string;
+    status: string;
+    source_channel?: string;
+  };
+  pending_actions: PendingAction[];
+};
+
+type ConfirmResult = {
+  lead_id: number;
+  results: Array<{ action_type: string; target_type: string; target_id: number }>;
+  idempotent: boolean;
 };
 
 type LeadItem = {
@@ -53,8 +75,10 @@ function formatTime() {
 export default function ConsultantAgentPage() {
   const [activeScene, setActiveScene] = useState(scenes[0].key);
   const [question, setQuestion] = useState(promptByScene.profile);
-  const [result, setResult] = useState<AgentResult | null>(null);
+  const [result, setResult] = useState<AgentDraft | null>(null);
+  const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
   const [sending, setSending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [message, setMessage] = useState("正在加载客户队列");
@@ -101,28 +125,48 @@ export default function ConsultantAgentPage() {
       return;
     }
     setSending(true);
+    setConfirmResult(null);
     setMessage("正在生成客户研判建议");
     try {
-      const data = await apiRequest<AgentResult>("/api/knowledge/chat", {
+      const data = await apiRequest<AgentDraft>("/api/consultant-agent/chat", {
         method: "POST",
         body: JSON.stringify({
-          scene: "customer_assessment",
-          question: `${content} 当前客户：${selectedLead.customer_name}，${selectedLead.source_channel || "客户增长"}，${selectedLead.status}`,
           lead_id: selectedLead.id,
-          actor_username: "advisor",
-          business_context: {
-            customer_name: selectedLead.customer_name,
-            status: selectedLead.status,
-            source_channel: selectedLead.source_channel || "",
-          },
+          message: content,
         }),
       });
       setResult(data);
-      setMessage(data.status === "success" ? "研判建议已返回" : "已提供可用研判参考");
+      setMessage(data.requires_confirmation ? "已生成待确认CRM动作" : "已提供可用研判参考");
     } catch (error) {
       setMessage(error instanceof Error ? `研判助手暂不可用：${error.message}` : "研判助手暂不可用");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function confirmAgentActions() {
+    if (!selectedLead || !result?.pending_actions.length) {
+      setMessage("暂无可确认的CRM动作");
+      return;
+    }
+    setConfirming(true);
+    setMessage("正在写入CRM记录");
+    try {
+      const data = await apiRequest<ConfirmResult>("/api/consultant-agent/actions/confirm", {
+        method: "POST",
+        body: JSON.stringify({
+          lead_id: selectedLead.id,
+          idempotency_key: result.idempotency_key,
+          pending_actions: result.pending_actions,
+        }),
+      });
+      setConfirmResult(data);
+      setMessage(data.idempotent ? "CRM动作已确认过" : "CRM动作已写入");
+      await loadLeads();
+    } catch (error) {
+      setMessage(error instanceof Error ? `CRM写入失败：${error.message}` : "CRM写入失败");
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -146,7 +190,7 @@ export default function ConsultantAgentPage() {
         question={question}
         onQuestionChange={setQuestion}
         onSend={sendAgentQuestion}
-        sending={sending || loadingLeads || !selectedLead}
+        sending={sending || confirming || loadingLeads || !selectedLead}
         statusLabel={message}
         statusDetail={`最近更新：${formatTime()}`}
         taskTitle="当前客户"
@@ -163,6 +207,25 @@ export default function ConsultantAgentPage() {
         <div className="role-agent-message user">{question}</div>
         <div className="role-agent-message assistant">
           {result?.answer ?? "我会基于当前客户资料生成资料补齐、画像研判、项目推荐、跟进建议、任务创建、阶段更新和客户360查看要点。"}
+          {result?.pending_actions.length ? (
+            <div className="role-agent-confirm-box">
+              {result.pending_actions.map((item) => (
+                <div key={item.action_type}>
+                  <strong>{item.label}</strong>
+                  <span>{String(item.draft.content || item.draft.title || item.draft.status || "")}</span>
+                </div>
+              ))}
+              <button type="button" onClick={confirmAgentActions} disabled={confirming}>
+                确认写入CRM
+              </button>
+            </div>
+          ) : null}
+          {confirmResult ? (
+            <div className="role-agent-confirm-box">
+              <strong>写入结果</strong>
+              <span>已同步 {confirmResult.results.length} 条CRM记录，可在客户360时间线追踪。</span>
+            </div>
+          ) : null}
         </div>
       </RoleAgentShell>
     </div>
