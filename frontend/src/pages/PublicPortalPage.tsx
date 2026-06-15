@@ -459,6 +459,7 @@ function EventsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate">
   const [contactInfo, setContactInfo] = useState("");
   const [message, setMessage] = useState("正在加载活动");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastRegistration, setLastRegistration] = useState<PublicEventRegistration | null>(null);
 
   async function loadEvents() {
     try {
@@ -496,6 +497,7 @@ function EventsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate">
           operator_username: "public_portal",
         }),
       });
+      setLastRegistration(registration);
       setMessage(`${registration.subject_name} 已报名，顾问会继续跟进`);
       setSubjectName("");
       setContactInfo("");
@@ -558,6 +560,11 @@ function EventsSubPage({ onNavigate }: Pick<PublicPortalPageProps, "onNavigate">
         <button className="icon-button" onClick={submitRegistration} disabled={isSubmitting || !selectedEventId}>
           {isSubmitting ? "正在报名" : "提交活动报名"}
         </button>
+        {lastRegistration?.lead_id ? (
+          <div className="public-registration-result">
+            线索 #{lastRegistration.lead_id} 已进入顾问队列
+          </div>
+        ) : null}
       </section>
     </div>
   );

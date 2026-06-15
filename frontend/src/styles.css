@@ -331,6 +331,16 @@ button:disabled {
   color: var(--ink);
 }
 
+.public-registration-result {
+  padding: 9px 10px;
+  border: 1px solid #b9dfcd;
+  border-radius: 6px;
+  color: #2b7a5f;
+  background: #effaf5;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .login-shell {
   min-height: 100vh;
   display: grid;

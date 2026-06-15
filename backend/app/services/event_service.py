@@ -229,10 +229,22 @@ def _create_public_registration_lead(
         background_info=f"通过{event.event_name}提交活动报名。",
         status="新增意向",
         source_channel=payload.source_channel or "官网活动报名",
+        owner_id=_resolve_public_lead_owner_id(db, payload.operator_username),
     )
     db.add(lead)
     db.flush()
     return lead, None
+
+
+def _resolve_public_lead_owner_id(db: Session, operator_username: str | None) -> int | None:
+    operator = _get_operator(db, operator_username)
+    if operator and operator.role == "consultant":
+        return operator.id
+    demo_consultant = db.query(SysUser).filter_by(username="consultant", role="consultant").first()
+    if demo_consultant:
+        return demo_consultant.id
+    consultant = db.query(SysUser).filter_by(role="consultant").order_by(SysUser.id).first()
+    return consultant.id if consultant else None
 
 
 def _get_operator(db: Session, username: str | None) -> SysUser | None:

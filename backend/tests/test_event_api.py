@@ -178,3 +178,18 @@ def test_public_portal_registration_creates_consultant_lead_and_shared_roster():
     timeline_payload = timeline_response.json()
     assert timeline_payload["code"] == 0
     assert any(item["type"] == "event_registration" and item["meta"]["status"] == "已签到" for item in timeline_payload["data"])
+
+    consultant_headers = _auth_headers("consultant", "consultant123")
+    agent_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=consultant_headers,
+        json={
+            "lead_id": registration["lead_id"],
+            "message": "请接住这个官网活动报名客户，生成跟进和三天后回访任务。",
+        },
+    )
+    assert agent_response.status_code == 200
+    agent_payload = agent_response.json()
+    assert agent_payload["code"] == 0
+    assert agent_payload["data"]["lead_context"]["id"] == registration["lead_id"]
+    assert agent_payload["data"]["lead_context"]["source_channel"] == "官网活动报名"
