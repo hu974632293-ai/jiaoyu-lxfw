@@ -189,4 +189,32 @@ if (/agent-workspace-grid,\s*\n\.agent-workspace-grid\.sidebar-expanded,\s*\n\.a
   throw new Error("Agent 布局不应把侧边栏展开态也强制成收起宽度");
 }
 
+const appSource = fs.readFileSync(path.join(root, "src/App.tsx"), "utf8");
+const backofficeShellSource = fs.readFileSync(path.join(root, "src/pages/BackofficeShellPage.tsx"), "utf8");
+const consultantAgentSource = fs.readFileSync(path.join(root, "src/pages/ConsultantAgentPage.tsx"), "utf8");
+const customerGrowthSource = fs.readFileSync(path.join(root, "src/pages/CustomerGrowthPage.tsx"), "utf8");
+const customer360Source = fs.readFileSync(path.join(root, "src/pages/Customer360Page.tsx"), "utf8");
+
+for (const token of [
+  "selectedLeadId?: number | null",
+  "consultantAgent: ConsultantAgentPage",
+  "selectedLeadId={selectedLeadId}",
+  "ConsultantAgentPageProps",
+  "selectedLeadId?: number | null",
+  "leads.find((item) => item.id === selectedLeadId)",
+  'onNavigate("consultantCustomer360", selectedLead.id)',
+  "查看客户360",
+]) {
+  const combined = `${appSource}\n${backofficeShellSource}\n${consultantAgentSource}`;
+  if (!combined.includes(token)) {
+    throw new Error(`顾问Agent可见闭环缺少: ${token}`);
+  }
+}
+
+for (const token of ['onNavigate("consultantAgent"', "交给助手"]) {
+  if (!customerGrowthSource.includes(token) && !customer360Source.includes(token)) {
+    throw new Error(`客户增长/客户360必须能带当前客户进入顾问Agent，缺少: ${token}`);
+  }
+}
+
 console.log("role agent pages check OK");

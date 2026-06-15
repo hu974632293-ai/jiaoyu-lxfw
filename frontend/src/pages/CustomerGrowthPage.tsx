@@ -624,6 +624,10 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
             <Users size={19} aria-hidden="true" />
             <span>360</span>
           </button>
+          <button onClick={() => spotlightLead && onNavigate("consultantAgent", spotlightLead.id)} title="交给助手">
+            <Sparkles size={19} aria-hidden="true" />
+            <span>交给助手</span>
+          </button>
         </aside>
 
         {activePanel === "create" ? (

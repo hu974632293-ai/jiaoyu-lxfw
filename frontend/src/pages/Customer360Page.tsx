@@ -548,6 +548,9 @@ export default function Customer360Page({ selectedLeadId, onNavigate, initialTab
             <RefreshCw className={isRefreshing ? "spin-icon" : ""} size={16} aria-hidden="true" />
             {isRefreshing ? "正在刷新" : "刷新客户 360"}
           </button>
+          <button className="ghost-button" onClick={() => onNavigate("consultantAgent", leadId)}>
+            交给助手
+          </button>
           <button className="ghost-button" onClick={() => onNavigate("consultantLeadQueue")}>
             返回线索队列
           </button>

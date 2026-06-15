@@ -21,6 +21,7 @@ export type PageProps = {
   onNavigate: (page: BackofficePageKey, leadId?: number) => void;
   onSeedDemo: () => Promise<void>;
   seedStatus: string;
+  selectedLeadId?: number | null;
 };
 
 type PersistedViewState = {

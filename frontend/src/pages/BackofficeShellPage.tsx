@@ -198,7 +198,7 @@ export default function BackofficeShellPage({
 
     const CurrentPage = backofficeComponents[activePage];
     if (CurrentPage) {
-      return <CurrentPage role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
+      return <CurrentPage role={role} selectedLeadId={selectedLeadId} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
     }
 
     return <RoleWorkspacePage role={role} activePage={activePage} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;

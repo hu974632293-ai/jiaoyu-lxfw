@@ -2,6 +2,7 @@ import { useEffect, useState, type KeyboardEvent } from "react";
 import { apiRequest } from "../api/client";
 import { crmPrototypeRows } from "../data/prototype";
 import { RoleAgentShell } from "./roleAgentShell";
+import type { BackofficePageKey } from "../navigation";
 
 type PendingAction = {
   action_type: "create_follow_up" | "create_task" | "update_lead_status";
@@ -38,6 +39,11 @@ type LeadItem = {
   source_channel?: string;
 };
 
+type ConsultantAgentPageProps = {
+  selectedLeadId?: number | null;
+  onNavigate: (page: BackofficePageKey, leadId?: number) => void;
+};
+
 const scenes = [
   { key: "profile", label: "资料补齐" },
   { key: "assessment", label: "画像研判" },
@@ -72,7 +78,7 @@ function formatTime() {
   return new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());
 }
 
-export default function ConsultantAgentPage() {
+export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: ConsultantAgentPageProps) {
   const [activeScene, setActiveScene] = useState(scenes[0].key);
   const [question, setQuestion] = useState(promptByScene.profile);
   const [result, setResult] = useState<AgentDraft | null>(null);
@@ -82,7 +88,7 @@ export default function ConsultantAgentPage() {
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [message, setMessage] = useState("正在加载客户队列");
-  const selectedLead = leads[0] ?? null;
+  const selectedLead = leads.find((item) => item.id === selectedLeadId) ?? leads[0] ?? null;
   const displayLead = selectedLead
     ? {
         customer_name: selectedLead.customer_name,
@@ -101,7 +107,7 @@ export default function ConsultantAgentPage() {
     try {
       const data = await apiRequest<LeadItem[]>("/api/leads");
       setLeads(data);
-      setMessage(data[0] ? "等待顾问输入" : "暂无可研判客户");
+      setMessage(data.find((item) => item.id === selectedLeadId) || data[0] ? "等待顾问输入" : "暂无可研判客户");
     } catch (error) {
       setMessage(error instanceof Error ? `客户队列加载失败：${error.message}` : "客户队列加载失败");
     } finally {
@@ -224,6 +230,9 @@ export default function ConsultantAgentPage() {
             <div className="role-agent-confirm-box">
               <strong>写入结果</strong>
               <span>已同步 {confirmResult.results.length} 条CRM记录，可在客户360时间线追踪。</span>
+              <button type="button" onClick={() => onNavigate("consultantCustomer360", selectedLead.id)}>
+                查看客户360
+              </button>
             </div>
           ) : null}
         </div>
