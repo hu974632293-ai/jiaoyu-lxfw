@@ -564,7 +564,7 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
               <option value="all">全部来源</option>
               <option value="官网咨询">官网咨询</option>
               <option value="顾问录入">顾问录入</option>
-              <option value="活动报名">活动报名</option>
+              <option value="官网活动报名">活动报名</option>
             </select>
           </div>
           <div className="advisor-stage-line" aria-label="客户增长阶段漏斗" onClick={handleFunnelClick}>

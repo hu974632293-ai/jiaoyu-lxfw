@@ -32,4 +32,8 @@ if (!/onNavigate\("(?:customer360|consultantCustomer360)",\s*(createdId|lead\.id
   throw new Error("新建或列表客户应可进入客户 360");
 }
 
+if (!/value="官网活动报名">\s*活动报名\s*<\/option>/.test(growth)) {
+  throw new Error("官网活动报名线索应能通过顾问队列来源筛选进入");
+}
+
 console.log("customer growth check OK");
