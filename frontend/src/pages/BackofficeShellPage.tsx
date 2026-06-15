@@ -1,14 +1,17 @@
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import ConsultantAgentPage from "./ConsultantAgentPage";
 import Customer360Page from "./Customer360Page";
 import CustomerGrowthPage from "./CustomerGrowthPage";
 import EmployeeWorkspacePage from "./EmployeeWorkspacePage";
 import EmployeeAgentPanel from "./EmployeeAgentPanel";
 import GrowthOverviewPage from "./GrowthOverviewPage";
+import ManagerAgentPage from "./ManagerAgentPage";
 import ManagementDashboardPage from "./ManagementDashboardPage";
 import OperationsResourcesPage from "./OperationsResourcesPage";
 import ReportsPage from "./ReportsPage";
 import RoleWorkspacePage from "./RoleWorkspacePage";
+import StudentAgentPage from "./StudentAgentPage";
 import StudentFeedbackWorkflowPage from "./StudentFeedbackWorkflowPage";
 import StudentGradeWorkflowPage from "./StudentGradeWorkflowPage";
 import StudentApplicationProgressWorkflowPage from "./StudentApplicationProgressWorkflowPage";
@@ -22,6 +25,7 @@ import TeacherFeedbackWorkflowPage from "./TeacherFeedbackWorkflowPage";
 import TeacherGradeWorkflowPage from "./TeacherGradeWorkflowPage";
 import TeacherLeaveApprovalWorkflowPage from "./TeacherLeaveApprovalWorkflowPage";
 import TeacherPsychWorkflowPage from "./TeacherPsychWorkflowPage";
+import TeacherAgentPage from "./TeacherAgentPage";
 import TeacherStudentServicePage from "./TeacherStudentServicePage";
 import { roleOptions } from "../data/prototype";
 import type { RoleKey } from "../data/prototype";
@@ -47,11 +51,11 @@ type BackofficeShellPageProps = {
 type BackofficeComponent = (props: PageProps) => JSX.Element;
 
 const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
-  consultantAgent: CustomerGrowthPage,
+  consultantAgent: ConsultantAgentPage,
   employeeAgent: EmployeeAgentPanel,
-  teacherAgent: TeacherStudentServicePage,
-  studentAgent: StudentServicePage,
-  managerAgent: ReportsPage,
+  teacherAgent: TeacherAgentPage,
+  studentAgent: StudentAgentPage,
+  managerAgent: ManagerAgentPage,
   employeeWorkspace: EmployeeWorkspacePage,
   teacherStudentService: TeacherStudentServicePage,
   teacherLeaveApproval: TeacherLeaveApprovalWorkflowPage,
@@ -113,9 +117,6 @@ export default function BackofficeShellPage({
     if (activePage === "consultantNewLead") {
       return <CustomerGrowthPage initialPanel="create" onNavigate={onNavigate} />;
     }
-    if (activePage === "consultantAgent") {
-      return <CustomerGrowthPage initialPanel="insight" onNavigate={onNavigate} />;
-    }
     if (activePage === "consultantLeadQueue") {
       return <CustomerGrowthPage onNavigate={onNavigate} />;
     }
@@ -148,9 +149,6 @@ export default function BackofficeShellPage({
     }
     if (activePage === "managerGrowthDashboard") {
       return <ManagementDashboardPage initialView="growth" onNavigate={onNavigate} />;
-    }
-    if (activePage === "managerAgent") {
-      return <ReportsPage role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
     }
     if (activePage === "managerDailySummary") {
       return <ManagementDashboardPage initialView="daily" onNavigate={onNavigate} />;

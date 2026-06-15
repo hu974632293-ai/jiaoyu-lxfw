@@ -76,16 +76,31 @@ for (const [key, label] of expectedAgentNav) {
 }
 
 const expectedAgentMappings = [
-  "consultantAgent",
-  "employeeAgent",
-  "teacherAgent",
-  "studentAgent",
-  "managerAgent",
+  "consultantAgent: ConsultantAgentPage",
+  "employeeAgent: EmployeeAgentPanel",
+  "teacherAgent: TeacherAgentPage",
+  "studentAgent: StudentAgentPage",
+  "managerAgent: ManagerAgentPage",
 ];
 
-for (const key of expectedAgentMappings) {
-  if (!contents["src/pages/BackofficeShellPage.tsx"].includes(key)) {
-    throw new Error(`角色助手缺少页面映射: ${key}`);
+for (const token of expectedAgentMappings) {
+  if (!contents["src/pages/BackofficeShellPage.tsx"].includes(token)) {
+    throw new Error(`角色助手缺少独立页面映射: ${token}`);
+  }
+}
+
+const forbiddenAgentShellMappings = [
+  "consultantAgent: CustomerGrowthPage",
+  "teacherAgent: TeacherStudentServicePage",
+  "studentAgent: StudentServicePage",
+  "managerAgent: ReportsPage",
+  'if (activePage === "consultantAgent")',
+  'if (activePage === "managerAgent")',
+];
+
+for (const token of forbiddenAgentShellMappings) {
+  if (contents["src/pages/BackofficeShellPage.tsx"].includes(token)) {
+    throw new Error(`角色助手不应套用原工作台页面: ${token}`);
   }
 }
 

@@ -302,17 +302,22 @@ git diff --check
 
 ### 7.13 角色助手前端体现批次已落地
 
-2026-06-15 已按角色补齐前端助手入口和基础交互：
+2026-06-15 已按角色补齐前端独立助手入口和基础交互；随后根据人工验收反馈修正“套旧工作台”和“没有对话框”的偏差：
 
 - 顾问、员工、老师、学生、管理者分别具备 `consultantAgent`、`employeeAgent`、`teacherAgent`、`studentAgent`、`managerAgent` 角色助手入口。
-- 顾问、老师、管理者不再默认共享员工企业助手、员工日报、新人指南等员工工作台入口；管理员生产视图仍只保留系统治理入口。
-- 五类角色助手统一进入 `agent-workspace-grid` / `agent-content-frame` 布局。
+- 顾问、老师、学生、管理者助手均为独立页面，不再把 `CustomerGrowthPage`、`TeacherStudentServicePage`、`StudentServicePage`、`ReportsPage` 套壳放回原工作台。
+- 顾问、老师、学生、管理者助手复用已确认的员工 Agent 结构：`enterprise-agent-shell`、`enterprise-agent-conversation`、`enterprise-agent-dialog`、`enterprise-agent-input` 和右侧任务/能力卡。
+- 五类角色助手统一进入 `agent-workspace-grid` / `agent-content-frame` 布局；Agent 页面侧栏默认可收起，但 `sidebar-expanded` 已恢复正常宽度，点击后可展开。
+- 顾问助手覆盖资料补齐、画像研判、项目推荐、跟进建议、任务创建、阶段更新、客户360。
+- 老师助手覆盖请假审批、反馈处理、心理预警、学业节点、申请进度、成绩查看。
+- 学生助手覆盖提交请假、提交反馈、申请进度、学业考务、生活支持、心理倾诉。
+- 管理者助手覆盖增长总览、客户经营报告、员工日报汇总、学生心理健康周报、投诉处理周报、风险队列。
 - 公开客服、顾问客户研判、员工企业助手、老师处理、学生服务、管理者报告解释、管理员知识库问答均已具备输入型助手的 `Enter` 发送、`Shift+Enter` 换行结构检查。
 
 边界：
 
 - 本批不配置真实 Dify key/app/dataset，不声明真实 Dify 命中率已通过。
-- 本批不替代人工浏览器验收；仍需按角色登录检查侧栏入口、页面体验和业务回答质量。
+- 本批不替代人工浏览器验收；仍需按角色登录检查侧栏入口、对话框可见性、输入体验和业务回答质量。
 - 老师处理助手的建议生成仍走学生助手对话接口，确认写入请假、反馈等业务记录仍必须使用页面已有确认按钮。
 
 ## 8. 后续执行建议
