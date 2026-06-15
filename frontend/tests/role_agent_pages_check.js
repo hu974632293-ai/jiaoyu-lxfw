@@ -195,6 +195,18 @@ const consultantAgentSource = fs.readFileSync(path.join(root, "src/pages/Consult
 const customerGrowthSource = fs.readFileSync(path.join(root, "src/pages/CustomerGrowthPage.tsx"), "utf8");
 const customer360Source = fs.readFileSync(path.join(root, "src/pages/Customer360Page.tsx"), "utf8");
 
+if (!consultantAgentSource.includes("consultantNaturalLanguagePrompts")) {
+  throw new Error("顾问Agent应以统一自然语言入口承接能力提示，而不是让用户先理解动作标签");
+}
+
+if (/sceneTags=\{scenes\}/.test(consultantAgentSource)) {
+  throw new Error("顾问Agent不应继续把内部能力标签作为用户可见功能边界");
+}
+
+if (!/sceneTags=\{consultantNaturalLanguagePrompts\}/.test(consultantAgentSource)) {
+  throw new Error("顾问Agent可见快捷项应只是自然语言提示，不是内部动作标签");
+}
+
 for (const token of [
   "selectedLeadId?: number | null",
   "consultantAgent: ConsultantAgentPage",

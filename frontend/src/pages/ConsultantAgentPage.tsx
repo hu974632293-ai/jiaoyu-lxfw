@@ -45,27 +45,21 @@ type ConsultantAgentPageProps = {
 };
 
 const scenes = [
-  { key: "profile", label: "资料补齐" },
-  { key: "assessment", label: "画像研判" },
-  { key: "recommendation", label: "项目推荐" },
-  { key: "followup", label: "跟进建议" },
-  { key: "task", label: "任务创建" },
-  { key: "stage", label: "阶段更新" },
-  { key: "customer360", label: "客户360" },
+  { key: "consultant", label: "客户承接" },
 ];
 
 const promptByScene: Record<string, string> = {
-  profile: "请检查当前客户资料缺口，并列出需要补齐的问题。",
-  assessment: "请基于当前客户资料补齐画像研判依据。",
-  recommendation: "请给出项目匹配理由和优先推荐方案。",
-  followup: "请生成下一步跟进建议和任务提醒。",
-  task: "请把下一步跟进建议整理成顾问待办任务草稿。",
-  stage: "请判断当前客户阶段是否需要更新，并说明依据。",
-  customer360: "请汇总客户360中需要顾问优先查看的信息。",
+  consultant: "请接住这个客户线索，结合客户360信息生成下一步跟进、待办任务和阶段建议。",
 };
 
+const consultantNaturalLanguagePrompts = [
+  { key: "followup", label: "帮我接住这个客户线索，生成下一步跟进和待办。" },
+  { key: "assessment", label: "这个客户现在最该补哪些信息，风险点是什么？" },
+  { key: "customer360", label: "帮我总结客户360里顾问今天要优先看的内容。" },
+];
+
 const capabilities = [
-  { title: "资料补齐", detail: "补背景、预算和目标" },
+  { title: "客户承接", detail: "直接说目标，助手会转成可确认CRM动作" },
   { title: "画像研判", detail: "生成意向和风险依据" },
   { title: "项目推荐", detail: "解释匹配理由" },
   { title: "跟进建议", detail: "整理沟通话术" },
@@ -80,7 +74,7 @@ function formatTime() {
 
 export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: ConsultantAgentPageProps) {
   const [activeScene, setActiveScene] = useState(scenes[0].key);
-  const [question, setQuestion] = useState(promptByScene.profile);
+  const [question, setQuestion] = useState(promptByScene.consultant);
   const [result, setResult] = useState<AgentDraft | null>(null);
   const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
   const [sending, setSending] = useState(false);
@@ -116,8 +110,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
   }
 
   function changeScene(nextScene: string) {
-    setActiveScene(nextScene);
-    setQuestion(promptByScene[nextScene]);
+    setQuestion(consultantNaturalLanguagePrompts.find((item) => item.key === nextScene)?.label ?? promptByScene.consultant);
   }
 
   async function sendAgentQuestion() {
@@ -187,11 +180,11 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
     <div className="consultant-agent-page">
       <RoleAgentShell
         title="客户研判助手"
-        subtitle="围绕资料补齐、画像研判、项目推荐、跟进任务和客户360生成可确认建议"
-        sceneLabel={scenes.find((item) => item.key === activeScene)?.label ?? "资料补齐"}
+        subtitle="直接描述客户目标，助手会读取真实客户上下文并生成可确认CRM动作"
+        sceneLabel="客户承接"
         sceneHint="顾问专属"
-        sceneTags={scenes}
-        activeTag={activeScene}
+        sceneTags={consultantNaturalLanguagePrompts}
+        activeTag=""
         onTagChange={changeScene}
         question={question}
         onQuestionChange={setQuestion}
@@ -207,12 +200,12 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         ]}
         capabilities={capabilities}
         resultTitle={result ? "研判结果" : "等待研判"}
-        resultBody={result?.answer ?? "输入客户目标后，助手会返回资料缺口、画像研判、项目推荐、跟进建议、任务创建、阶段更新和客户360查看要点。"}
+        resultBody={result?.answer ?? "输入客户目标后，助手会读取真实客户资料，生成资料补齐、跟进任务、阶段更新和客户360查看要点。"}
         onQuestionKeyDown={handleAgentKeyDown}
       >
         <div className="role-agent-message user">{question}</div>
         <div className="role-agent-message assistant">
-          {result?.answer ?? "我会基于当前客户资料生成资料补齐、画像研判、项目推荐、跟进建议、任务创建、阶段更新和客户360查看要点。"}
+          {result?.answer ?? "你可以直接说想完成的客户承接目标，我会基于当前客户资料生成可确认的CRM动作。"}
           {result?.pending_actions.length ? (
             <div className="role-agent-confirm-box">
               {result.pending_actions.map((item) => (
