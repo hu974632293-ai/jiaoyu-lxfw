@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { apiRequest } from "../api/client";
 import { studentRows } from "../data/prototype";
 import { RoleAgentShell } from "./roleAgentShell";
@@ -6,6 +6,14 @@ import { RoleAgentShell } from "./roleAgentShell";
 type AgentResult = {
   answer: string;
   status: string;
+};
+
+type StudentItem = {
+  id: number;
+  student_name: string;
+  enrollment_project: string;
+  status: string;
+  risk_level: string;
 };
 
 const scenes = [
@@ -44,8 +52,34 @@ export default function StudentAgentPage() {
   const [question, setQuestion] = useState(promptByScene.leave);
   const [result, setResult] = useState<AgentResult | null>(null);
   const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState("等待学生输入");
-  const student = studentRows[0];
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [students, setStudents] = useState<StudentItem[]>([]);
+  const [message, setMessage] = useState("正在加载学生信息");
+  const selectedStudent = students[0] ?? null;
+  const displayStudent = selectedStudent
+    ? {
+        name: selectedStudent.student_name,
+        project: selectedStudent.enrollment_project,
+        status: selectedStudent.status,
+      }
+    : studentRows[0];
+
+  useEffect(() => {
+    void loadStudents();
+  }, []);
+
+  async function loadStudents() {
+    setLoadingStudents(true);
+    try {
+      const data = await apiRequest<StudentItem[]>("/api/student-assistant/students");
+      setStudents(data);
+      setMessage(data[0] ? "等待学生输入" : "暂无可用学生");
+    } catch (error) {
+      setMessage(error instanceof Error ? `学生信息加载失败：${error.message}` : "学生信息加载失败");
+    } finally {
+      setLoadingStudents(false);
+    }
+  }
 
   function changeScene(nextScene: string) {
     setActiveScene(nextScene);
@@ -58,12 +92,16 @@ export default function StudentAgentPage() {
       setMessage("请先输入学生问题");
       return;
     }
+    if (!selectedStudent) {
+      setMessage(loadingStudents ? "正在加载学生信息，请稍后再发送" : "暂无可用学生，暂不能发送");
+      return;
+    }
     setSending(true);
     setMessage("正在整理学生服务建议");
     try {
       const data = await apiRequest<AgentResult>("/api/student-assistant/chat", {
         method: "POST",
-        body: JSON.stringify({ student_id: student.id, message: content, actor_username: "student" }),
+        body: JSON.stringify({ student_id: selectedStudent.id, message: content, actor_username: "student" }),
       });
       setResult(data);
       setMessage(data.status === "success" ? "服务建议已返回" : "已返回可用服务建议");
@@ -94,14 +132,14 @@ export default function StudentAgentPage() {
         question={question}
         onQuestionChange={setQuestion}
         onSend={sendAgentQuestion}
-        sending={sending}
+        sending={sending || loadingStudents || !selectedStudent}
         statusLabel={message}
         statusDetail={`最近更新：${formatTime()}`}
         taskTitle="当前学生"
         taskItems={[
-          { label: "学生", value: student.name },
-          { label: "项目", value: student.project },
-          { label: "状态", value: student.status },
+          { label: "学生", value: displayStudent.name },
+          { label: "项目", value: displayStudent.project },
+          { label: "状态", value: displayStudent.status },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "服务建议" : "等待服务建议"}

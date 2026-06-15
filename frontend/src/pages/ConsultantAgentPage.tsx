@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { apiRequest } from "../api/client";
 import { crmPrototypeRows } from "../data/prototype";
 import { RoleAgentShell } from "./roleAgentShell";
@@ -6,6 +6,14 @@ import { RoleAgentShell } from "./roleAgentShell";
 type AgentResult = {
   answer: string;
   status: string;
+};
+
+type LeadItem = {
+  id: number;
+  customer_name: string;
+  status: string;
+  owner_id?: number | null;
+  source_channel?: string;
 };
 
 const scenes = [
@@ -47,8 +55,35 @@ export default function ConsultantAgentPage() {
   const [question, setQuestion] = useState(promptByScene.profile);
   const [result, setResult] = useState<AgentResult | null>(null);
   const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState("等待顾问输入");
-  const lead = crmPrototypeRows[0];
+  const [loadingLeads, setLoadingLeads] = useState(true);
+  const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [message, setMessage] = useState("正在加载客户队列");
+  const selectedLead = leads[0] ?? null;
+  const displayLead = selectedLead
+    ? {
+        customer_name: selectedLead.customer_name,
+        project: selectedLead.source_channel || "客户增长",
+        recent: selectedLead.status,
+        statusLabel: selectedLead.status,
+      }
+    : crmPrototypeRows[0];
+
+  useEffect(() => {
+    void loadLeads();
+  }, []);
+
+  async function loadLeads() {
+    setLoadingLeads(true);
+    try {
+      const data = await apiRequest<LeadItem[]>("/api/leads");
+      setLeads(data);
+      setMessage(data[0] ? "等待顾问输入" : "暂无可研判客户");
+    } catch (error) {
+      setMessage(error instanceof Error ? `客户队列加载失败：${error.message}` : "客户队列加载失败");
+    } finally {
+      setLoadingLeads(false);
+    }
+  }
 
   function changeScene(nextScene: string) {
     setActiveScene(nextScene);
@@ -61,6 +96,10 @@ export default function ConsultantAgentPage() {
       setMessage("请先输入客户研判问题");
       return;
     }
+    if (!selectedLead) {
+      setMessage(loadingLeads ? "正在加载客户队列，请稍后再发送" : "暂无可研判客户，暂不能发送");
+      return;
+    }
     setSending(true);
     setMessage("正在生成客户研判建议");
     try {
@@ -68,10 +107,14 @@ export default function ConsultantAgentPage() {
         method: "POST",
         body: JSON.stringify({
           scene: "customer_assessment",
-          question: `${content} 当前客户：${lead.customer_name}，${lead.project}，${lead.recent}`,
-          lead_id: lead.id,
+          question: `${content} 当前客户：${selectedLead.customer_name}，${selectedLead.source_channel || "客户增长"}，${selectedLead.status}`,
+          lead_id: selectedLead.id,
           actor_username: "advisor",
-          business_context: { customer_name: lead.customer_name, status: lead.statusLabel, project: lead.project },
+          business_context: {
+            customer_name: selectedLead.customer_name,
+            status: selectedLead.status,
+            source_channel: selectedLead.source_channel || "",
+          },
         }),
       });
       setResult(data);
@@ -103,14 +146,14 @@ export default function ConsultantAgentPage() {
         question={question}
         onQuestionChange={setQuestion}
         onSend={sendAgentQuestion}
-        sending={sending}
+        sending={sending || loadingLeads || !selectedLead}
         statusLabel={message}
         statusDetail={`最近更新：${formatTime()}`}
         taskTitle="当前客户"
         taskItems={[
-          { label: "客户", value: lead.customer_name },
-          { label: "项目", value: lead.project },
-          { label: "状态", value: lead.statusLabel },
+          { label: "客户", value: displayLead.customer_name },
+          { label: "来源", value: displayLead.project },
+          { label: "状态", value: displayLead.statusLabel },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "研判结果" : "等待研判"}

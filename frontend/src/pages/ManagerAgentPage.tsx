@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { apiRequest } from "../api/client";
 import { reportTypes } from "../data/prototype";
 import { RoleAgentShell } from "./roleAgentShell";
@@ -6,6 +6,16 @@ import { RoleAgentShell } from "./roleAgentShell";
 type AgentResult = {
   answer: string;
   status: string;
+};
+
+type ReportItem = {
+  id: number;
+  title: string;
+  report_type: string;
+  generation_mode: string;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string | null;
 };
 
 const scenes = [
@@ -44,8 +54,38 @@ export default function ManagerAgentPage() {
   const [question, setQuestion] = useState(promptByScene.growth);
   const [result, setResult] = useState<AgentResult | null>(null);
   const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState("等待管理者输入");
-  const reportType = reportTypes[0];
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [message, setMessage] = useState("正在加载报告列表");
+  const selectedReport = reports[0] ?? null;
+  const displayReport = selectedReport
+    ? {
+        title: selectedReport.title,
+        key: selectedReport.report_type,
+        status: selectedReport.generation_mode,
+      }
+    : {
+        title: reportTypes.find((item) => item.key === "customer_operation")?.title ?? "经营报告",
+        key: "report",
+        status: "待打开",
+      };
+
+  useEffect(() => {
+    void loadReports();
+  }, []);
+
+  async function loadReports() {
+    setLoadingReports(true);
+    try {
+      const data = await apiRequest<ReportItem[]>("/api/reports");
+      setReports(data);
+      setMessage(data[0] ? "等待管理者输入" : "暂无可解释报告");
+    } catch (error) {
+      setMessage(error instanceof Error ? `报告列表加载失败：${error.message}` : "报告列表加载失败");
+    } finally {
+      setLoadingReports(false);
+    }
+  }
 
   function changeScene(nextScene: string) {
     setActiveScene(nextScene);
@@ -58,6 +98,10 @@ export default function ManagerAgentPage() {
       setMessage("请先输入报告解释问题");
       return;
     }
+    if (!selectedReport) {
+      setMessage(loadingReports ? "正在加载报告列表，请稍后再发送" : "暂无可解释报告，暂不能发送");
+      return;
+    }
     setSending(true);
     setMessage("正在解释报告变化");
     try {
@@ -65,9 +109,9 @@ export default function ManagerAgentPage() {
         method: "POST",
         body: JSON.stringify({
           scene: "report_assistant",
-          question: `${content} 当前报告类型：${reportType.title}`,
+          question: `${content} 当前报告：${selectedReport.title}`,
           actor_username: "manager",
-          business_context: { report_type: reportType.key, title: reportType.title },
+          business_context: { report_type: selectedReport.report_type, report_id: selectedReport.id, title: selectedReport.title },
         }),
       });
       setResult(data);
@@ -99,14 +143,14 @@ export default function ManagerAgentPage() {
         question={question}
         onQuestionChange={setQuestion}
         onSend={sendAgentQuestion}
-        sending={sending}
+        sending={sending || loadingReports || !selectedReport}
         statusLabel={message}
         statusDetail={`最近更新：${formatTime()}`}
         taskTitle="当前报告"
         taskItems={[
-          { label: "报告", value: reportType.title },
+          { label: "报告", value: displayReport.title },
           { label: "场景", value: scenes.find((item) => item.key === activeScene)?.label ?? "增长总览" },
-          { label: "状态", value: "待解释" },
+          { label: "状态", value: displayReport.status },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "解释结果" : "等待解释"}

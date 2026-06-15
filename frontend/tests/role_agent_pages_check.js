@@ -60,6 +60,52 @@ for (const [label, file, className, title, coverageTokens] of pages) {
   }
 }
 
+for (const [label, file] of [
+  ["老师处理助手", "src/pages/TeacherAgentPage.tsx"],
+  ["学生服务助手", "src/pages/StudentAgentPage.tsx"],
+]) {
+  const source = fs.readFileSync(path.join(root, file), "utf8");
+  for (const token of [
+    "useEffect",
+    "StudentItem",
+    'apiRequest<StudentItem[]>("/api/student-assistant/students")',
+    "selectedStudent",
+    "selectedStudent.id",
+  ]) {
+    if (!source.includes(token)) {
+      throw new Error(`${label} 发送前必须加载真实学生对象，缺少: ${token}`);
+    }
+  }
+  if (/body:\s*JSON\.stringify\(\{\s*student_id:\s*student\.id/.test(source)) {
+    throw new Error(`${label} 不应使用静态 studentRows[0] ID 发送学生助手请求`);
+  }
+}
+
+for (const [label, file, tokens, forbiddenPattern] of [
+  [
+    "顾问客户研判助手",
+    "src/pages/ConsultantAgentPage.tsx",
+    ["LeadItem", 'apiRequest<LeadItem[]>("/api/leads")', "selectedLead", "selectedLead.id"],
+    /const\s+lead\s*=\s*crmPrototypeRows\[0\]|lead_id:\s*lead\.id/,
+  ],
+  [
+    "管理者报告解释助手",
+    "src/pages/ManagerAgentPage.tsx",
+    ["ReportItem", 'apiRequest<ReportItem[]>("/api/reports")', "selectedReport", "selectedReport.id"],
+    /const\s+reportType\s*=\s*reportTypes\[0\]/,
+  ],
+]) {
+  const source = fs.readFileSync(path.join(root, file), "utf8");
+  for (const token of tokens) {
+    if (!source.includes(token)) {
+      throw new Error(`${label} 必须绑定真实业务对象，缺少: ${token}`);
+    }
+  }
+  if (forbiddenPattern.test(source)) {
+    throw new Error(`${label} 不应使用静态原型对象作为正式助手发送上下文`);
+  }
+}
+
 const shellSource = fs.readFileSync(path.join(root, "src/pages/roleAgentShell.tsx"), "utf8");
 for (const token of [
   "role-agent-shell",
