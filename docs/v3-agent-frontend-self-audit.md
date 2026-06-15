@@ -72,6 +72,7 @@
 - 检查每个角色助手覆盖既定功能词。
 - 检查共享壳复用员工 Agent 的 `enterprise-agent-shell`、`enterprise-agent-conversation`、`enterprise-agent-dialog`、`enterprise-agent-input` 结构。
 - 2026-06-15 复核修正：检查共享壳不再渲染右侧结果 article 或功能范围长列表，输入框必须位于对话容器内并紧跟 dialog，右侧只保留员工 Agent 等价的任务卡和本次事项上下文。
+- 2026-06-15 二次复核：检查顾问、老师、学生、管理者 Agent 外层必须撑满右侧内容框，`enterprise-agent-main` 必须撑满 shell 剩余高度，保证右侧工作区底线和左侧导航底线对齐、不留空白。
 - 检查 Agent 页侧栏展开态不再被 CSS 强制成 76px。
 
 相关既有验证：

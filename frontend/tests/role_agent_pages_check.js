@@ -110,6 +110,20 @@ for (const token of [".role-agent-result", ".role-agent-capability-grid"]) {
   }
 }
 
+for (const selector of [".consultant-agent-page", ".teacher-agent-page", ".student-agent-page", ".manager-agent-page"]) {
+  const selectorIndex = styles.indexOf(selector);
+  const blockStart = selectorIndex >= 0 ? styles.indexOf("{", selectorIndex) : -1;
+  const blockEnd = blockStart >= 0 ? styles.indexOf("}", blockStart) : -1;
+  const block = blockStart >= 0 && blockEnd >= 0 ? styles.slice(blockStart, blockEnd) : "";
+  if (!block.includes("height: 100%") || !block.includes("min-height: 0")) {
+    throw new Error(`独立角色助手外层必须撑满右侧内容框，避免底部留白: ${selector}`);
+  }
+}
+
+if (!/\.enterprise-agent-main\s*\{[^}]*height:\s*100%/m.test(styles)) {
+  throw new Error("Agent 主工作区必须撑满 shell 剩余高度，保证对话区和右侧任务区底线对齐");
+}
+
 const backofficeShell = fs.readFileSync(path.join(root, "src/pages/BackofficeShellPage.tsx"), "utf8");
 if (!backofficeShell.includes('isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"')) {
   throw new Error("角色助手所在后台壳必须保留侧边栏展开/收起状态");
