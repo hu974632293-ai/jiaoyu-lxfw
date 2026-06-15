@@ -2099,6 +2099,40 @@ td span {
   overflow-wrap: anywhere;
 }
 
+.recent-customer-changes {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recent-customer-changes > strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.recent-customer-changes article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #dbe7ef;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.recent-customer-changes span,
+.recent-customer-changes small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.recent-customer-changes em {
+  color: #2f6f8f;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .compact-report-list {
   max-height: 420px;
   overflow: auto;

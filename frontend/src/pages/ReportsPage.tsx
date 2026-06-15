@@ -29,6 +29,13 @@ type ReportExportResult = {
   content_type: string;
   content_base64: string;
 };
+type RecentCustomerChange = {
+  lead_id: number;
+  customer_name: string;
+  source_channel: string;
+  status: string;
+  timeline_titles: string[];
+};
 type ReportOperation = "load" | "generate" | "open" | "agent" | "export" | null;
 
 function formatOperationTime() {
@@ -411,16 +418,33 @@ export default function ReportsPage({ onNavigate }: PageProps) {
 
 function ReportBusinessSummary({ content }: { content: Record<string, unknown> }) {
   const entries = Object.entries(content).slice(0, 8);
+  const recentCustomerChanges = Array.isArray(content.recent_customer_changes)
+    ? (content.recent_customer_changes as RecentCustomerChange[])
+    : [];
 
   return (
-    <div className="report-business-list">
-      {entries.map(([key, value]) => (
-        <article key={key}>
-          <span>{formatReportKey(key)}</span>
-          <strong>{formatReportValue(value)}</strong>
-        </article>
-      ))}
-    </div>
+    <>
+      <div className="report-business-list">
+        {entries.map(([key, value]) => (
+          <article key={key}>
+            <span>{formatReportKey(key)}</span>
+            <strong>{formatReportValue(value)}</strong>
+          </article>
+        ))}
+      </div>
+      {recentCustomerChanges.length > 0 && (
+        <div className="recent-customer-changes">
+          <strong>客户变化</strong>
+          {recentCustomerChanges.slice(0, 3).map((item) => (
+            <article key={item.lead_id}>
+              <span>{item.customer_name} / {item.source_channel || "未标注来源"}</span>
+              <em>{item.status}</em>
+              <small>{item.timeline_titles.join("、") || "暂无处理记录"}</small>
+            </article>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 

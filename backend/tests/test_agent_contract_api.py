@@ -317,6 +317,67 @@ def test_consultant_agent_golden_path_creates_confirmable_actions_and_timeline_r
     assert "阶段流转" in timeline_titles
 
 
+def test_consultant_agent_confirmed_changes_are_traceable_in_manager_customer_report():
+    client.post("/api/demo/seed")
+    consultant_token = _token("consultant", "consultant123")
+    consultant_headers = {"Authorization": f"Bearer {consultant_token}"}
+    manager_token = _token("manager", "manager123")
+    manager_headers = {"Authorization": f"Bearer {manager_token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=consultant_headers,
+        json={
+            "customer_name": "端到端闭环客户",
+            "contact_info": "13900006555",
+            "background_info": "官网报名客户，计划申请新加坡本科，家长关注费用和录取把握。",
+            "source_channel": "官网报名",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=consultant_headers,
+        json={
+            "lead_id": lead_id,
+            "message": "请为官网报名客户生成跟进、三天后回访任务，并推进到已初步研判。",
+        },
+    )
+    assert chat_response.status_code == 200
+    draft = chat_response.json()["data"]
+
+    confirm_response = client.post(
+        "/api/consultant-agent/actions/confirm",
+        headers=consultant_headers,
+        json={
+            "lead_id": lead_id,
+            "idempotency_key": draft["idempotency_key"],
+            "pending_actions": draft["pending_actions"],
+        },
+    )
+    assert confirm_response.status_code == 200
+
+    report_response = client.post(
+        "/api/reports/generate",
+        headers=manager_headers,
+        json={"report_type": "customer_operation", "generated_by": "manager"},
+    )
+    assert report_response.status_code == 200
+    report_id = report_response.json()["data"]["id"]
+
+    detail_response = client.get(f"/api/reports/{report_id}", headers=manager_headers)
+    assert detail_response.status_code == 200
+    content = detail_response.json()["data"]["content"]
+    recent_changes = content["recent_customer_changes"]
+    target_change = next(item for item in recent_changes if item["lead_id"] == lead_id)
+    assert target_change["customer_name"] == "端到端闭环客户"
+    assert target_change["source_channel"] == "官网报名"
+    assert target_change["status"] == "已初步研判"
+    assert {"阶段流转", "创建任务", "新增跟进"}.issubset(set(target_change["timeline_titles"]))
+
+
 def test_employee_agent_knowledge_chat_returns_structured_read_results():
     client.post("/api/demo/seed")
     token = _token("employee", "employee123")
