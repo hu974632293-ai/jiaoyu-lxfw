@@ -27,12 +27,12 @@ const promptByScene: Record<string, string> = {
 };
 
 const capabilities = [
-  { title: "增长总览", detail: "解释线索、成交、流失和转化指标" },
-  { title: "客户经营报告", detail: "定位高潜客户、跟进缺口和经营变化" },
-  { title: "员工日报汇总", detail: "提炼团队日报进展、产出和风险" },
-  { title: "学生心理健康周报", detail: "汇总心理辅助风险和跟进要求" },
-  { title: "投诉处理周报", detail: "解释投诉分类、时效和未决风险" },
-  { title: "风险队列", detail: "聚合高优先级经营与服务风险" },
+  { title: "增长总览", detail: "解释线索和转化" },
+  { title: "客户经营", detail: "定位高潜和缺口" },
+  { title: "日报汇总", detail: "提炼进展和风险" },
+  { title: "心理周报", detail: "汇总风险和要求" },
+  { title: "投诉周报", detail: "解释分类和时效" },
+  { title: "风险队列", detail: "聚合高优先级风险" },
 ];
 
 function formatTime() {
@@ -106,7 +106,6 @@ export default function ManagerAgentPage() {
         taskItems={[
           { label: "报告", value: reportType.title },
           { label: "场景", value: scenes.find((item) => item.key === activeScene)?.label ?? "增长总览" },
-          { label: "摘要", value: reportType.summary },
           { label: "状态", value: "待解释" },
         ]}
         capabilities={capabilities}

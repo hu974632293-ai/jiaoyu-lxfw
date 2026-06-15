@@ -27,12 +27,12 @@ const promptByScene: Record<string, string> = {
 };
 
 const capabilities = [
-  { title: "请假审批", detail: "判断申请优先级、审批口径和记录要点" },
-  { title: "反馈处理", detail: "整理投诉建议、处理路径和回访说明" },
-  { title: "心理预警", detail: "辅助识别风险并提示跟进记录" },
-  { title: "学业节点", detail: "查看考试、材料和课程节点" },
-  { title: "申请进度", detail: "解释阶段状态和待补材料" },
-  { title: "成绩查看", detail: "查看成绩表现并生成反馈建议" },
+  { title: "请假审批", detail: "判断优先级和记录" },
+  { title: "反馈处理", detail: "整理工单和回访" },
+  { title: "心理预警", detail: "识别风险并跟进" },
+  { title: "学业节点", detail: "查看考试和材料" },
+  { title: "申请进度", detail: "解释阶段和缺口" },
+  { title: "成绩查看", detail: "查看成绩和反馈" },
 ];
 
 function formatTime() {
@@ -102,7 +102,6 @@ export default function TeacherAgentPage() {
           { label: "学生", value: student.name },
           { label: "项目", value: student.project },
           { label: "风险", value: student.risk },
-          { label: "状态", value: student.status },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "处理建议" : "等待处理建议"}

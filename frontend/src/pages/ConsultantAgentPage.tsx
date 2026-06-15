@@ -29,13 +29,13 @@ const promptByScene: Record<string, string> = {
 };
 
 const capabilities = [
-  { title: "资料补齐", detail: "识别背景、预算、目标国家和联系方式缺口" },
-  { title: "画像研判", detail: "生成客户意向、风险和高潜依据" },
-  { title: "项目推荐", detail: "解释项目匹配理由和优先方案" },
-  { title: "跟进建议", detail: "给出下一次沟通话术和触达时机" },
-  { title: "任务创建", detail: "整理可确认的跟进任务草稿" },
-  { title: "阶段更新", detail: "提示线索阶段变化和更新原因" },
-  { title: "客户360", detail: "汇总画像、跟进、活动和推荐记录入口" },
+  { title: "资料补齐", detail: "补背景、预算和目标" },
+  { title: "画像研判", detail: "生成意向和风险依据" },
+  { title: "项目推荐", detail: "解释匹配理由" },
+  { title: "跟进建议", detail: "整理沟通话术" },
+  { title: "任务创建", detail: "生成待办草稿" },
+  { title: "阶段更新", detail: "提示阶段变化" },
+  { title: "客户360", detail: "定位关键记录" },
 ];
 
 function formatTime() {
@@ -111,7 +111,6 @@ export default function ConsultantAgentPage() {
           { label: "客户", value: lead.customer_name },
           { label: "项目", value: lead.project },
           { label: "状态", value: lead.statusLabel },
-          { label: "跟进", value: lead.nextTask },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "研判结果" : "等待研判"}

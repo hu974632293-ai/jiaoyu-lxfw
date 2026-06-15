@@ -27,12 +27,12 @@ const promptByScene: Record<string, string> = {
 };
 
 const capabilities = [
-  { title: "提交请假", detail: "整理请假原因、时间和给老师的说明" },
-  { title: "提交反馈", detail: "整理投诉建议、补充说明和期望处理" },
-  { title: "申请进度", detail: "解释材料、阶段和下一步准备事项" },
-  { title: "学业考务", detail: "查看考试、课程和材料截止节点" },
-  { title: "生活支持", detail: "回答住宿、出行、行前和紧急支持问题" },
-  { title: "心理倾诉", detail: "整理可向老师表达的压力和求助内容" },
+  { title: "提交请假", detail: "整理原因和时间" },
+  { title: "提交反馈", detail: "整理建议和说明" },
+  { title: "申请进度", detail: "解释阶段和准备项" },
+  { title: "学业考务", detail: "查看考试和截止点" },
+  { title: "生活支持", detail: "回答住宿和行前问题" },
+  { title: "心理倾诉", detail: "整理求助表达" },
 ];
 
 function formatTime() {
@@ -102,7 +102,6 @@ export default function StudentAgentPage() {
           { label: "学生", value: student.name },
           { label: "项目", value: student.project },
           { label: "状态", value: student.status },
-          { label: "老师", value: student.owner },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "服务建议" : "等待服务建议"}
