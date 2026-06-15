@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { KeyboardEvent } from "react";
 import {
   ArrowRight,
   Building2,
@@ -632,6 +633,13 @@ function PublicAgentPanel({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  function handleAgentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void askAgent();
+    }
+  }
+
   return (
     <section className={compact ? "public-agent-panel compact" : "public-agent-panel"}>
       <div className="agent-panel-heading">
@@ -646,7 +654,7 @@ function PublicAgentPanel({ compact = false }: { compact?: boolean }) {
           </button>
         ))}
       </div>
-      <textarea value={question} onChange={(event) => setQuestion(event.target.value)} rows={compact ? 3 : 4} />
+      <textarea value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={handleAgentKeyDown} rows={compact ? 3 : 4} />
       <button className="icon-button" onClick={askAgent}>
         <Send size={16} aria-hidden="true" />
         提问

@@ -4,6 +4,7 @@ import {
   SendHorizonal,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { apiRequest } from "../api/client";
 import { isLoginAccountKey, loginAccounts } from "../authRules";
 import {
@@ -295,6 +296,15 @@ export default function EmployeeAgentPanel(props: PageProps) {
     }
   }
 
+  function handlePromptKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!sending && input.trim()) {
+        void sendPrompt(input);
+      }
+    }
+  }
+
   const activeSceneCopy = getEnterpriseAgentSceneForRole(props.role, activeScene);
   const taskSummary = getEnterpriseAgentTaskSummary(props.role, activeScene);
   const activeResult = lastResults[activeScene];
@@ -403,6 +413,7 @@ export default function EmployeeAgentPanel(props: PageProps) {
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handlePromptKeyDown}
               placeholder="直接输入业务目标，例如：帮我整理今天日报，或查询投诉负责人。"
               disabled={sending}
             />

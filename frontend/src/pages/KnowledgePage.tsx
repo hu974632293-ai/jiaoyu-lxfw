@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { BookOpenCheck, DatabaseZap, RefreshCw, Send } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
@@ -152,6 +153,15 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
       });
     } finally {
       setPendingOperation(null);
+    }
+  }
+
+  function handleQuestionKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!hasPendingOperation) {
+        void ask();
+      }
     }
   }
 
@@ -390,7 +400,7 @@ export default function KnowledgePage({ onNavigate }: PageProps) {
               ))}
             </select>
           </div>
-          <textarea value={question} onChange={(event) => setQuestion(event.target.value)} rows={4} />
+          <textarea value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={handleQuestionKeyDown} rows={4} />
           <div className="inline-actions">
             <button className="icon-button" onClick={ask} disabled={hasPendingOperation}>
               <Send size={16} aria-hidden="true" />

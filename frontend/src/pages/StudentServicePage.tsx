@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { CalendarDays, ClipboardCheck, HeartHandshake, MessageSquareWarning, Send, ShieldAlert } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
@@ -230,6 +231,15 @@ export default function StudentServicePage() {
       });
     } finally {
       setPendingOperation(null);
+    }
+  }
+
+  function handleChatKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!hasPendingOperation) {
+        void sendChat();
+      }
     }
   }
 
@@ -554,7 +564,7 @@ export default function StudentServicePage() {
             ))}
           </div>
           <div className="composer">
-            <textarea value={input} onChange={(event) => setInput(event.target.value)} rows={3} />
+            <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleChatKeyDown} rows={3} />
             <button className="icon-button" onClick={() => sendChat()} disabled={hasPendingOperation}>
               <Send size={16} aria-hidden="true" />
               {isSending ? "正在发送" : "发送给服务台"}
