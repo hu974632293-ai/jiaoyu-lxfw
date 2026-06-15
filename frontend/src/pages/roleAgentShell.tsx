@@ -20,7 +20,6 @@ type RoleAgentShellProps = {
   capabilities: Array<{ title: string; detail: string }>;
   resultTitle: string;
   resultBody: string;
-  footerNote?: string;
   children?: ReactNode;
   onQuestionKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
 };
@@ -43,11 +42,11 @@ export function RoleAgentShell({
   taskItems,
   capabilities,
   resultTitle,
-  resultBody,
-  footerNote,
   children,
   onQuestionKeyDown,
 }: RoleAgentShellProps) {
+  const activeCapability = capabilities.find((item) => item.title === sceneLabel) ?? capabilities[0];
+
   return (
     <section className="role-agent-shell enterprise-agent-shell">
       <header className="role-agent-header enterprise-agent-header">
@@ -89,11 +88,16 @@ export function RoleAgentShell({
               onSend();
             }}
           >
-            <textarea value={question} onChange={(event) => onQuestionChange(event.target.value)} onKeyDown={onQuestionKeyDown} rows={3} />
+            <textarea
+              value={question}
+              onChange={(event) => onQuestionChange(event.target.value)}
+              onKeyDown={onQuestionKeyDown}
+              placeholder="直接输入业务目标，助手会先给出可确认建议。"
+              disabled={sending}
+            />
             <button type="submit" disabled={sending || !question.trim()} aria-label={`发送${title}`}>
               <SendHorizonal size={18} aria-hidden="true" />
             </button>
-            <small>{footerNote ?? "Enter 发送，Shift+Enter 换行"}</small>
           </form>
         </section>
 
@@ -113,20 +117,21 @@ export function RoleAgentShell({
               </div>
             ))}
           </div>
-          <div className="role-agent-capability-grid enterprise-agent-context" aria-label={`${title} 功能范围`}>
-            <h3>功能范围</h3>
-            {capabilities.map((item) => (
-              <div key={item.title}>
-                <strong>{item.title}</strong>
-                <span>{item.detail}</span>
-              </div>
-            ))}
+          <div className="role-agent-context enterprise-agent-context" aria-label={`${title} 本次事项`}>
+            <h3>本次事项</h3>
+            <div>
+              <span>正在处理</span>
+              <strong>{sceneLabel}</strong>
+            </div>
+            <div>
+              <span>关联内容</span>
+              <strong>{activeCapability?.detail ?? sceneHint}</strong>
+            </div>
+            <div>
+              <span>处理结果</span>
+              <strong>{resultTitle}</strong>
+            </div>
           </div>
-          <article className="role-agent-result">
-            <strong>{resultTitle}</strong>
-            <p>{resultBody}</p>
-            <small>{statusDetail}</small>
-          </article>
         </aside>
       </div>
     </section>

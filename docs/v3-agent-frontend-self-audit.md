@@ -71,6 +71,7 @@
 - 检查四个新增角色助手页存在并使用 `RoleAgentShell`。
 - 检查每个角色助手覆盖既定功能词。
 - 检查共享壳复用员工 Agent 的 `enterprise-agent-shell`、`enterprise-agent-conversation`、`enterprise-agent-dialog`、`enterprise-agent-input` 结构。
+- 2026-06-15 复核修正：检查共享壳不再渲染右侧结果 article 或功能范围长列表，输入框必须位于对话容器内并紧跟 dialog，右侧只保留员工 Agent 等价的任务卡和本次事项上下文。
 - 检查 Agent 页侧栏展开态不再被 CSS 强制成 76px。
 
 相关既有验证：

@@ -70,11 +70,22 @@ for (const token of [
   "enterprise-agent-input",
   "role-agent-task-card",
   "role-agent-composer",
-  "role-agent-capability-grid",
+  "enterprise-agent-task-card",
+  "enterprise-agent-context",
 ]) {
   if (!shellSource.includes(token)) {
     throw new Error(`独立角色助手共享壳缺少结构: ${token}`);
   }
+}
+
+for (const token of ["role-agent-result", "role-agent-capability-grid", "<small>"]) {
+  if (shellSource.includes(token)) {
+    throw new Error(`独立角色助手共享壳不应继续使用撑高右侧的旧结构: ${token}`);
+  }
+}
+
+if (!/enterprise-agent-dialog[^]*?<\/div>\s*<form[^]*?enterprise-agent-input[^]*?<\/form>\s*<\/section>\s*<aside[^]*?enterprise-agent-execution/.test(shellSource)) {
+  throw new Error("独立角色助手输入框必须在对话容器内、紧跟对话区之后，右侧信息不能插在中间");
 }
 
 const styles = fs.readFileSync(path.join(root, "src/styles.css"), "utf8");
@@ -84,10 +95,18 @@ for (const token of [
   ".enterprise-agent-conversation",
   ".enterprise-agent-dialog",
   ".enterprise-agent-input",
-  ".role-agent-capability-grid",
+  ".enterprise-agent-execution",
+  "grid-template-rows: auto minmax(0, 1fr) auto",
+  "overflow-y: auto",
 ]) {
   if (!styles.includes(token)) {
     throw new Error(`独立角色助手样式缺少: ${token}`);
+  }
+}
+
+for (const token of [".role-agent-result", ".role-agent-capability-grid"]) {
+  if (styles.includes(token)) {
+    throw new Error(`独立角色助手样式不应保留旧右侧长列表规则: ${token}`);
   }
 }
 
