@@ -7,9 +7,9 @@ from app.core.permissions import require_token_permission
 from app.core.response import fail, ok
 from app.models.user import SysUser
 from app.schemas.crm import CrmFollowUpCreate
-from app.schemas.lead import LeadCreate, LeadStatusUpdate
+from app.schemas.lead import LeadCreate, LeadStatusUpdate, PublicConsultationCreate
 from app.services.crm_service import create_follow_up, list_lead_timeline, serialize_follow_up
-from app.services.lead_service import create_lead, get_lead, list_leads, update_lead_status
+from app.services.lead_service import create_lead, create_public_consultation_lead, get_lead, list_leads, update_lead_status
 from app.services.scope_service import DataScopeError, ensure_can_access_lead
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
@@ -47,6 +47,22 @@ def list_all(
             }
             for item in leads
         ]
+    )
+
+
+@router.post("/public-consultations")
+def create_public_consultation(payload: PublicConsultationCreate, db: Session = Depends(get_db)):
+    try:
+        lead = create_public_consultation_lead(db, payload)
+    except ValueError as exc:
+        return fail(str(exc), 40001)
+    return ok(
+        {
+            "id": lead.id,
+            "customer_name": lead.customer_name,
+            "source_channel": lead.source_channel,
+            "owner_id": lead.owner_id,
+        }
     )
 
 

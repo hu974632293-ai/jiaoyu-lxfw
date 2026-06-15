@@ -4,7 +4,8 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.lead import CrmLead
-from app.schemas.lead import LeadCreate
+from app.models.user import SysUser
+from app.schemas.lead import LeadCreate, PublicConsultationCreate
 from app.services.crm_service import create_stage_history
 
 
@@ -13,6 +14,34 @@ def create_lead(db: Session, payload: LeadCreate, owner_id: int | None = None):
     if owner_id is not None:
         lead_data["owner_id"] = owner_id
     lead = CrmLead(**lead_data)
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+    return lead
+
+
+def create_public_consultation_lead(db: Session, payload: PublicConsultationCreate):
+    customer_name = payload.customer_name.strip()
+    contact_info = payload.contact_info.strip()
+    if not customer_name:
+        raise ValueError("请填写姓名")
+    if not contact_info:
+        raise ValueError("请填写联系方式")
+
+    background_parts = []
+    if payload.consultation_direction.strip():
+        background_parts.append(f"咨询方向：{payload.consultation_direction.strip()}")
+    if payload.background_info.strip():
+        background_parts.append(f"补充背景：{payload.background_info.strip()}")
+
+    lead = CrmLead(
+        customer_name=customer_name,
+        contact_info=contact_info,
+        background_info="；".join(background_parts) or "通过官网联系咨询提交。",
+        status="新增意向",
+        source_channel="官网咨询",
+        owner_id=_resolve_public_lead_owner_id(db),
+    )
     db.add(lead)
     db.commit()
     db.refresh(lead)
@@ -87,3 +116,11 @@ def _expand_status_filter(status: str) -> list[str]:
         "lost": ["lost", "流失", "暂缓/流失"],
     }
     return status_aliases.get(status, [status])
+
+
+def _resolve_public_lead_owner_id(db: Session) -> int | None:
+    demo_consultant = db.query(SysUser).filter_by(username="consultant", role="consultant").first()
+    if demo_consultant:
+        return demo_consultant.id
+    consultant = db.query(SysUser).filter_by(role="consultant").order_by(SysUser.id).first()
+    return consultant.id if consultant else None

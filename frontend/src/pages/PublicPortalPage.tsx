@@ -679,12 +679,50 @@ function PublicAgentPanel({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function ContactCard({ onNavigate, onLogin }: { onNavigate: (page: PublicPageKey) => void; onLogin?: () => void }) {
+function ContactCard({ onLogin }: { onNavigate: (page: PublicPageKey) => void; onLogin?: () => void }) {
+  const [customerName, setCustomerName] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [consultationDirection, setConsultationDirection] = useState("新加坡本科 / 德国双元制 / 语言提升");
+  const [consultationBackground, setConsultationBackground] = useState("");
+  const [message, setMessage] = useState("留下姓名和联系方式，顾问会继续承接。");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastLead, setLastLead] = useState<{ id: number; customer_name: string; source_channel: string; owner_id: number | null } | null>(null);
+
+  async function submitConsultation() {
+    if (!customerName.trim() || !contactInfo.trim()) {
+      setMessage("请填写姓名和联系方式");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage("正在提交咨询");
+    try {
+      const lead = await apiRequest<{ id: number; customer_name: string; source_channel: string; owner_id: number | null }>("/api/leads/public-consultations", {
+        method: "POST",
+        body: JSON.stringify({
+          customer_name: customerName.trim(),
+          contact_info: contactInfo.trim(),
+          consultation_direction: consultationDirection.trim(),
+          background_info: consultationBackground.trim(),
+        }),
+      });
+      setLastLead(lead);
+      setMessage(`${lead.customer_name} 已进入顾问队列`);
+      setCustomerName("");
+      setContactInfo("");
+      setConsultationBackground("");
+    } catch (error) {
+      setMessage(error instanceof Error ? `咨询提交失败：${error.message}` : "咨询提交失败");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <section className="public-contact-card">
       <p className="eyebrow">联系咨询</p>
       <h2>把意向转成可跟进的客户线索</h2>
-      <p>留下目标国家、当前阶段、预算和联系方式，由顾问在后台继续研判和跟进。</p>
+      <p>{message}</p>
       <div className="public-contact-grid">
         <span><Phone size={16} aria-hidden="true" /> 400-100-2026</span>
         <span><Mail size={16} aria-hidden="true" /> consult@example.com</span>
@@ -692,18 +730,34 @@ function ContactCard({ onNavigate, onLogin }: { onNavigate: (page: PublicPageKey
       </div>
       <div className="public-form-preview">
         <label>
-          <span>咨询方向</span>
-          <input value="新加坡本科 / 德国双元制 / 语言提升" readOnly />
+          <span>姓名</span>
+          <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="请输入姓名" />
         </label>
         <label>
           <span>联系方式</span>
-          <input value="手机 / 微信 / 邮箱" readOnly />
+          <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} placeholder="手机 / 微信 / 邮箱" />
+        </label>
+        <label>
+          <span>咨询方向</span>
+          <input value={consultationDirection} onChange={(event) => setConsultationDirection(event.target.value)} placeholder="新加坡本科 / 德国双元制 / 语言提升" />
+        </label>
+        <label>
+          <span>补充背景</span>
+          <input value={consultationBackground} onChange={(event) => setConsultationBackground(event.target.value)} placeholder="当前年级 / 预算 / 想解决的问题" />
         </label>
       </div>
       <div className="public-actions">
-        <button className="icon-button" onClick={() => onNavigate("contact")}>提交咨询</button>
+        <button className="icon-button" onClick={submitConsultation} disabled={isSubmitting}>
+          {isSubmitting ? "正在提交" : "提交咨询"}
+        </button>
         {onLogin ? <button className="ghost-button" onClick={onLogin}>登录后台</button> : null}
       </div>
+      {lastLead ? (
+        <div className="public-registration-result">
+          线索 #{lastLead.id} 已进入顾问队列
+          <span>{lastLead.source_channel}</span>
+        </div>
+      ) : null}
     </section>
   );
 }

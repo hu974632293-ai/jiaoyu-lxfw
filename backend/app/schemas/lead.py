@@ -9,6 +9,13 @@ class LeadCreate(BaseModel):
     owner_id: int | None = None
 
 
+class PublicConsultationCreate(BaseModel):
+    customer_name: str
+    contact_info: str
+    consultation_direction: str = ""
+    background_info: str = ""
+
+
 class LeadStatusUpdate(BaseModel):
     status: str
     reason: str = ""
