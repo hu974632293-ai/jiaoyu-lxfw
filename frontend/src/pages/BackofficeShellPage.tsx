@@ -47,7 +47,11 @@ type BackofficeShellPageProps = {
 type BackofficeComponent = (props: PageProps) => JSX.Element;
 
 const backofficeComponents: Partial<Record<BackofficePageKey, BackofficeComponent>> = {
+  consultantAgent: CustomerGrowthPage,
   employeeAgent: EmployeeAgentPanel,
+  teacherAgent: TeacherStudentServicePage,
+  studentAgent: StudentServicePage,
+  managerAgent: ReportsPage,
   employeeWorkspace: EmployeeWorkspacePage,
   teacherStudentService: TeacherStudentServicePage,
   teacherLeaveApproval: TeacherLeaveApprovalWorkflowPage,
@@ -90,7 +94,7 @@ export default function BackofficeShellPage({
     .filter((item): item is (typeof backofficeNavItems)[number] => Boolean(item));
   const current = backofficeNavItems.find((page) => page.key === activePage) ?? visibleNavItems[0] ?? backofficeNavItems[0];
   const shellClass = role === "student" ? "workspace-shell student-shell" : "workspace-shell staff-shell";
-  const isAgentPage = activePage === "employeeAgent";
+  const isAgentPage = ["consultantAgent", "employeeAgent", "teacherAgent", "studentAgent", "managerAgent"].includes(activePage);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -108,6 +112,9 @@ export default function BackofficeShellPage({
   function renderCurrentPage() {
     if (activePage === "consultantNewLead") {
       return <CustomerGrowthPage initialPanel="create" onNavigate={onNavigate} />;
+    }
+    if (activePage === "consultantAgent") {
+      return <CustomerGrowthPage initialPanel="insight" onNavigate={onNavigate} />;
     }
     if (activePage === "consultantLeadQueue") {
       return <CustomerGrowthPage onNavigate={onNavigate} />;
@@ -141,6 +148,9 @@ export default function BackofficeShellPage({
     }
     if (activePage === "managerGrowthDashboard") {
       return <ManagementDashboardPage initialView="growth" onNavigate={onNavigate} />;
+    }
+    if (activePage === "managerAgent") {
+      return <ReportsPage role={role} onNavigate={onNavigate} onSeedDemo={onSeedDemo} seedStatus={seedStatus} />;
     }
     if (activePage === "managerDailySummary") {
       return <ManagementDashboardPage initialView="daily" onNavigate={onNavigate} />;

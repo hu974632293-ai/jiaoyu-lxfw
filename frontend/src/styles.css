@@ -4042,6 +4042,30 @@ textarea {
   gap: 8px;
 }
 
+.customer-agent-composer,
+.report-agent-composer,
+.teacher-agent-composer {
+  display: grid;
+  gap: 8px;
+}
+
+.customer-agent-composer textarea,
+.report-agent-composer textarea,
+.teacher-agent-composer textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+}
+
+.customer-agent-composer small,
+.report-agent-composer small,
+.teacher-agent-composer small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .report-export-actions {
   margin-top: 12px;
 }
@@ -4636,6 +4660,16 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.teacher-agent-composer {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.teacher-agent-composer small {
+  grid-column: 1 / -1;
 }
 
 .student-progress-panel .guide-list article,

@@ -141,3 +141,21 @@ npm.cmd run build
 cd D:\00_Project\jiaoyu_lxfw
 git diff --check
 ```
+
+## 10. 角色助手前端体现批次已完成
+
+完成日期：2026-06-15
+
+本批已把第 5 节中的高优先级问题推进到前端可验收状态：
+
+- `frontend/src/navigation.ts` 新增 `consultantAgent`、`teacherAgent`、`studentAgent`、`managerAgent`，并保留 `employeeAgent`，侧边栏可按角色展示“客户研判助手、企业助手、老师处理助手、学生服务助手、报告解释助手”。
+- `frontend/src/authRules.ts` 拆除顾问、老师、管理者默认共享员工企业助手的权限矩阵；管理员生产视图只保留系统治理入口，不再暴露业务角色助手合集。
+- `frontend/src/pages/BackofficeShellPage.tsx` 将五类角色助手统一纳入 `agent-workspace-grid` / `agent-content-frame` 布局。
+- `CustomerGrowthPage.tsx`、`TeacherStudentServicePage.tsx`、`ReportsPage.tsx` 已补自由输入区，支持 `Enter` 发送、`Shift+Enter` 换行；按钮保留为快捷指令。
+- `frontend/tests/navigation_check.js`、`frontend/tests/authRules.test.mjs`、`frontend/tests/agent_enter_send_check.js`、`frontend/tests/customer_report_agent_check.js`、`frontend/tests/student_teacher_agent_check.js` 已覆盖本批结构。
+
+仍需人工浏览器验收：
+
+- 不同角色登录后侧栏是否只出现自己的助手入口。
+- 顾问、老师、学生、管理者进入助手后，页面布局和输入体验是否符合业务使用习惯。
+- 真实 Dify 配置后，客户研判、报告解释等 scene 的命中率和回答质量仍需单独验收。

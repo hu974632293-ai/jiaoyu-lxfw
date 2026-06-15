@@ -15,12 +15,16 @@ const contents = Object.fromEntries(
 const allText = Object.values(contents).join("\n");
 
 const requiredPageKeys = [
+  "consultantAgent",
   "customerGrowth",
   "customer360",
   "employeeWorkspace",
   "employeeAgent",
+  "teacherAgent",
   "teacherStudentService",
+  "studentAgent",
   "studentService",
+  "managerAgent",
   "managementDashboard",
   "systemGovernance",
 ];
@@ -57,12 +61,36 @@ if (/disabled=\{disabled\}/.test(contents["src/pages/BackofficeShellPage.tsx"]))
   throw new Error("后台导航不应渲染禁用入口");
 }
 
-if (!/key:\s*"employeeAgent"/.test(contents["src/navigation.ts"])) {
-  throw new Error("员工企业助手缺少导航项");
+const expectedAgentNav = [
+  ["consultantAgent", "客户研判助手"],
+  ["employeeAgent", "企业助手"],
+  ["teacherAgent", "老师处理助手"],
+  ["studentAgent", "学生服务助手"],
+  ["managerAgent", "报告解释助手"],
+];
+
+for (const [key, label] of expectedAgentNav) {
+  if (!contents["src/navigation.ts"].includes(`key: "${key}", label: "${label}"`)) {
+    throw new Error(`缺少角色助手导航项: ${label}`);
+  }
 }
 
-if (!/employeeAgent:\s*EmployeeAgentPanel/.test(contents["src/pages/BackofficeShellPage.tsx"])) {
-  throw new Error("员工企业助手缺少页面映射");
+const expectedAgentMappings = [
+  "consultantAgent",
+  "employeeAgent",
+  "teacherAgent",
+  "studentAgent",
+  "managerAgent",
+];
+
+for (const key of expectedAgentMappings) {
+  if (!contents["src/pages/BackofficeShellPage.tsx"].includes(key)) {
+    throw new Error(`角色助手缺少页面映射: ${key}`);
+  }
+}
+
+if (!/const isAgentPage = \["consultantAgent", "employeeAgent", "teacherAgent", "studentAgent", "managerAgent"\]\.includes\(activePage\)/.test(contents["src/pages/BackofficeShellPage.tsx"])) {
+  throw new Error("角色助手页应统一使用 agent-workspace-grid 布局");
 }
 
 console.log("navigation check OK");

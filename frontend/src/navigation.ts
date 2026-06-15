@@ -42,6 +42,7 @@ export type PublicPageKey =
 
 export type BackofficePageKey =
   | "roleOverview"
+  | "consultantAgent"
   | "consultantNewLead"
   | "consultantLeadQueue"
   | "consultantFunnel"
@@ -54,6 +55,7 @@ export type BackofficePageKey =
   | "employeeCustomerQuery"
   | "employeeGuide"
   | "employeeAgent"
+  | "teacherAgent"
   | "teacherLeaveApproval"
   | "teacherFeedback"
   | "teacherPsych"
@@ -65,7 +67,9 @@ export type BackofficePageKey =
   | "studentApplicationProgress"
   | "studentExamNodes"
   | "studentLifeSupport"
+  | "studentAgent"
   | "managerGrowthDashboard"
+  | "managerAgent"
   | "managerDailySummary"
   | "managerPsychWeekly"
   | "managerFeedbackWeekly"
@@ -115,6 +119,7 @@ export const publicNavItems: PublicNavItem[] = [
 
 export const backofficeNavItems: BackofficeNavItem[] = [
   { key: "roleOverview", label: "工作台总览", desc: "指标、待办、最近记录和功能入口", group: "overview", icon: Gauge },
+  { key: "consultantAgent", label: "客户研判助手", desc: "资料补齐、项目匹配和跟进建议", group: "main", icon: Bot },
   { key: "consultantNewLead", label: "新建线索", desc: "手动录入客户资料并进入研判", group: "main", icon: UserPlus },
   { key: "consultantLeadQueue", label: "线索队列", desc: "搜索、筛选和进入客户详情", group: "main", icon: Users },
   { key: "consultantFunnel", label: "漏斗阶段", desc: "按阶段查看客户推进状态", group: "main", icon: BarChart3 },
@@ -127,6 +132,7 @@ export const backofficeNavItems: BackofficeNavItem[] = [
   { key: "employeeCustomerQuery", label: "客户查询", desc: "受控查询客户状态和统计", group: "main", icon: Search },
   { key: "employeeGuide", label: "新人指南", desc: "制度、流程和操作指引", group: "main", icon: BookOpen },
   { key: "employeeAgent", label: "企业助手", desc: "新人指南、组织架构和日报问答", group: "main", icon: Bot },
+  { key: "teacherAgent", label: "老师处理助手", desc: "请假、反馈、心理预警和学业处理", group: "main", icon: Bot },
   { key: "teacherLeaveApproval", label: "请假审批", desc: "查看申请、审批和记录", group: "main", icon: CalendarCheck },
   { key: "teacherFeedback", label: "反馈处理", desc: "处理投诉建议和服务工单", group: "main", icon: MessageSquare },
   { key: "teacherPsych", label: "心理预警", desc: "辅助识别、跟进和记录", group: "main", icon: Siren },
@@ -138,7 +144,9 @@ export const backofficeNavItems: BackofficeNavItem[] = [
   { key: "studentApplicationProgress", label: "申请进度", desc: "查看阶段、材料和下一步", group: "main", icon: FileText },
   { key: "studentExamNodes", label: "考务节点", desc: "考试、材料和提醒节点", group: "main", icon: CalendarDays },
   { key: "studentLifeSupport", label: "生活支持", desc: "住宿、出行和紧急支持", group: "main", icon: HelpCircle },
+  { key: "studentAgent", label: "学生服务助手", desc: "请假、反馈、进度和生活支持问答", group: "main", icon: Bot },
   { key: "managerGrowthDashboard", label: "增长总览", desc: "线索、成交、流失和转化", group: "main", icon: BarChart3 },
+  { key: "managerAgent", label: "报告解释助手", desc: "解释经营报告并定位待处理对象", group: "main", icon: Bot },
   { key: "managerDailySummary", label: "日报汇总", desc: "团队日报和周报汇总", group: "main", icon: FileText },
   { key: "managerPsychWeekly", label: "心理周报", desc: "学生心理辅助风险周报", group: "main", icon: Siren },
   { key: "managerFeedbackWeekly", label: "投诉周报", desc: "投诉处理和未决风险", group: "main", icon: MessageSquare },

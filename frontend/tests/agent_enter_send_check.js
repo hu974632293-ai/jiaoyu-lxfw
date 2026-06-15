@@ -12,11 +12,25 @@ const checks = [
     textarea: "onKeyDown={handleAgentKeyDown}",
   },
   {
-    label: "企业助手",
+    label: "员工企业助手",
     file: "src/pages/EmployeeAgentPanel.tsx",
     handler: "handlePromptKeyDown",
     submit: "void sendPrompt(input)",
     textarea: "onKeyDown={handlePromptKeyDown}",
+  },
+  {
+    label: "顾问客户研判助手",
+    file: "src/pages/CustomerGrowthPage.tsx",
+    handler: "handleAssessmentAgentKeyDown",
+    submit: "void askAssessmentAssistant()",
+    textarea: "onKeyDown={handleAssessmentAgentKeyDown}",
+  },
+  {
+    label: "老师处理助手",
+    file: "src/pages/TeacherStudentServicePage.tsx",
+    handler: "handleTeacherAgentKeyDown",
+    submit: "void askTeacherAgent()",
+    textarea: "onKeyDown={handleTeacherAgentKeyDown}",
   },
   {
     label: "学生服务助手",
@@ -24,6 +38,13 @@ const checks = [
     handler: "handleChatKeyDown",
     submit: "void sendChat()",
     textarea: "onKeyDown={handleChatKeyDown}",
+  },
+  {
+    label: "管理者报告解释助手",
+    file: "src/pages/ReportsPage.tsx",
+    handler: "handleReportAgentKeyDown",
+    submit: "void askReportAssistant()",
+    textarea: "onKeyDown={handleReportAgentKeyDown}",
   },
   {
     label: "知识库场景问答",
@@ -47,18 +68,6 @@ for (const check of checks) {
     if (!source.includes(token)) {
       throw new Error(`${check.label} 缺少回车发送验收点: ${token}`);
     }
-  }
-}
-
-const buttonOnlyAgentFiles = [
-  ["客户研判助手", "src/pages/CustomerGrowthPage.tsx"],
-  ["报告解释助手", "src/pages/ReportsPage.tsx"],
-];
-
-for (const [label, file] of buttonOnlyAgentFiles) {
-  const source = fs.readFileSync(path.join(root, file), "utf8");
-  if (!source.includes(label)) {
-    throw new Error(`${label} 缺少助手入口标识`);
   }
 }
 

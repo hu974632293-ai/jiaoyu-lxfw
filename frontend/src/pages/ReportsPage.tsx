@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { BarChart3, Download, Play, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
@@ -52,6 +52,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
   const [pendingOperation, setPendingOperation] = useState<ReportOperation>(null);
   const [highlightReportId, setHighlightReportId] = useState<number | null>(null);
   const [agentResult, setAgentResult] = useState<ReportAgentResult | null>(null);
+  const [agentQuestion, setAgentQuestion] = useState("请解释本期报告变化，并定位需要跟进的对象。");
 
   async function loadReports(options: { preserveFeedback?: boolean } = {}) {
     if (!options.preserveFeedback) {
@@ -171,6 +172,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
   async function askReportAssistant() {
     const report = detail ?? created;
     const targetTitle = report?.title ?? active.title;
+    const question = agentQuestion.trim() || "请解释本期报告变化，并定位需要跟进的对象。";
     setPendingOperation("agent");
     setOperationFeedback({
       phase: "pending",
@@ -183,7 +185,7 @@ export default function ReportsPage({ onNavigate }: PageProps) {
         method: "POST",
         body: JSON.stringify({
           scene: "report_assistant",
-          question: `请解释本期变化，并定位待处理对象：${targetTitle}`,
+          question: `${question} 报告：${targetTitle}`,
           actor_username: "manager",
           business_context: { report_type: activeType, report_id: report?.id ?? null, title: targetTitle },
         }),
@@ -206,6 +208,15 @@ export default function ReportsPage({ onNavigate }: PageProps) {
       });
     } finally {
       setPendingOperation(null);
+    }
+  }
+
+  function handleReportAgentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!hasPendingOperation) {
+        void askReportAssistant();
+      }
     }
   }
 
@@ -364,6 +375,10 @@ export default function ReportsPage({ onNavigate }: PageProps) {
               <button className="ghost-button" onClick={askReportAssistant} disabled={hasPendingOperation}>
                 定位待处理对象
               </button>
+            </div>
+            <div className="report-agent-composer">
+              <textarea value={agentQuestion} onChange={(event) => setAgentQuestion(event.target.value)} onKeyDown={handleReportAgentKeyDown} rows={3} />
+              <small>Enter 发送，Shift+Enter 换行</small>
             </div>
             <article className="report-agent-result">
               <strong>{agentResult ? "解释摘要" : "待生成解释"}</strong>

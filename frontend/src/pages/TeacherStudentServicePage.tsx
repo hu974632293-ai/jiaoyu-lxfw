@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { AlertTriangle, CheckCircle2, ClipboardCheck, GraduationCap, MessageSquare, RefreshCw } from "lucide-react";
 import { apiRequest } from "../api/client";
 import { OperationFeedback, type OperationFeedbackState } from "../components/OperationFeedback";
@@ -76,7 +76,11 @@ type TimelineItem = {
   created_at: string | null;
   detail: Record<string, unknown>;
 };
-type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "closeFeedback" | "archiveFeedback" | "psych" | "academic" | "grade" | null;
+type TeacherAgentResult = {
+  answer: string;
+  status: string;
+};
+type TeacherOperation = "refresh" | "approveLeave" | "handleFeedback" | "closeFeedback" | "archiveFeedback" | "psych" | "academic" | "grade" | "agent" | null;
 type TeacherActionKey = "leave" | "feedback" | "psych" | "academic" | "grade" | null;
 
 const emptyTasks: TeacherTasks = { leaves: [], feedback_tickets: [], psych_alerts: [], grades: [] };
@@ -112,6 +116,8 @@ export default function TeacherStudentServicePage() {
   });
   const [pendingOperation, setPendingOperation] = useState<TeacherOperation>(null);
   const [highlightAction, setHighlightAction] = useState<TeacherActionKey>(null);
+  const [teacherAgentInput, setTeacherAgentInput] = useState("请帮我判断当前学生待办的处理优先级，并给出下一步建议。");
+  const [teacherAgentResult, setTeacherAgentResult] = useState<TeacherAgentResult | null>(null);
 
   const displayStudents = students.length
     ? students.map((item) => ({
@@ -218,6 +224,60 @@ export default function TeacherStudentServicePage() {
     setTasks(data);
     setSelectedLeaveId((current) => current ?? data.leaves[0]?.id ?? null);
     setSelectedTicketId((current) => current ?? data.feedback_tickets[0]?.id ?? null);
+  }
+
+  async function askTeacherAgent() {
+    const content = teacherAgentInput.trim();
+    if (!content) {
+      setOperationFeedback({
+        phase: "error",
+        title: "老师处理助手未发送",
+        detail: "请先输入要处理的问题。当前学生和待办队列已保留。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+      return;
+    }
+    setPendingOperation("agent");
+    setOperationFeedback({
+      phase: "pending",
+      title: "正在整理老师处理建议",
+      detail: "围绕当前学生、请假、反馈、心理预警和学业节点生成处理建议。",
+      target: selected.name,
+    });
+    try {
+      const result = await apiRequest<TeacherAgentResult>("/api/student-assistant/chat", {
+        method: "POST",
+        body: JSON.stringify({ student_id: selected.id, message: content, actor_username: "teacher" }),
+      });
+      setTeacherAgentResult(result);
+      setOperationFeedback({
+        phase: result.status === "success" ? "success" : "fallback",
+        title: "老师处理建议已返回",
+        detail: "建议已显示在老师处理助手面板，确认写入仍需使用对应处理按钮。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } catch (error) {
+      setOperationFeedback({
+        phase: "error",
+        title: "老师处理建议生成失败",
+        detail: error instanceof Error ? `${error.message}。输入内容已保留，可重试。` : "服务暂不可用。输入内容已保留，可重试。",
+        target: selected.name,
+        timestamp: formatOperationTime(),
+      });
+    } finally {
+      setPendingOperation(null);
+    }
+  }
+
+  function handleTeacherAgentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!hasPendingOperation) {
+        void askTeacherAgent();
+      }
+    }
   }
 
   async function saveGrade() {
@@ -609,6 +669,13 @@ export default function TeacherStudentServicePage() {
         <div className="teacher-agent-confirmation">
           <button onClick={approveLeave} disabled={hasPendingOperation || !selectedLeave}>确认处理请假</button>
           <button className="ghost-button" onClick={handleFeedback} disabled={hasPendingOperation || !selectedTicket}>确认处理反馈</button>
+        </div>
+        <div className="teacher-agent-composer">
+          <textarea value={teacherAgentInput} onChange={(event) => setTeacherAgentInput(event.target.value)} onKeyDown={handleTeacherAgentKeyDown} rows={3} />
+          <button className="ghost-button" onClick={() => void askTeacherAgent()} disabled={hasPendingOperation}>
+            发送给助手
+          </button>
+          <small>{teacherAgentResult?.answer ?? "Enter 发送，Shift+Enter 换行"}</small>
         </div>
       </section>
 

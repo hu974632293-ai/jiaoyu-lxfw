@@ -23,6 +23,7 @@ export type LoginShortcut = {
 
 const allBackofficePages: BackofficePageKey[] = [
   "roleOverview",
+  "consultantAgent",
   "consultantNewLead",
   "consultantLeadQueue",
   "consultantFunnel",
@@ -35,6 +36,7 @@ const allBackofficePages: BackofficePageKey[] = [
   "employeeCustomerQuery",
   "employeeGuide",
   "employeeAgent",
+  "teacherAgent",
   "teacherLeaveApproval",
   "teacherFeedback",
   "teacherPsych",
@@ -46,7 +48,9 @@ const allBackofficePages: BackofficePageKey[] = [
   "studentApplicationProgress",
   "studentExamNodes",
   "studentLifeSupport",
+  "studentAgent",
   "managerGrowthDashboard",
+  "managerAgent",
   "managerDailySummary",
   "managerPsychWeekly",
   "managerFeedbackWeekly",
@@ -71,11 +75,9 @@ const allBackofficePages: BackofficePageKey[] = [
   "systemDemo",
 ];
 
-const enterpriseCommonPages: BackofficePageKey[] = ["employeeReports", "employeeOrg", "employeeGuide", "employeeAgent"];
-const consultantEnterprisePages: BackofficePageKey[] = [...enterpriseCommonPages, "employeeCustomerQuery"];
+const employeePages: BackofficePageKey[] = ["employeeQuickEntry", "employeeReports", "employeeOrg", "employeeCustomerQuery", "employeeGuide", "employeeAgent"];
 const adminGovernancePages: BackofficePageKey[] = [
   "roleOverview",
-  "employeeAgent",
   "adminUsers",
   "adminRoles",
   "adminPermissions",
@@ -87,11 +89,11 @@ const adminGovernancePages: BackofficePageKey[] = [
 
 export const roleVisiblePages: Record<RoleKey, BackofficePageKey[]> = {
   admin: adminGovernancePages,
-  manager: ["roleOverview", "managerGrowthDashboard", "managerDailySummary", "managerPsychWeekly", "managerFeedbackWeekly", "managerRiskQueue", ...enterpriseCommonPages, "reports"],
-  consultant: ["roleOverview", "consultantNewLead", "consultantLeadQueue", "consultantFunnel", "consultantCustomer360", "consultantTasks", "consultantEvents", ...consultantEnterprisePages],
-  employee: ["roleOverview", ...enterpriseCommonPages],
-  teacher: ["roleOverview", "teacherLeaveApproval", "teacherFeedback", "teacherPsych", "teacherAcademic", "teacherGrades", ...enterpriseCommonPages],
-  student: ["roleOverview", "studentLeaveRequest", "studentFeedbackSubmit", "studentGradeQuery", "studentApplicationProgress", "studentExamNodes", "studentLifeSupport"],
+  manager: ["roleOverview", "managerAgent", "managerGrowthDashboard", "managerDailySummary", "managerPsychWeekly", "managerFeedbackWeekly", "managerRiskQueue", "reports"],
+  consultant: ["roleOverview", "consultantAgent", "consultantNewLead", "consultantLeadQueue", "consultantFunnel", "consultantCustomer360", "consultantTasks", "consultantEvents"],
+  employee: ["roleOverview", ...employeePages],
+  teacher: ["roleOverview", "teacherAgent", "teacherLeaveApproval", "teacherFeedback", "teacherPsych", "teacherAcademic", "teacherGrades"],
+  student: ["roleOverview", "studentAgent", "studentLeaveRequest", "studentFeedbackSubmit", "studentGradeQuery", "studentApplicationProgress", "studentExamNodes", "studentLifeSupport"],
 };
 
 export const loginAccounts: Record<LoginAccountKey, LoginAccountProfile> = {
@@ -111,7 +113,7 @@ export const loginAccounts: Record<LoginAccountKey, LoginAccountProfile> = {
     displayName: "王管理者",
     role: "manager",
     title: "经营管理者",
-    accessScope: "经营管理后台 + 员工工作台",
+    accessScope: "经营管理后台",
   },
   consultant: {
     key: "consultant",
@@ -120,7 +122,7 @@ export const loginAccounts: Record<LoginAccountKey, LoginAccountProfile> = {
     displayName: "李顾问",
     role: "consultant",
     title: "客户增长顾问",
-    accessScope: "客户增长 + 员工工作台",
+    accessScope: "客户增长后台",
   },
   employee: {
     key: "employee",
@@ -138,7 +140,7 @@ export const loginAccounts: Record<LoginAccountKey, LoginAccountProfile> = {
     displayName: "周老师",
     role: "teacher",
     title: "学生服务老师",
-    accessScope: "学生服务工作台 + 员工工作台",
+    accessScope: "学生服务工作台",
   },
   student: {
     key: "student",

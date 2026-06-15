@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
 import {
   ArrowRight,
   CalendarClock,
@@ -108,6 +108,7 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
   const [activePanel, setActivePanel] = useState<AdvisorPanel>(initialPanel);
   const [agentResult, setAgentResult] = useState<AdvisorAgentResult | null>(null);
+  const [agentQuestion, setAgentQuestion] = useState("请补齐当前客户研判依据，并给出下一步跟进建议。");
 
   const leadFilters = useMemo(
     () => ({
@@ -375,10 +376,11 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
 
   async function askAssessmentAssistant() {
     const lead = spotlightLead;
+    const question = agentQuestion.trim() || "请补齐当前客户研判依据，并给出下一步跟进建议。";
     setPendingOperation("agent");
     setOperationFeedback({
       phase: "pending",
-      title: "正在整理客户研判建议",
+      title: "正在处理客户研判问题",
       detail: `围绕 ${lead.customer_name} 的资料补齐、项目匹配和下一步跟进生成建议。`,
       target: lead.customer_name,
     });
@@ -387,7 +389,7 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
         method: "POST",
         body: JSON.stringify({
           scene: "customer_assessment",
-          question: `请基于当前客户资料，补齐研判依据并生成跟进建议：${lead.customer_name}，${lead.project}，${lead.recent}`,
+          question: `${question} 当前客户：${lead.customer_name}，${lead.project}，${lead.recent}`,
           lead_id: lead.id,
           actor_username: "advisor",
           business_context: { customer_name: lead.customer_name, status: lead.statusLabel, project: lead.project },
@@ -412,6 +414,15 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
       });
     } finally {
       setPendingOperation(null);
+    }
+  }
+
+  function handleAssessmentAgentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!hasPendingOperation) {
+        void askAssessmentAssistant();
+      }
     }
   }
 
@@ -711,6 +722,10 @@ export default function CustomerGrowthPage({ onNavigate, initialPanel = null, in
                 <button className="ghost-button" onClick={askAssessmentAssistant} disabled={hasPendingOperation}>
                   生成跟进建议
                 </button>
+              </div>
+              <div className="customer-agent-composer">
+                <textarea value={agentQuestion} onChange={(event) => setAgentQuestion(event.target.value)} onKeyDown={handleAssessmentAgentKeyDown} rows={3} />
+                <small>Enter 发送，Shift+Enter 换行</small>
               </div>
               <article className="customer-agent-result">
                 <strong>{agentResult ? "建议摘要" : "待生成建议"}</strong>
