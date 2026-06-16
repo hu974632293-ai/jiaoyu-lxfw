@@ -48,6 +48,14 @@ type ConfirmResult = {
   idempotent: boolean;
 };
 
+type AgentMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  draft?: AgentDraft;
+  confirmResult?: ConfirmResult;
+};
+
 type LeadItem = {
   id: number;
   customer_name: string;
@@ -123,6 +131,13 @@ function businessToolLabel(tool: string) {
 export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: ConsultantAgentPageProps) {
   const [activeScene, setActiveScene] = useState(scenes[0].key);
   const [question, setQuestion] = useState(promptByScene.consultant);
+  const [messages, setMessages] = useState<AgentMessage[]>([
+    {
+      id: "consultant-agent-welcome",
+      role: "assistant",
+      content: "你可以直接说想完成的客户承接目标，我会基于当前客户资料生成可确认的CRM动作。",
+    },
+  ]);
   const [result, setResult] = useState<AgentDraft | null>(null);
   const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
   const [selectedActionTypes, setSelectedActionTypes] = useState<PendingActionType[]>([]);
@@ -177,6 +192,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
     setSending(true);
     setConfirmResult(null);
     setMessage("正在生成客户研判建议");
+    setMessages((current) => [...current, appendUserMessage(content)]);
     try {
       const data = await apiRequest<AgentDraft>("/api/consultant-agent/chat", {
         method: "POST",
@@ -189,6 +205,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
       setResult(data);
       setSelectedActionTypes(data.pending_actions.map((item) => item.action_type));
       setEditedActionDrafts(Object.fromEntries(data.pending_actions.map((item) => [item.action_type, { ...item.draft }])));
+      setMessages((current) => [...current, appendAssistantMessage(data)]);
       setConversationContext((current) =>
         [
           ...current,
@@ -196,9 +213,12 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
           ...(data.follow_up_questions?.length ? [`助手追问：${data.follow_up_questions.join("；")}`] : []),
         ].slice(-6),
       );
+      setQuestion("");
       setMessage(data.requires_more_info ? "需要补充客户信息" : data.requires_confirmation ? "已生成待确认CRM动作" : "已提供可用研判参考");
     } catch (error) {
-      setMessage(error instanceof Error ? `研判助手暂不可用：${error.message}` : "研判助手暂不可用");
+      const errorMessage = error instanceof Error ? `研判助手暂不可用：${error.message}` : "研判助手暂不可用";
+      setMessages((current) => [...current, appendErrorMessage(errorMessage)]);
+      setMessage(errorMessage);
     } finally {
       setSending(false);
     }
@@ -226,6 +246,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         }),
       });
       setConfirmResult(data);
+      setMessages((current) => [...current, appendConfirmResultMessage(data)]);
       setMessage(data.idempotent ? "CRM动作已确认过" : "CRM动作已写入");
       await loadLeads();
     } catch (error) {
@@ -243,6 +264,32 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         ...item,
         draft: editedActionDrafts[item.action_type] ?? item.draft,
       }));
+  }
+
+  function appendUserMessage(content: string): AgentMessage {
+    return { id: `user-${Date.now()}`, role: "user", content };
+  }
+
+  function appendAssistantMessage(draft: AgentDraft): AgentMessage {
+    return {
+      id: `assistant-${draft.idempotency_key}`,
+      role: "assistant",
+      content: draft.answer,
+      draft,
+    };
+  }
+
+  function appendErrorMessage(content: string): AgentMessage {
+    return { id: `assistant-error-${Date.now()}`, role: "assistant", content };
+  }
+
+  function appendConfirmResultMessage(data: ConfirmResult): AgentMessage {
+    return {
+      id: `assistant-confirm-${data.lead_id}-${Date.now()}`,
+      role: "assistant",
+      content: data.idempotent ? "这组CRM动作此前已经确认过。" : "已写入CRM，可在客户360时间线追踪。",
+      confirmResult: data,
+    };
   }
 
   function togglePendingAction(actionType: PendingActionType) {
@@ -297,30 +344,33 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         resultBody={result?.answer ?? "输入客户目标后，助手会读取真实客户资料，生成资料补齐、跟进任务、阶段更新和客户360查看要点。"}
         onQuestionKeyDown={handleAgentKeyDown}
       >
-        <div className="role-agent-message user">{question}</div>
-        <div className="role-agent-message assistant">
-          {result?.answer ?? "你可以直接说想完成的客户承接目标，我会基于当前客户资料生成可确认的CRM动作。"}
-          {result?.orchestration ? (
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={msg.role === "user" ? "role-agent-message user" : "role-agent-message assistant"}
+          >
+            {msg.content}
+            {msg.draft?.orchestration ? (
             <div className="role-agent-confirm-box" aria-label="顾问助手编排状态">
-              <strong>{result.orchestration.mode === "ask_more_info" ? "需要补充信息" : "等待确认写入"}</strong>
+              <strong>{msg.draft.orchestration.mode === "ask_more_info" ? "需要补充信息" : "等待确认写入"}</strong>
               <span>
                 已读取上下文：
-                {result.orchestration.context_sources.map(contextSourceLabel).join("、") || "当前客户"}
+                {msg.draft.orchestration.context_sources.map(contextSourceLabel).join("、") || "当前客户"}
               </span>
               <span>
                 识别动作：
-                {result.orchestration.business_tools.map((item) => businessToolLabel(item.tool)).join("、") ||
+                {msg.draft.orchestration.business_tools.map((item) => businessToolLabel(item.tool)).join("、") ||
                   "暂不生成写库动作"}
               </span>
               <span>
                 确认后写入：
-                {result.orchestration.business_tools.length ? "选中的CRM动作" : "不会写入CRM，仅补充信息"}
+                {msg.draft.orchestration.business_tools.length ? "选中的CRM动作" : "不会写入CRM，仅补充信息"}
               </span>
             </div>
           ) : null}
-          {result?.pending_actions.length ? (
+            {msg.draft?.pending_actions.length && msg.draft.idempotency_key === result?.idempotency_key ? (
             <div className="role-agent-confirm-box">
-              {result.pending_actions.map((item) => (
+              {msg.draft.pending_actions.map((item) => (
                 <div key={item.action_type}>
                   <label>
                     <input
@@ -347,24 +397,26 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
               </button>
             </div>
           ) : null}
-          {result?.requires_more_info && result.follow_up_questions.length ? (
+            {msg.draft?.requires_more_info && msg.draft.follow_up_questions.length ? (
             <div className="role-agent-confirm-box">
               <strong>需要补充信息</strong>
-              {result.follow_up_questions.map((item) => (
+              {msg.draft.follow_up_questions.map((item) => (
                 <span key={item}>{item}</span>
               ))}
             </div>
           ) : null}
-          {confirmResult ? (
+            {msg.confirmResult ? (
             <div className="role-agent-confirm-box">
               <strong>写入结果</strong>
-              <span>已同步 {confirmResult.results.length} 条CRM记录，可在客户360时间线追踪。</span>
+              <span>已同步 {msg.confirmResult.results.length} 条CRM记录，可在客户360时间线追踪。</span>
               <button type="button" onClick={() => onNavigate("consultantCustomer360", selectedLead.id)}>
                 查看客户360
               </button>
             </div>
           ) : null}
-        </div>
+          </div>
+        ))}
+        {sending ? <div className="role-agent-message assistant">正在处理...</div> : null}
       </RoleAgentShell>
     </div>
   );
