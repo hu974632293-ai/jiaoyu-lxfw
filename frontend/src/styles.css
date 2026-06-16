@@ -5171,6 +5171,118 @@ textarea {
   cursor: not-allowed;
 }
 
+.role-agent-confirm-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(13, 75, 62, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.role-agent-confirm-box strong {
+  color: #17261f;
+}
+
+.role-agent-confirm-box span {
+  color: #4e625a;
+  font-size: 13px;
+}
+
+.role-agent-action-card {
+  max-width: 100%;
+}
+
+.role-agent-action-card > div {
+  display: grid;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(13, 75, 62, 0.08);
+}
+
+.role-agent-action-card > div:last-of-type {
+  border-bottom: 0;
+}
+
+.role-agent-action-card label {
+  display: grid;
+  gap: 4px;
+  color: #17261f;
+  font-size: 13px;
+}
+
+.role-agent-action-card label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-agent-action-card details {
+  color: #4e625a;
+  font-size: 13px;
+}
+
+.role-agent-action-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.role-agent-draft-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.role-agent-draft-grid label:first-child,
+.role-agent-draft-grid label:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.role-agent-draft-grid input,
+.role-agent-draft-grid textarea {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(24, 58, 49, 0.14);
+  border-radius: 10px;
+  color: #17261f;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.role-agent-draft-grid input {
+  padding: 7px 9px;
+}
+
+.role-agent-draft-grid textarea {
+  max-height: 92px;
+  padding: 8px 9px;
+  resize: vertical;
+}
+
+.role-agent-action-card button,
+.role-agent-confirm-box button {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: #0d4b3e;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.role-agent-action-card button:disabled,
+.role-agent-confirm-box button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
 .enterprise-panel-heading {
   display: flex;
   align-items: flex-start;

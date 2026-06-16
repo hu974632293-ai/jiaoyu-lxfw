@@ -347,10 +347,10 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={msg.role === "user" ? "role-agent-message user" : "role-agent-message assistant"}
+            className={`enterprise-agent-message role-agent-message ${msg.role}`}
           >
             {msg.content}
-            {msg.draft?.orchestration ? (
+            {msg.draft?.orchestration && !msg.draft.pending_actions.length ? (
             <div className="role-agent-confirm-box" aria-label="顾问助手编排状态">
               <strong>{msg.draft.orchestration.mode === "ask_more_info" ? "需要补充信息" : "等待确认写入"}</strong>
               <span>
@@ -369,7 +369,12 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
             </div>
           ) : null}
             {msg.draft?.pending_actions.length && msg.draft.idempotency_key === result?.idempotency_key ? (
-            <div className="role-agent-confirm-box">
+            <div className="role-agent-confirm-box role-agent-action-card">
+              <strong>待确认动作</strong>
+              <span>
+                已读取：{msg.draft.orchestration.context_sources.map(contextSourceLabel).join("、")}；识别：
+                {msg.draft.orchestration.business_tools.map((item) => businessToolLabel(item.tool)).join("、")}
+              </span>
               {msg.draft.pending_actions.map((item) => (
                 <div key={item.action_type}>
                   <label>
@@ -380,16 +385,29 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
                     />
                     <strong>{item.label}</strong>
                   </label>
-                  {Object.entries(editedActionDrafts[item.action_type] ?? item.draft).map(([field, value]) => (
-                    <label key={`${item.action_type}-${field}`}>
-                      <span>{draftFieldLabel(field)}</span>
-                      <textarea
-                        value={String(value ?? "")}
-                        onChange={(event) => updatePendingActionDraft(item.action_type, field, event.target.value)}
-                        disabled={!selectedActionTypes.includes(item.action_type) || confirming}
-                      />
-                    </label>
-                  ))}
+                  <details>
+                    <summary>查看并修改草稿</summary>
+                    <div className="role-agent-draft-grid">
+                      {Object.entries(editedActionDrafts[item.action_type] ?? item.draft).map(([field, value]) => (
+                        <label key={`${item.action_type}-${field}`}>
+                          <span>{draftFieldLabel(field)}</span>
+                          {field === "content" || field === "next_action" || field === "reason" ? (
+                            <textarea
+                              value={String(value ?? "")}
+                              onChange={(event) => updatePendingActionDraft(item.action_type, field, event.target.value)}
+                              disabled={!selectedActionTypes.includes(item.action_type) || confirming}
+                            />
+                          ) : (
+                            <input
+                              value={String(value ?? "")}
+                              onChange={(event) => updatePendingActionDraft(item.action_type, field, event.target.value)}
+                              disabled={!selectedActionTypes.includes(item.action_type) || confirming}
+                            />
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </details>
                 </div>
               ))}
               <button type="button" onClick={confirmAgentActions} disabled={confirming} aria-label="确认选中动作">
@@ -416,7 +434,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
           ) : null}
           </div>
         ))}
-        {sending ? <div className="role-agent-message assistant">正在处理...</div> : null}
+        {sending ? <div className="enterprise-agent-message role-agent-message assistant">正在处理...</div> : null}
       </RoleAgentShell>
     </div>
   );
