@@ -210,9 +210,14 @@ if (!/sceneTags=\{consultantNaturalLanguagePrompts\}/.test(consultantAgentSource
 for (const token of [
   "selectedActionTypes",
   "editedActionDrafts",
+  "conversationContext",
+  "setConversationContext",
   "togglePendingAction",
   "updatePendingActionDraft",
   "buildConfirmableActions",
+  "requires_more_info",
+  "follow_up_questions",
+  "conversation_context: conversationContext",
   'type="checkbox"',
   "确认选中动作",
 ]) {

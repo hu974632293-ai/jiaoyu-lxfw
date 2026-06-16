@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class ConsultantAgentChatRequest(BaseModel):
     lead_id: int
     message: str = Field(min_length=1)
+    conversation_context: list[str] = Field(default_factory=list)
 
 
 class ConsultantPendingAction(BaseModel):

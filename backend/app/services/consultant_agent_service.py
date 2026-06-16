@@ -22,12 +22,38 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
     timeline = list_lead_timeline(db, lead.id) or []
     recent_items = [item["title"] for item in timeline[:3]]
     now = datetime.now(UTC).replace(tzinfo=None)
+    conversation_context = _normalize_conversation_context(payload.conversation_context)
+    if _should_ask_for_more_info(payload.message, lead.background_info or "", conversation_context):
+        follow_up_questions = _build_follow_up_questions(payload.message, lead.background_info or "", conversation_context)
+        return {
+            "intent": "consultant_followup",
+            "idempotency_key": f"consultant-agent-{lead.id}-{int(now.timestamp() * 1000)}",
+            "requires_confirmation": False,
+            "requires_more_info": True,
+            "confirmation_endpoint": "/api/consultant-agent/actions/confirm",
+            "answer": f"{lead.customer_name}当前资料还不足以判断项目匹配，请先补充关键信息。",
+            "follow_up_questions": follow_up_questions,
+            "lead_context": {
+                "id": lead.id,
+                "customer_name": lead.customer_name,
+                "status": lead.status,
+                "source_channel": lead.source_channel,
+                "background_info": lead.background_info,
+                "recent_timeline": recent_items,
+                "conversation_context": conversation_context,
+            },
+            "pending_actions": [],
+        }
+
     action_types = _resolve_consultant_action_types(payload.message)
     due_time = _resolve_task_due_time(payload.message, now)
+    supplemental_context = _extract_supplemental_context(payload.message)
     follow_content = (
         f"围绕{lead.customer_name}完成本次跟进：确认目标专业、申请时间和家长关注点；"
         f"当前阶段为{lead.status}，来源为{lead.source_channel or '客户增长'}。"
     )
+    if supplemental_context:
+        follow_content = f"{follow_content} 本轮补充：{supplemental_context}。"
     next_action = "三天后回访家长，确认专业方向、申请节奏和预算边界。"
     task_title = f"回访{lead.customer_name}：确认专业方向和申请节奏"
 
@@ -55,6 +81,7 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
         "intent": "consultant_followup",
         "idempotency_key": f"consultant-agent-{lead.id}-{int(now.timestamp() * 1000)}",
         "requires_confirmation": True,
+        "requires_more_info": False,
         "confirmation_endpoint": "/api/consultant-agent/actions/confirm",
         "answer": (
             f"已基于{lead.customer_name}的客户资料生成{action_labels}草稿。"
@@ -67,7 +94,9 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
             "source_channel": lead.source_channel,
             "background_info": lead.background_info,
             "recent_timeline": recent_items,
+            "conversation_context": conversation_context,
         },
+        "follow_up_questions": [],
         "pending_actions": [item.model_dump() for item in pending_actions],
     }
 
@@ -79,13 +108,12 @@ def _resolve_consultant_action_types(message: str) -> list[str]:
     requested: list[str] = []
     if _contains_any(text, ["跟进", "沟通记录", "电话记录", "电话跟"]):
         requested.append("create_follow_up")
-    if _contains_any(text, ["任务", "待办", "回访任务"]):
+    if _contains_any(text, ["任务", "待办", "回访", "回访任务"]):
         requested.append("create_task")
     if _contains_any(text, ["阶段", "状态", "推进"]):
         requested.append("update_lead_status")
 
-    only_mode = _contains_any(text, ["只", "仅", "单独"])
-    action_types = requested if only_mode and requested else default_actions.copy()
+    action_types = requested or default_actions.copy()
 
     if _contains_any(text, ["不要写跟进", "不要生成跟进", "不写跟进", "无需跟进记录", "先不要写跟进"]):
         action_types = [item for item in action_types if item != "create_follow_up"]
@@ -95,6 +123,43 @@ def _resolve_consultant_action_types(message: str) -> list[str]:
         action_types = [item for item in action_types if item != "update_lead_status"]
 
     return action_types or default_actions
+
+
+def _should_ask_for_more_info(message: str, background_info: str, conversation_context: list[str]) -> bool:
+    text = _join_context(message, background_info, conversation_context)
+    asks_assessment = _contains_any(message, ["适合哪个项目", "项目匹配", "判断项目", "推荐项目", "研判", "适合"])
+    return asks_assessment and not _has_budget_signal(text)
+
+
+def _build_follow_up_questions(message: str, background_info: str, conversation_context: list[str]) -> list[str]:
+    text = _join_context(message, background_info, conversation_context)
+    questions = []
+    if not _has_budget_signal(text):
+        questions.append("预算范围大概是多少？")
+    if not _contains_any(text, ["雅思", "托福", "语言", "英语"]):
+        questions.append("目前语言成绩或英语水平如何？")
+    if not _contains_any(text, ["入学", "申请时间", "时间线", "明年", "今年"]):
+        questions.append("计划什么时候入学或递交申请？")
+    return questions or ["请补充预算、语言成绩和目标入学时间。"]
+
+
+def _has_budget_signal(text: str) -> bool:
+    return _contains_any(text, ["预算", "费用", "万", "人民币", "资金"])
+
+
+def _join_context(message: str, background_info: str, conversation_context: list[str]) -> str:
+    return " ".join([message or "", background_info or "", *conversation_context])
+
+
+def _normalize_conversation_context(items: list[str]) -> list[str]:
+    return [str(item).strip() for item in items if str(item).strip()][:5]
+
+
+def _extract_supplemental_context(message: str) -> str:
+    markers = ["预算", "雅思", "托福", "语言", "入学", "申请"]
+    if not _contains_any(message, markers):
+        return ""
+    return message.strip()
 
 
 def _resolve_task_due_time(message: str, now: datetime) -> datetime:

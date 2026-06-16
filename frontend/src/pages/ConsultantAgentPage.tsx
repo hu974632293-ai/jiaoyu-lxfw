@@ -17,12 +17,15 @@ type AgentDraft = {
   intent: string;
   idempotency_key: string;
   requires_confirmation: boolean;
+  requires_more_info: boolean;
   confirmation_endpoint: string;
+  follow_up_questions: string[];
   lead_context: {
     id: number;
     customer_name: string;
     status: string;
     source_channel?: string;
+    conversation_context?: string[];
   };
   pending_actions: PendingAction[];
 };
@@ -94,6 +97,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
   const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
   const [selectedActionTypes, setSelectedActionTypes] = useState<PendingActionType[]>([]);
   const [editedActionDrafts, setEditedActionDrafts] = useState<Record<string, PendingAction["draft"]>>({});
+  const [conversationContext, setConversationContext] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [loadingLeads, setLoadingLeads] = useState(true);
@@ -149,12 +153,20 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         body: JSON.stringify({
           lead_id: selectedLead.id,
           message: content,
+          conversation_context: conversationContext,
         }),
       });
       setResult(data);
       setSelectedActionTypes(data.pending_actions.map((item) => item.action_type));
       setEditedActionDrafts(Object.fromEntries(data.pending_actions.map((item) => [item.action_type, { ...item.draft }])));
-      setMessage(data.requires_confirmation ? "已生成待确认CRM动作" : "已提供可用研判参考");
+      setConversationContext((current) =>
+        [
+          ...current,
+          `顾问输入：${content}`,
+          ...(data.follow_up_questions?.length ? [`助手追问：${data.follow_up_questions.join("；")}`] : []),
+        ].slice(-6),
+      );
+      setMessage(data.requires_more_info ? "需要补充客户信息" : data.requires_confirmation ? "已生成待确认CRM动作" : "已提供可用研判参考");
     } catch (error) {
       setMessage(error instanceof Error ? `研判助手暂不可用：${error.message}` : "研判助手暂不可用");
     } finally {
@@ -285,6 +297,14 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
               <button type="button" onClick={confirmAgentActions} disabled={confirming} aria-label="确认选中动作">
                 确认写入CRM
               </button>
+            </div>
+          ) : null}
+          {result?.requires_more_info && result.follow_up_questions.length ? (
+            <div className="role-agent-confirm-box">
+              <strong>需要补充信息</strong>
+              {result.follow_up_questions.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
             </div>
           ) : null}
           {confirmResult ? (

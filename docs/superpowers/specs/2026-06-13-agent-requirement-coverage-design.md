@@ -390,6 +390,7 @@ YAML 应至少覆盖这些场景：
 3. 本批前端验证命令为 `cd frontend && node tests\customer_report_agent_check.js`、`node tests\customer_growth_check.js`、`node tests\navigation_check.js`、`npm.cmd run build`、`git diff --check`。
 4. 2026-06-16 已增强顾问 Agent 后端编排层：`/api/consultant-agent/chat` 能按自然语言限制待确认动作范围，例如只生成跟进、只创建明天下午回访任务，并继续通过确认接口写入正式 CRM 记录。
 5. 2026-06-16 已增强顾问 Agent 确认层：顾问可在前端选择部分待确认动作、修改草稿字段后再写入 CRM；后端 ActionLog 记录实际确认的动作和草稿，便于审计追踪。
+6. 2026-06-16 已增强顾问 Agent 连续对话层：项目信息不足时先返回追问且不生成写库动作；顾问补充预算、语言等信息后，同一客户上下文会随请求传回后端并进入可确认草稿。
 
 范围：
 

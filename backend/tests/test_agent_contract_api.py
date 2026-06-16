@@ -402,6 +402,77 @@ def test_consultant_agent_natural_language_can_create_tomorrow_afternoon_task_on
     assert due_time.hour >= 12
 
 
+def test_consultant_agent_asks_follow_up_when_project_assessment_lacks_budget():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "待追问客户",
+            "contact_info": "13900007774",
+            "background_info": "高三在读，目标新加坡本科，家长想先判断方向。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"lead_id": lead_id, "message": "帮我判断这个客户适合哪个项目。"},
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    assert data["requires_confirmation"] is False
+    assert data["requires_more_info"] is True
+    assert data["pending_actions"] == []
+    assert any("预算" in question for question in data["follow_up_questions"])
+    assert data["lead_context"]["id"] == lead_id
+
+
+def test_consultant_agent_uses_follow_up_context_for_same_lead_after_user_adds_budget():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "连续补充客户",
+            "contact_info": "13900007775",
+            "background_info": "高三在读，目标新加坡本科，家长想先判断方向。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={
+            "lead_id": lead_id,
+            "message": "预算30万，雅思6.0，继续为这个客户生成电话跟进草稿。",
+            "conversation_context": ["上一轮追问：预算范围、语言成绩和目标入学时间还不完整。"],
+        },
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    assert data["requires_more_info"] is False
+    assert data["lead_context"]["id"] == lead_id
+    assert data["lead_context"]["conversation_context"][0].startswith("上一轮追问")
+    assert [item["action_type"] for item in data["pending_actions"]] == ["create_follow_up"]
+    assert "预算30万" in data["pending_actions"][0]["draft"]["content"]
+    assert "雅思6.0" in data["pending_actions"][0]["draft"]["content"]
+
+
 def test_consultant_agent_confirm_audits_selected_and_edited_drafts():
     client.post("/api/demo/seed")
     token = _token("consultant", "consultant123")
