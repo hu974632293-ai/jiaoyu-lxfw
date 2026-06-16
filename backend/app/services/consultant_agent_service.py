@@ -23,6 +23,7 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
     recent_items = [item["title"] for item in timeline[:3]]
     now = datetime.now(UTC).replace(tzinfo=None)
     conversation_context = _normalize_conversation_context(payload.conversation_context)
+    context_sources = ["crm_lead", "crm_timeline", "conversation_context"]
     if _should_ask_for_more_info(payload.message, lead.background_info or "", conversation_context):
         follow_up_questions = _build_follow_up_questions(payload.message, lead.background_info or "", conversation_context)
         return {
@@ -42,6 +43,15 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
                 "recent_timeline": recent_items,
                 "conversation_context": conversation_context,
             },
+            "orchestration": _build_orchestration_contract(
+                lead_id=lead.id,
+                intent="consultant_followup",
+                mode="ask_more_info",
+                requires_confirmation=False,
+                context_sources=context_sources,
+                action_types=[],
+                next_step="collect_missing_customer_context",
+            ),
             "pending_actions": [],
         }
 
@@ -97,7 +107,40 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
             "conversation_context": conversation_context,
         },
         "follow_up_questions": [],
+        "orchestration": _build_orchestration_contract(
+            lead_id=lead.id,
+            intent="consultant_followup",
+            mode="draft_then_confirm",
+            requires_confirmation=True,
+            context_sources=context_sources,
+            action_types=action_types,
+            next_step="confirm_selected_business_actions",
+        ),
         "pending_actions": [item.model_dump() for item in pending_actions],
+    }
+
+
+def _build_orchestration_contract(
+    *,
+    lead_id: int,
+    intent: str,
+    mode: str,
+    requires_confirmation: bool,
+    context_sources: list[str],
+    action_types: list[str],
+    next_step: str,
+) -> dict[str, Any]:
+    return {
+        "mode": mode,
+        "role": "consultant",
+        "intent": intent,
+        "target": {"type": "crm_lead", "id": lead_id},
+        "context_sources": context_sources,
+        "requires_confirmation": requires_confirmation,
+        "business_tools": [
+            {"tool": action_type, "execution": "after_user_confirmation"} for action_type in action_types
+        ],
+        "next_step": next_step,
     }
 
 

@@ -402,6 +402,47 @@ def test_consultant_agent_natural_language_can_create_tomorrow_afternoon_task_on
     assert due_time.hour >= 12
 
 
+def test_consultant_agent_chat_exposes_orchestration_contract_for_confirmable_tools():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "编排契约客户",
+            "contact_info": "13900007773",
+            "background_info": "高三，计划申请英国本科，预算40万，雅思6.5。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"lead_id": lead_id, "message": "生成电话跟进，并安排回访任务，阶段推进到已初步研判。"},
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    orchestration = data["orchestration"]
+    assert orchestration["mode"] == "draft_then_confirm"
+    assert orchestration["role"] == "consultant"
+    assert orchestration["target"] == {"type": "crm_lead", "id": lead_id}
+    assert orchestration["context_sources"] == ["crm_lead", "crm_timeline", "conversation_context"]
+    assert orchestration["intent"] == data["intent"]
+    assert orchestration["requires_confirmation"] is True
+    assert [item["tool"] for item in orchestration["business_tools"]] == [
+        "create_follow_up",
+        "create_task",
+        "update_lead_status",
+    ]
+    assert all(item["execution"] == "after_user_confirmation" for item in orchestration["business_tools"])
+
+
 def test_consultant_agent_asks_follow_up_when_project_assessment_lacks_budget():
     client.post("/api/demo/seed")
     token = _token("consultant", "consultant123")
@@ -433,6 +474,11 @@ def test_consultant_agent_asks_follow_up_when_project_assessment_lacks_budget():
     assert data["pending_actions"] == []
     assert any("预算" in question for question in data["follow_up_questions"])
     assert data["lead_context"]["id"] == lead_id
+    orchestration = data["orchestration"]
+    assert orchestration["mode"] == "ask_more_info"
+    assert orchestration["requires_confirmation"] is False
+    assert orchestration["business_tools"] == []
+    assert orchestration["next_step"] == "collect_missing_customer_context"
 
 
 def test_consultant_agent_uses_follow_up_context_for_same_lead_after_user_adds_budget():
