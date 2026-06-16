@@ -5194,6 +5194,39 @@ textarea {
   max-width: 100%;
 }
 
+.role-agent-candidate-list {
+  align-items: stretch;
+}
+
+.role-agent-candidate-card {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  justify-items: start;
+  padding: 9px 10px;
+  border: 1px solid rgba(13, 75, 62, 0.12);
+  border-radius: 10px;
+  color: #17261f;
+  background: #fff;
+  text-align: left;
+}
+
+.role-agent-candidate-card span {
+  color: #17261f;
+  font-weight: 800;
+}
+
+.role-agent-candidate-card small,
+.role-agent-candidate-card em {
+  color: #4e625a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.role-agent-candidate-card em {
+  font-style: normal;
+}
+
 .role-agent-action-card > div {
   display: grid;
   gap: 8px;

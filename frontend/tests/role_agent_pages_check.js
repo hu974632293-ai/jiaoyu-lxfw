@@ -234,6 +234,10 @@ for (const token of [
   "appendAssistantMessage",
   "appendErrorMessage",
   "appendConfirmResultMessage",
+  "candidate_leads",
+  "role-agent-candidate-card",
+  "selectCandidateLead",
+  "未选客户也可以直接询问",
   'type="checkbox"',
   "确认选中动作",
 ]) {
@@ -246,6 +250,14 @@ if (/pending_actions:\s*result\.pending_actions/.test(consultantAgentSource)) {
   throw new Error("顾问Agent确认写入不应直接提交原始全部草稿，必须提交用户选中的已编辑草稿");
 }
 
+if (/sending=\\{sending \\|\\| confirming \\|\\| loadingLeads \\|\\| !selectedLead\\}/.test(consultantAgentSource)) {
+  throw new Error("顾问Agent不应要求先选择客户才能发送自然语言工作起点问题");
+}
+
+if (/lead_id:\\s*selectedLead\\.id/.test(consultantAgentSource)) {
+  throw new Error("顾问Agent空上下文起步时不应强制把当前列表首个客户作为请求对象");
+}
+
 for (const token of [
   "selectedLeadId?: number | null",
   "consultantAgent: ConsultantAgentPage",
@@ -253,7 +265,8 @@ for (const token of [
   "ConsultantAgentPageProps",
   "selectedLeadId?: number | null",
   "leads.find((item) => item.id === selectedLeadId)",
-  'onNavigate("consultantCustomer360", selectedLead.id)',
+  'onNavigate("consultantCustomer360", leadId)',
+  'onNavigate("consultantCustomer360", msg.confirmResult?.lead_id)',
   "查看客户360",
 ]) {
   const combined = `${appSource}\n${backofficeShellSource}\n${consultantAgentSource}`;

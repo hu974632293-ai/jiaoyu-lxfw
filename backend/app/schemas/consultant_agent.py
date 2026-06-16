@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class ConsultantAgentChatRequest(BaseModel):
-    lead_id: int
+    lead_id: int | None = None
     message: str = Field(min_length=1)
     conversation_context: list[str] = Field(default_factory=list)
 

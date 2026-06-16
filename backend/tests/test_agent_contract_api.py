@@ -443,6 +443,173 @@ def test_consultant_agent_chat_exposes_orchestration_contract_for_confirmable_to
     assert all(item["execution"] == "after_user_confirmation" for item in orchestration["business_tools"])
 
 
+def test_consultant_agent_can_start_from_public_lead_queue_without_selected_customer():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "入口闭环官网线索",
+            "contact_info": "13900007776",
+            "background_info": "官网咨询客户，计划申请英国本科，预算40万，家长关注录取把握。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"message": "官网今天来的线索有哪些？我应该先处理谁？"},
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    assert data["intent"] == "consultant_object_discovery"
+    assert data["requires_confirmation"] is False
+    assert data["requires_more_info"] is False
+    assert data["pending_actions"] == []
+    assert data["lead_context"] is None
+    assert data["candidate_leads"][0]["id"] == lead_id
+    assert data["candidate_leads"][0]["customer_name"] == "入口闭环官网线索"
+    assert data["candidate_leads"][0]["source_channel"] == "官网咨询"
+    assert "官网咨询" in data["answer"]
+    orchestration = data["orchestration"]
+    assert orchestration["mode"] == "object_discovery"
+    assert orchestration["target"] == {"type": "crm_lead_queue", "id": None}
+    assert orchestration["context_sources"] == ["crm_lead_queue", "crm_task"]
+    assert orchestration["next_step"] == "select_customer_or_refine_query"
+
+
+def test_consultant_agent_returns_candidate_cards_for_ambiguous_customer_name():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for name, phone, background in [
+        ("张明", "13900007777", "高三，目标英国本科，预算35万。"),
+        ("张明宇", "13900007778", "大一，计划转学美国本科，预算45万。"),
+    ]:
+        response = client.post(
+            "/api/leads",
+            headers=headers,
+            json={
+                "customer_name": name,
+                "contact_info": phone,
+                "background_info": background,
+                "source_channel": "官网咨询",
+            },
+        )
+        assert response.status_code == 200
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"message": "张明最近怎么样？"},
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    assert data["intent"] == "consultant_object_discovery"
+    assert data["requires_confirmation"] is False
+    assert data["pending_actions"] == []
+    assert data["lead_context"] is None
+    names = [item["customer_name"] for item in data["candidate_leads"]]
+    assert "张明" in names
+    assert "张明宇" in names
+    assert "请选择" in data["answer"]
+    assert data["orchestration"]["next_step"] == "select_customer_or_refine_query"
+
+
+def test_consultant_agent_can_start_from_consultant_todo_queue():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "待办入口客户",
+            "contact_info": "13900007780",
+            "background_info": "客户等待顾问回访确认申请节奏。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+    task_response = client.post(
+        "/api/crm/tasks",
+        headers=headers,
+        json={"lead_id": lead_id, "title": "今天回访待办入口客户", "owner_username": "consultant"},
+    )
+    assert task_response.status_code == 200
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"message": "我今天有哪些客户待办需要优先处理？"},
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    assert data["intent"] == "consultant_object_discovery"
+    assert data["pending_actions"] == []
+    assert data["candidate_leads"][0]["id"] == lead_id
+    assert data["candidate_leads"][0]["open_task_count"] >= 1
+    assert "待办" in data["answer"]
+    assert data["orchestration"]["context_sources"] == ["crm_lead_queue", "crm_task"]
+
+
+def test_consultant_agent_reads_selected_customer_context_without_creating_pending_action():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "上下文查询客户",
+            "contact_info": "13900007779",
+            "background_info": "官网咨询客户，计划申请英国本科，预算38万。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    follow_response = client.post(
+        f"/api/leads/{lead_id}/follow-ups",
+        headers=headers,
+        json={"follow_type": "电话", "content": "已确认预算和目标国家，卡在语言成绩。", "next_action": "补交雅思成绩"},
+    )
+    assert follow_response.status_code == 200
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"lead_id": lead_id, "message": "这个客户最近跟进了什么？现在卡在哪里？"},
+    )
+
+    assert chat_response.status_code == 200
+    data = chat_response.json()["data"]
+    assert data["intent"] == "consultant_context_query"
+    assert data["requires_confirmation"] is False
+    assert data["requires_more_info"] is False
+    assert data["pending_actions"] == []
+    assert data["lead_context"]["id"] == lead_id
+    assert "已确认预算和目标国家" in data["answer"]
+    assert "语言成绩" in data["answer"]
+    assert data["orchestration"]["mode"] == "read_context"
+    assert data["orchestration"]["business_tools"] == []
+    assert data["orchestration"]["next_step"] == "suggest_followup_or_task_if_needed"
+
+
 def test_consultant_agent_asks_follow_up_when_project_assessment_lacks_budget():
     client.post("/api/demo/seed")
     token = _token("consultant", "consultant123")

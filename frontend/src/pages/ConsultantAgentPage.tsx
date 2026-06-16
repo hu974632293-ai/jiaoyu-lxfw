@@ -16,11 +16,21 @@ type AgentOrchestration = {
   mode: string;
   role: string;
   intent: string;
-  target: { type: string; id: number };
+  target: { type: string; id: number | null };
   context_sources: string[];
   requires_confirmation: boolean;
   business_tools: Array<{ tool: PendingActionType | string; execution: string }>;
   next_step: string;
+};
+
+type CandidateLead = {
+  id: number;
+  customer_name: string;
+  contact_info?: string;
+  status: string;
+  source_channel?: string;
+  recent_timeline?: string[];
+  open_task_count?: number;
 };
 
 type AgentDraft = {
@@ -37,7 +47,8 @@ type AgentDraft = {
     status: string;
     source_channel?: string;
     conversation_context?: string[];
-  };
+  } | null;
+  candidate_leads?: CandidateLead[];
   orchestration: AgentOrchestration;
   pending_actions: PendingAction[];
 };
@@ -78,6 +89,8 @@ const promptByScene: Record<string, string> = {
 };
 
 const consultantNaturalLanguagePrompts = [
+  { key: "queue", label: "官网今天来的线索有哪些？我应该先处理谁？" },
+  { key: "todo", label: "我今天有哪些客户待办需要优先处理？" },
   { key: "followup", label: "帮我接住这个客户线索，生成下一步跟进和待办。" },
   { key: "assessment", label: "这个客户现在最该补哪些信息，风险点是什么？" },
   { key: "customer360", label: "帮我总结客户360里顾问今天要优先看的内容。" },
@@ -135,7 +148,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
     {
       id: "consultant-agent-welcome",
       role: "assistant",
-      content: "你可以直接说想完成的客户承接目标，我会基于当前客户资料生成可确认的CRM动作。",
+      content: "未选客户也可以直接询问官网新线索、今日待办或客户姓名；我会先帮你找到对象，再继续推进CRM动作。",
     },
   ]);
   const [result, setResult] = useState<AgentDraft | null>(null);
@@ -148,7 +161,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [message, setMessage] = useState("正在加载客户队列");
-  const selectedLead = leads.find((item) => item.id === selectedLeadId) ?? leads[0] ?? null;
+  const selectedLead = selectedLeadId ? leads.find((item) => item.id === selectedLeadId) ?? null : null;
   const displayLead = selectedLead
     ? {
         customer_name: selectedLead.customer_name,
@@ -185,8 +198,8 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
       setMessage("请先输入客户研判问题");
       return;
     }
-    if (!selectedLead) {
-      setMessage(loadingLeads ? "正在加载客户队列，请稍后再发送" : "暂无可研判客户，暂不能发送");
+    if (loadingLeads) {
+      setMessage("正在加载客户队列，请稍后再发送");
       return;
     }
     setSending(true);
@@ -197,7 +210,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
       const data = await apiRequest<AgentDraft>("/api/consultant-agent/chat", {
         method: "POST",
         body: JSON.stringify({
-          lead_id: selectedLead.id,
+          ...(selectedLead ? { lead_id: selectedLead.id } : {}),
           message: content,
           conversation_context: conversationContext,
         }),
@@ -214,7 +227,15 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         ].slice(-6),
       );
       setQuestion("");
-      setMessage(data.requires_more_info ? "需要补充客户信息" : data.requires_confirmation ? "已生成待确认CRM动作" : "已提供可用研判参考");
+      setMessage(
+        data.candidate_leads?.length
+          ? "已找到候选客户"
+          : data.requires_more_info
+            ? "需要补充客户信息"
+            : data.requires_confirmation
+              ? "已生成待确认CRM动作"
+              : "已提供可用研判参考",
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? `研判助手暂不可用：${error.message}` : "研判助手暂不可用";
       setMessages((current) => [...current, appendErrorMessage(errorMessage)]);
@@ -310,6 +331,10 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
     }));
   }
 
+  function selectCandidateLead(leadId: number) {
+    onNavigate("consultantCustomer360", leadId);
+  }
+
   function handleAgentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -330,7 +355,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         question={question}
         onQuestionChange={setQuestion}
         onSend={sendAgentQuestion}
-        sending={sending || confirming || loadingLeads || !selectedLead}
+        sending={sending || confirming || loadingLeads}
         statusLabel={message}
         statusDetail={`最近更新：${formatTime()}`}
         taskTitle="当前客户"
@@ -350,6 +375,25 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
             className={`enterprise-agent-message role-agent-message ${msg.role}`}
           >
             {msg.content}
+            {msg.draft?.candidate_leads?.length ? (
+              <div className="role-agent-confirm-box role-agent-candidate-list" aria-label="顾问助手候选客户">
+                <strong>候选客户</strong>
+                {msg.draft.candidate_leads.map((lead) => (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    className="role-agent-candidate-card"
+                    onClick={() => selectCandidateLead(lead.id)}
+                  >
+                    <span>{lead.customer_name}</span>
+                    <small>
+                      {lead.source_channel || "客户增长"} · {lead.status} · 待办{lead.open_task_count ?? 0}项
+                    </small>
+                    {lead.recent_timeline?.length ? <em>{lead.recent_timeline.join("、")}</em> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {msg.draft?.orchestration && !msg.draft.pending_actions.length ? (
             <div className="role-agent-confirm-box" aria-label="顾问助手编排状态">
               <strong>{msg.draft.orchestration.mode === "ask_more_info" ? "需要补充信息" : "等待确认写入"}</strong>
@@ -427,7 +471,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
             <div className="role-agent-confirm-box">
               <strong>写入结果</strong>
               <span>已同步 {msg.confirmResult.results.length} 条CRM记录，可在客户360时间线追踪。</span>
-              <button type="button" onClick={() => onNavigate("consultantCustomer360", selectedLead.id)}>
+              <button type="button" onClick={() => onNavigate("consultantCustomer360", msg.confirmResult?.lead_id)}>
                 查看客户360
               </button>
             </div>
