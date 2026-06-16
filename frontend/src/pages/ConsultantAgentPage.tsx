@@ -1,6 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { apiRequest } from "../api/client";
-import { crmPrototypeRows } from "../data/prototype";
 import { RoleAgentShell } from "./roleAgentShell";
 import type { BackofficePageKey } from "../navigation";
 
@@ -160,20 +159,31 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
   const [confirming, setConfirming] = useState(false);
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [selectedLeadDetail, setSelectedLeadDetail] = useState<LeadItem | null>(null);
   const [message, setMessage] = useState("正在加载客户队列");
   const selectedLead = selectedLeadId ? leads.find((item) => item.id === selectedLeadId) ?? null : null;
-  const displayLead = selectedLead
+  const displayLead = selectedLead ?? selectedLeadDetail;
+  const displayLeadCard = displayLead
     ? {
-        customer_name: selectedLead.customer_name,
-        project: selectedLead.source_channel || "客户增长",
-        recent: selectedLead.status,
-        statusLabel: selectedLead.status,
+        customer_name: displayLead.customer_name,
+        project: displayLead.source_channel || "客户增长",
+        recent: displayLead.status,
+        statusLabel: displayLead.status,
       }
-    : crmPrototypeRows[0];
+    : {
+        customer_name: "未选择客户",
+        project: "可直接询问官网线索或今日待办",
+        recent: "等待定位",
+        statusLabel: "等待定位",
+      };
 
   useEffect(() => {
     void loadLeads();
   }, []);
+
+  useEffect(() => {
+    void loadSelectedLeadDetail();
+  }, [selectedLeadId, selectedLead?.id]);
 
   async function loadLeads() {
     setLoadingLeads(true);
@@ -185,6 +195,21 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
       setMessage(error instanceof Error ? `客户队列加载失败：${error.message}` : "客户队列加载失败");
     } finally {
       setLoadingLeads(false);
+    }
+  }
+
+  async function loadSelectedLeadDetail() {
+    if (!selectedLeadId || selectedLead?.id === selectedLeadId) {
+      setSelectedLeadDetail(null);
+      return;
+    }
+    try {
+      const data = await apiRequest<LeadItem>(`/api/leads/${selectedLeadId}`);
+      setSelectedLeadDetail(data);
+      setMessage("等待顾问输入");
+    } catch (error) {
+      setSelectedLeadDetail(null);
+      setMessage(error instanceof Error ? `当前客户加载失败：${error.message}` : "当前客户加载失败");
     }
   }
 
@@ -210,7 +235,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
       const data = await apiRequest<AgentDraft>("/api/consultant-agent/chat", {
         method: "POST",
         body: JSON.stringify({
-          ...(selectedLead ? { lead_id: selectedLead.id } : {}),
+          ...(selectedLeadId ? { lead_id: selectedLeadId } : {}),
           message: content,
           conversation_context: conversationContext,
         }),
@@ -247,7 +272,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
 
   async function confirmAgentActions() {
     const confirmableActions = buildConfirmableActions();
-    if (!selectedLead || !result?.pending_actions.length) {
+    if (!selectedLeadId || !result?.pending_actions.length) {
       setMessage("暂无可确认的CRM动作");
       return;
     }
@@ -261,7 +286,7 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
       const data = await apiRequest<ConfirmResult>("/api/consultant-agent/actions/confirm", {
         method: "POST",
         body: JSON.stringify({
-          lead_id: selectedLead.id,
+          lead_id: selectedLeadId,
           idempotency_key: result.idempotency_key,
           pending_actions: confirmableActions,
         }),
@@ -360,9 +385,9 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         statusDetail={`最近更新：${formatTime()}`}
         taskTitle="当前客户"
         taskItems={[
-          { label: "客户", value: displayLead.customer_name },
-          { label: "来源", value: displayLead.project },
-          { label: "状态", value: displayLead.statusLabel },
+          { label: "客户", value: displayLeadCard.customer_name },
+          { label: "来源", value: displayLeadCard.project },
+          { label: "状态", value: displayLeadCard.statusLabel },
         ]}
         capabilities={capabilities}
         resultTitle={result ? "研判结果" : "等待研判"}

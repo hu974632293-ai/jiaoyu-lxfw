@@ -2,6 +2,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.assistant import AgentActionLog
@@ -23,6 +24,12 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
     lead = get_lead(db, payload.lead_id)
     if not lead:
         raise ValueError("客户不存在")
+    if _message_names_different_customer(payload.message, lead):
+        return _build_consultant_object_discovery(
+            db,
+            ConsultantAgentChatRequest(message=payload.message, conversation_context=payload.conversation_context),
+            actor,
+        )
 
     timeline = list_lead_timeline(db, lead.id) or []
     recent_items = [item["title"] for item in timeline[:3]]
@@ -214,26 +221,36 @@ def _build_orchestration_contract(
 def _discover_consultant_leads(db: Session, message: str, actor: SysUser) -> list[CrmLead]:
     text = (message or "").strip()
     if _contains_any(text, ["官网", "咨询", "新线索", "来的线索"]):
-        return list_leads(db, owner_id=actor.id, source_channel="官网咨询")[:5]
+        return _list_consultant_scoped_leads(db, actor, source_channel="官网咨询")[:5]
 
     if _contains_any(text, ["待办", "任务", "优先处理", "今天"]):
         return _discover_consultant_task_leads(db, actor)
 
     keyword = _extract_customer_keyword(text)
     if keyword:
-        return list_leads(db, keyword=keyword, owner_id=actor.id)[:5]
+        return _list_consultant_scoped_leads(db, actor, keyword=keyword)[:5]
 
-    return list_leads(db, owner_id=actor.id)[:5]
+    return _list_consultant_scoped_leads(db, actor)[:5]
+
+
+def _list_consultant_scoped_leads(
+    db: Session,
+    actor: SysUser,
+    *,
+    keyword: str | None = None,
+    source_channel: str | None = None,
+) -> list[CrmLead]:
+    owner_id = None if actor.role in {"admin", "manager"} else actor.id
+    return list_leads(db, keyword=keyword, owner_id=owner_id, source_channel=source_channel)
 
 
 def _discover_consultant_task_leads(db: Session, actor: SysUser) -> list[CrmLead]:
+    now = datetime.now(UTC).replace(tzinfo=None)
+    task_query = db.query(CrmTask).filter(CrmTask.status != "已完成", CrmTask.lead_id.isnot(None))
+    if actor.role not in {"admin", "manager"}:
+        task_query = task_query.filter(CrmTask.owner_id == actor.id)
     tasks = (
-        db.query(CrmTask)
-        .filter(
-            CrmTask.owner_id == actor.id,
-            CrmTask.status != "已完成",
-            CrmTask.lead_id.isnot(None),
-        )
+        task_query.filter(or_(CrmTask.due_time <= now, CrmTask.due_time.is_(None)))
         .order_by(CrmTask.due_time.is_(None), CrmTask.due_time.asc(), CrmTask.id.desc())
         .limit(10)
         .all()
@@ -244,7 +261,10 @@ def _discover_consultant_task_leads(db: Session, actor: SysUser) -> list[CrmLead
             lead_ids.append(task.lead_id)
     if not lead_ids:
         return []
-    leads = db.query(CrmLead).filter(CrmLead.id.in_(lead_ids), CrmLead.owner_id == actor.id).all()
+    leads_query = db.query(CrmLead).filter(CrmLead.id.in_(lead_ids))
+    if actor.role not in {"admin", "manager"}:
+        leads_query = leads_query.filter(CrmLead.owner_id == actor.id)
+    leads = leads_query.all()
     leads_by_id = {lead.id: lead for lead in leads}
     return [leads_by_id[lead_id] for lead_id in lead_ids if lead_id in leads_by_id][:5]
 
@@ -303,6 +323,18 @@ def _is_context_query(message: str) -> bool:
     return _contains_any(message or "", ["最近跟进", "跟进了什么", "待办", "卡在哪里", "卡住", "现在怎么样"])
 
 
+def _message_names_different_customer(message: str, lead: CrmLead) -> bool:
+    text = message or ""
+    if "同学" not in text:
+        return False
+    keyword = _extract_customer_keyword(message)
+    if not keyword or len(keyword) < 1:
+        return False
+    if _contains_any(text, ["这个客户", "当前客户", "该客户", "这条线索"]):
+        return False
+    return keyword not in (lead.customer_name or "")
+
+
 def _build_context_query_answer(lead: CrmLead, timeline: list[dict[str, Any]]) -> str:
     recent_details = [item.get("content") or item.get("detail") or item.get("title") or "" for item in timeline[:3]]
     recent_text = "；".join(item for item in recent_details if item) or "暂无最近跟进记录"
@@ -327,9 +359,9 @@ def _extract_blocker_text(recent_text: str, background_info: str) -> str:
 
 def _extract_customer_keyword(message: str) -> str:
     text = (message or "").strip()
-    for suffix in ["最近怎么样", "现在怎么样", "卡在哪里", "最近跟进了什么", "还有哪些待办"]:
+    for suffix in ["最近怎么样", "现在怎么样", "卡在哪里", "最近跟进了什么", "还有哪些待办", "怎么样"]:
         text = text.replace(suffix, "")
-    for token in ["帮我看看", "看一下", "这个客户", "客户", "线索", "？", "?", "，", ","]:
+    for token in ["帮我看看", "看一下", "这个客户", "客户", "同学", "学生", "线索", "？", "?", "，", ","]:
         text = text.replace(token, " ")
     parts = [part.strip() for part in text.split() if part.strip()]
     return parts[0] if parts else ""
