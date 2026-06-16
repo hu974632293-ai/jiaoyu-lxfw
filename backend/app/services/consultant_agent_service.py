@@ -22,7 +22,8 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
     timeline = list_lead_timeline(db, lead.id) or []
     recent_items = [item["title"] for item in timeline[:3]]
     now = datetime.now(UTC).replace(tzinfo=None)
-    due_time = now + timedelta(days=3)
+    action_types = _resolve_consultant_action_types(payload.message)
+    due_time = _resolve_task_due_time(payload.message, now)
     follow_content = (
         f"围绕{lead.customer_name}完成本次跟进：确认目标专业、申请时间和家长关注点；"
         f"当前阶段为{lead.status}，来源为{lead.source_channel or '客户增长'}。"
@@ -30,23 +31,25 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
     next_action = "三天后回访家长，确认专业方向、申请节奏和预算边界。"
     task_title = f"回访{lead.customer_name}：确认专业方向和申请节奏"
 
-    pending_actions = [
-        ConsultantPendingAction(
+    actions_by_type = {
+        "create_follow_up": ConsultantPendingAction(
             action_type="create_follow_up",
             label="新增跟进",
             draft={"follow_type": "电话", "content": follow_content, "next_action": next_action},
         ),
-        ConsultantPendingAction(
+        "create_task": ConsultantPendingAction(
             action_type="create_task",
             label="创建任务",
             draft={"title": task_title, "due_time": due_time.isoformat()},
         ),
-        ConsultantPendingAction(
+        "update_lead_status": ConsultantPendingAction(
             action_type="update_lead_status",
             label="阶段更新",
             draft={"status": "已初步研判", "reason": "顾问确认客户资料已完成初步研判"},
         ),
-    ]
+    }
+    pending_actions = [actions_by_type[action_type] for action_type in action_types]
+    action_labels = "、".join(item.label for item in pending_actions)
 
     return {
         "intent": "consultant_followup",
@@ -54,7 +57,7 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
         "requires_confirmation": True,
         "confirmation_endpoint": "/api/consultant-agent/actions/confirm",
         "answer": (
-            f"已基于{lead.customer_name}的客户资料生成跟进、任务和阶段建议。"
+            f"已基于{lead.customer_name}的客户资料生成{action_labels}草稿。"
             "请先确认草稿，再写入CRM记录。"
         ),
         "lead_context": {
@@ -67,6 +70,57 @@ def build_consultant_agent_draft(db: Session, payload: ConsultantAgentChatReques
         },
         "pending_actions": [item.model_dump() for item in pending_actions],
     }
+
+
+def _resolve_consultant_action_types(message: str) -> list[str]:
+    text = (message or "").strip()
+    default_actions = ["create_follow_up", "create_task", "update_lead_status"]
+
+    requested: list[str] = []
+    if _contains_any(text, ["跟进", "沟通记录", "电话记录", "电话跟"]):
+        requested.append("create_follow_up")
+    if _contains_any(text, ["任务", "待办", "回访任务"]):
+        requested.append("create_task")
+    if _contains_any(text, ["阶段", "状态", "推进"]):
+        requested.append("update_lead_status")
+
+    only_mode = _contains_any(text, ["只", "仅", "单独"])
+    action_types = requested if only_mode and requested else default_actions.copy()
+
+    if _contains_any(text, ["不要写跟进", "不要生成跟进", "不写跟进", "无需跟进记录", "先不要写跟进"]):
+        action_types = [item for item in action_types if item != "create_follow_up"]
+    if _contains_any(text, ["不要创建任务", "不要建任务", "不创建任务", "无需创建任务", "先不要创建任务"]):
+        action_types = [item for item in action_types if item != "create_task"]
+    if _contains_any(text, ["不要更新阶段", "不要改阶段", "不更新阶段", "不变更阶段", "先不要更新阶段"]):
+        action_types = [item for item in action_types if item != "update_lead_status"]
+
+    return action_types or default_actions
+
+
+def _resolve_task_due_time(message: str, now: datetime) -> datetime:
+    text = (message or "").strip()
+    days = 3
+    if "今天" in text:
+        days = 0
+    elif "明天" in text:
+        days = 1
+    elif "后天" in text:
+        days = 2
+    elif _contains_any(text, ["三天", "3天"]):
+        days = 3
+
+    due_time = now + timedelta(days=days)
+    if "上午" in text:
+        return due_time.replace(hour=10, minute=0, second=0, microsecond=0)
+    if "下午" in text:
+        return due_time.replace(hour=15, minute=0, second=0, microsecond=0)
+    if "晚上" in text:
+        return due_time.replace(hour=19, minute=0, second=0, microsecond=0)
+    return due_time
+
+
+def _contains_any(text: str, patterns: list[str]) -> bool:
+    return any(item in text for item in patterns)
 
 
 def confirm_consultant_agent_actions(db: Session, payload: ConsultantAgentConfirmRequest, actor: SysUser) -> dict[str, Any]:

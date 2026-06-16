@@ -388,6 +388,7 @@ YAML 应至少覆盖这些场景：
 1. 2026-06-15 已在客户增长页补 `customer-assessment-agent`，通过 `/api/knowledge/chat` 携带 `customer_assessment` scene、当前线索和业务上下文生成研判依据与跟进建议。
 2. 2026-06-15 已在报告中心补 `report-assistant-panel`，通过 `/api/knowledge/chat` 携带 `report_assistant` scene、当前报告类型和报告上下文解释本期变化并定位待处理对象。
 3. 本批前端验证命令为 `cd frontend && node tests\customer_report_agent_check.js`、`node tests\customer_growth_check.js`、`node tests\navigation_check.js`、`npm.cmd run build`、`git diff --check`。
+4. 2026-06-16 已增强顾问 Agent 后端编排层：`/api/consultant-agent/chat` 能按自然语言限制待确认动作范围，例如只生成跟进、只创建明天下午回访任务，并继续通过确认接口写入正式 CRM 记录。
 
 范围：
 

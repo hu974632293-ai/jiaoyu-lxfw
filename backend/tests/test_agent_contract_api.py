@@ -1,4 +1,6 @@
 ﻿"""Agent契约测试 — 批次一 Task 1 失败用例"""
+from datetime import UTC, datetime, timedelta
+
 from fastapi.testclient import TestClient
 
 from app.core.database import init_db
@@ -315,6 +317,87 @@ def test_consultant_agent_golden_path_creates_confirmable_actions_and_timeline_r
     assert "新增跟进" in timeline_titles
     assert "创建任务" in timeline_titles
     assert "阶段流转" in timeline_titles
+
+
+def test_consultant_agent_natural_language_can_limit_draft_to_follow_up_only():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "只跟进客户",
+            "contact_info": "13900007771",
+            "background_info": "家长只想先电话沟通预算，不希望现在变更阶段。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"lead_id": lead_id, "message": "这次只生成电话跟进记录，不要创建任务，也不要更新阶段。"},
+    )
+
+    assert chat_response.status_code == 200
+    draft = chat_response.json()["data"]
+    assert [item["action_type"] for item in draft["pending_actions"]] == ["create_follow_up"]
+
+    confirm_response = client.post(
+        "/api/consultant-agent/actions/confirm",
+        headers=headers,
+        json={
+            "lead_id": lead_id,
+            "idempotency_key": draft["idempotency_key"],
+            "pending_actions": draft["pending_actions"],
+        },
+    )
+    assert confirm_response.status_code == 200
+    assert [item["target_type"] for item in confirm_response.json()["data"]["results"]] == ["crm_follow_up"]
+
+    timeline = client.get(f"/api/leads/{lead_id}/timeline", headers=headers).json()["data"]
+    timeline_titles = [item["title"] for item in timeline]
+    assert "新增跟进" in timeline_titles
+    assert "创建任务" not in timeline_titles
+    assert "阶段流转" not in timeline_titles
+
+
+def test_consultant_agent_natural_language_can_create_tomorrow_afternoon_task_only():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "只建任务客户",
+            "contact_info": "13900007772",
+            "background_info": "客户希望明天下午再次电话确认目标专业。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"lead_id": lead_id, "message": "帮我创建明天下午回访任务，先不要写跟进，也不要更新阶段。"},
+    )
+
+    assert chat_response.status_code == 200
+    draft = chat_response.json()["data"]
+    assert [item["action_type"] for item in draft["pending_actions"]] == ["create_task"]
+    task_draft = draft["pending_actions"][0]["draft"]
+    assert "回访" in task_draft["title"]
+    due_time = datetime.fromisoformat(task_draft["due_time"])
+    assert due_time.date() == (datetime.now(UTC).date() + timedelta(days=1))
+    assert due_time.hour >= 12
 
 
 def test_consultant_agent_confirmed_changes_are_traceable_in_manager_customer_report():
