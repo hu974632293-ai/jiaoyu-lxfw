@@ -208,6 +208,24 @@ if (!/sceneTags=\{consultantNaturalLanguagePrompts\}/.test(consultantAgentSource
 }
 
 for (const token of [
+  "selectedActionTypes",
+  "editedActionDrafts",
+  "togglePendingAction",
+  "updatePendingActionDraft",
+  "buildConfirmableActions",
+  'type="checkbox"',
+  "确认选中动作",
+]) {
+  if (!consultantAgentSource.includes(token)) {
+    throw new Error(`顾问Agent待确认草稿必须支持选择和修改，缺少: ${token}`);
+  }
+}
+
+if (/pending_actions:\s*result\.pending_actions/.test(consultantAgentSource)) {
+  throw new Error("顾问Agent确认写入不应直接提交原始全部草稿，必须提交用户选中的已编辑草稿");
+}
+
+for (const token of [
   "selectedLeadId?: number | null",
   "consultantAgent: ConsultantAgentPage",
   "selectedLeadId={selectedLeadId}",

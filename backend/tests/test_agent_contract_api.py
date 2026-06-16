@@ -1,10 +1,12 @@
 ﻿"""Agent契约测试 — 批次一 Task 1 失败用例"""
+import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
-from app.core.database import init_db
+from app.core.database import SessionLocal, init_db
 from app.main import app
+from app.models.assistant import AgentActionLog
 
 init_db()
 client = TestClient(app)
@@ -398,6 +400,65 @@ def test_consultant_agent_natural_language_can_create_tomorrow_afternoon_task_on
     due_time = datetime.fromisoformat(task_draft["due_time"])
     assert due_time.date() == (datetime.now(UTC).date() + timedelta(days=1))
     assert due_time.hour >= 12
+
+
+def test_consultant_agent_confirm_audits_selected_and_edited_drafts():
+    client.post("/api/demo/seed")
+    token = _token("consultant", "consultant123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    lead_response = client.post(
+        "/api/leads",
+        headers=headers,
+        json={
+            "customer_name": "部分确认客户",
+            "contact_info": "13900007773",
+            "background_info": "客户需要先电话确认预算，任务和阶段稍后再处理。",
+            "source_channel": "官网咨询",
+        },
+    )
+    assert lead_response.status_code == 200
+    lead_id = lead_response.json()["data"]["id"]
+
+    chat_response = client.post(
+        "/api/consultant-agent/chat",
+        headers=headers,
+        json={"lead_id": lead_id, "message": "生成跟进、任务和阶段建议，我先挑一部分确认。"},
+    )
+    assert chat_response.status_code == 200
+    draft = chat_response.json()["data"]
+    selected_follow_up = next(item for item in draft["pending_actions"] if item["action_type"] == "create_follow_up")
+    selected_follow_up["draft"]["content"] = "用户修改后的电话跟进内容：先确认预算和目标专业。"
+    selected_follow_up["draft"]["next_action"] = "周五前补齐预算范围。"
+
+    confirm_response = client.post(
+        "/api/consultant-agent/actions/confirm",
+        headers=headers,
+        json={
+            "lead_id": lead_id,
+            "idempotency_key": draft["idempotency_key"],
+            "pending_actions": [selected_follow_up],
+        },
+    )
+    assert confirm_response.status_code == 200
+    confirm_payload = confirm_response.json()["data"]
+    assert [item["action_type"] for item in confirm_payload["results"]] == ["create_follow_up"]
+
+    db = SessionLocal()
+    try:
+        action_log = db.query(AgentActionLog).filter(AgentActionLog.id == confirm_payload["action_log_id"]).one()
+        payload = json.loads(action_log.payload_json)
+    finally:
+        db.close()
+
+    assert payload["confirmed_actions"][0]["action_type"] == "create_follow_up"
+    assert payload["confirmed_actions"][0]["draft"]["content"] == "用户修改后的电话跟进内容：先确认预算和目标专业。"
+
+    timeline = client.get(f"/api/leads/{lead_id}/timeline", headers=headers).json()["data"]
+    timeline_titles = [item["title"] for item in timeline]
+    assert "新增跟进" in timeline_titles
+    assert "创建任务" not in timeline_titles
+    assert "阶段流转" not in timeline_titles
 
 
 def test_consultant_agent_confirmed_changes_are_traceable_in_manager_customer_report():

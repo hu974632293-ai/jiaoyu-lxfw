@@ -389,6 +389,7 @@ YAML 应至少覆盖这些场景：
 2. 2026-06-15 已在报告中心补 `report-assistant-panel`，通过 `/api/knowledge/chat` 携带 `report_assistant` scene、当前报告类型和报告上下文解释本期变化并定位待处理对象。
 3. 本批前端验证命令为 `cd frontend && node tests\customer_report_agent_check.js`、`node tests\customer_growth_check.js`、`node tests\navigation_check.js`、`npm.cmd run build`、`git diff --check`。
 4. 2026-06-16 已增强顾问 Agent 后端编排层：`/api/consultant-agent/chat` 能按自然语言限制待确认动作范围，例如只生成跟进、只创建明天下午回访任务，并继续通过确认接口写入正式 CRM 记录。
+5. 2026-06-16 已增强顾问 Agent 确认层：顾问可在前端选择部分待确认动作、修改草稿字段后再写入 CRM；后端 ActionLog 记录实际确认的动作和草稿，便于审计追踪。
 
 范围：
 

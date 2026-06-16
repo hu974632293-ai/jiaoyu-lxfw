@@ -149,6 +149,7 @@ def confirm_consultant_agent_actions(db: Session, payload: ConsultantAgentConfir
             {
                 "idempotency_key": payload.idempotency_key,
                 "lead_id": payload.lead_id,
+                "confirmed_actions": [action.model_dump() for action in payload.pending_actions],
                 "results": results,
             },
             ensure_ascii=False,
