@@ -12,6 +12,17 @@ type PendingAction = {
 
 type PendingActionType = PendingAction["action_type"];
 
+type AgentOrchestration = {
+  mode: string;
+  role: string;
+  intent: string;
+  target: { type: string; id: number };
+  context_sources: string[];
+  requires_confirmation: boolean;
+  business_tools: Array<{ tool: PendingActionType | string; execution: string }>;
+  next_step: string;
+};
+
 type AgentDraft = {
   answer: string;
   intent: string;
@@ -27,6 +38,7 @@ type AgentDraft = {
     source_channel?: string;
     conversation_context?: string[];
   };
+  orchestration: AgentOrchestration;
   pending_actions: PendingAction[];
 };
 
@@ -88,6 +100,24 @@ function draftFieldLabel(field: string) {
     reason: "更新原因",
   };
   return labels[field] ?? field;
+}
+
+function contextSourceLabel(source: string) {
+  const labels: Record<string, string> = {
+    crm_lead: "客户资料",
+    crm_timeline: "客户时间线",
+    conversation_context: "连续对话",
+  };
+  return labels[source] ?? source;
+}
+
+function businessToolLabel(tool: string) {
+  const labels: Record<string, string> = {
+    create_follow_up: "新增跟进",
+    create_task: "创建任务",
+    update_lead_status: "更新阶段",
+  };
+  return labels[tool] ?? tool;
 }
 
 export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: ConsultantAgentPageProps) {
@@ -270,6 +300,24 @@ export default function ConsultantAgentPage({ selectedLeadId, onNavigate }: Cons
         <div className="role-agent-message user">{question}</div>
         <div className="role-agent-message assistant">
           {result?.answer ?? "你可以直接说想完成的客户承接目标，我会基于当前客户资料生成可确认的CRM动作。"}
+          {result?.orchestration ? (
+            <div className="role-agent-confirm-box" aria-label="顾问助手编排状态">
+              <strong>{result.orchestration.mode === "ask_more_info" ? "需要补充信息" : "等待确认写入"}</strong>
+              <span>
+                已读取上下文：
+                {result.orchestration.context_sources.map(contextSourceLabel).join("、") || "当前客户"}
+              </span>
+              <span>
+                识别动作：
+                {result.orchestration.business_tools.map((item) => businessToolLabel(item.tool)).join("、") ||
+                  "暂不生成写库动作"}
+              </span>
+              <span>
+                确认后写入：
+                {result.orchestration.business_tools.length ? "选中的CRM动作" : "不会写入CRM，仅补充信息"}
+              </span>
+            </div>
+          ) : null}
           {result?.pending_actions.length ? (
             <div className="role-agent-confirm-box">
               {result.pending_actions.map((item) => (

@@ -218,6 +218,12 @@ for (const token of [
   "requires_more_info",
   "follow_up_questions",
   "conversation_context: conversationContext",
+  "orchestration",
+  "context_sources",
+  "business_tools",
+  "已读取上下文",
+  "识别动作",
+  "确认后写入",
   'type="checkbox"',
   "确认选中动作",
 ]) {
